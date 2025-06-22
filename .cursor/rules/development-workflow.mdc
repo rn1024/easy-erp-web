@@ -1,0 +1,245 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 开发流程规范
+
+## Git 工作流
+
+### 分支策略
+
+1. **主分支**
+   - `main`: 生产环境分支，始终保持可发布状态
+   - `develop`: 开发分支，集成最新开发功能
+
+2. **功能分支**
+   - `feature/功能名称`: 新功能开发
+   - `bugfix/问题描述`: 问题修复
+   - `hotfix/紧急修复`: 生产环境紧急修复
+
+### 提交规范
+
+1. **Commit Message 格式**
+   ```
+   <type>(<scope>): <subject>
+
+   <body>
+
+   <footer>
+   ```
+
+2. **Type 类型**
+   - `feat`: 新功能
+   - `fix`: 修复bug
+   - `docs`: 文档更新
+   - `style`: 代码格式调整
+   - `refactor`: 重构代码
+   - `test`: 测试相关
+   - `chore`: 构建工具或辅助工具的变动
+
+3. **示例**
+   ```bash
+   feat(auth): 添加JWT身份验证功能
+
+   - 实现登录/登出接口
+   - 添加token验证中间件
+   - 集成权限控制系统
+
+   Closes #123
+   ```
+
+### 代码审查
+
+1. **Pull Request 要求**
+   - 功能完整且经过测试
+   - 代码符合编码规范
+   - 包含必要的文档更新
+   - 通过所有CI检查
+
+2. **审查清单**
+   - [ ] 代码逻辑正确
+   - [ ] 错误处理完善
+   - [ ] 性能影响评估
+   - [ ] 安全性检查
+   - [ ] 测试覆盖率
+
+## 开发环境配置
+
+### 环境要求
+
+1. **基础环境**
+   ```bash
+   # Node.js 18+
+   node --version
+
+   # pnpm 包管理器
+   npm install -g pnpm
+
+   # PostgreSQL 数据库
+   # 参考 [schema.prisma](mdc:prisma/schema.prisma) 配置
+   ```
+
+2. **环境变量配置**
+   ```bash
+   # 复制环境变量模板
+   cp .env.example .env.local
+
+   # 配置必要的环境变量
+   DATABASE_URL="postgresql://..."
+   NEXTAUTH_SECRET="your-secret"
+   OSS_ACCESS_KEY_ID="your-key"
+   ```
+
+### 项目初始化
+
+1. **安装依赖**
+   ```bash
+   # 使用 pnpm 安装依赖
+   pnpm install
+
+   # 数据库初始化
+   npx prisma generate
+   npx prisma db push
+   npx prisma db seed
+   ```
+
+2. **启动开发服务器**
+   ```bash
+   # 开发模式
+   pnpm dev
+
+   # 类型检查
+   pnpm type-check
+
+   # 代码格式化
+   pnpm format
+   ```
+
+## 功能开发流程
+
+### 1. 需求分析阶段
+
+1. **需求文档**
+   - 功能描述和用户故事
+   - 接口设计和数据结构
+   - UI/UX 设计稿
+
+2. **技术方案**
+   - 数据库表设计 (更新 [schema.prisma](mdc:prisma/schema.prisma))
+   - API 接口设计 (参考 [API文档](mdc:docs))
+   - 组件设计和状态管理
+
+### 2. 开发实施阶段
+
+1. **后端开发**
+   ```bash
+   # 1. 数据库迁移
+   npx prisma migrate dev --name add_new_feature
+
+   # 2. API 路由开发 (参考 [api目录](mdc:src/app/api))
+   # 3. 服务层开发 (参考 [services目录](mdc:src/services))
+   # 4. 工具函数开发 (参考 [lib目录](mdc:src/lib))
+   ```
+
+2. **前端开发**
+   ```bash
+   # 1. 页面组件开发 (参考 [app目录](mdc:src/app))
+   # 2. 业务组件开发 (参考 [components目录](mdc:src/components))
+   # 3. 状态管理 (参考 [store目录](mdc:src/store))
+   # 4. 样式开发
+   ```
+
+3. **国际化支持**
+   - 更新 [中文语言包](mdc:src/locales/zh-CN)
+   - 更新 [英文语言包](mdc:src/locales/en-US)
+
+### 3. 测试阶段
+
+1. **单元测试**
+   ```bash
+   # 运行单元测试
+   pnpm test
+
+   # 测试覆盖率
+   pnpm test:coverage
+   ```
+
+2. **集成测试**
+   - API 接口测试
+   - 端到端测试
+   - 性能测试
+
+3. **手动测试**
+   - 功能测试
+   - 兼容性测试
+   - 用户体验测试
+
+### 4. 部署流程
+
+1. **构建检查**
+   ```bash
+   # 类型检查
+   pnpm type-check
+
+   # 构建检查
+   pnpm build
+
+   # 预览构建结果
+   pnpm start
+   ```
+
+2. **部署步骤**
+   ```bash
+   # 1. 代码合并到主分支
+   git checkout main
+   git merge feature/new-feature
+
+   # 2. 数据库迁移
+   npx prisma migrate deploy
+
+   # 3. 构建和部署
+   pnpm build
+   ```
+
+## 问题排查流程
+
+### 开发问题
+
+1. **代码问题**
+   - 检查 TypeScript 类型错误
+   - 检查 ESLint 警告
+   - 检查 Console 错误信息
+
+2. **构建问题**
+   - 清理缓存: `pnpm clean`
+   - 重新安装依赖: `rm -rf node_modules && pnpm install`
+   - 检查依赖版本兼容性
+
+3. **数据库问题**
+   - 检查数据库连接配置 ([db.ts](mdc:src/lib/db.ts))
+   - 检查 Prisma schema 同步状态
+   - 查看数据库日志
+
+### 性能问题
+
+1. **前端性能**
+   - 使用 React DevTools Profiler
+   - 检查组件重渲染
+   - 分析打包体积
+
+2. **后端性能**
+   - 数据库查询优化
+   - API 响应时间监控
+   - 缓存策略优化
+
+## 文档维护
+
+### API 文档
+- 及时更新 [API接口文档](mdc:docs/API_INTERFACES.md)
+- 更新 [API使用指南](mdc:docs/API_USAGE_GUIDE.md)
+
+### 代码文档
+- 重要函数添加 JSDoc 注释
+- 复杂业务逻辑添加说明注释
+- 保持 [README.md](mdc:README.md) 更新

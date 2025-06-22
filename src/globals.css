@@ -1,0 +1,249 @@
+/* 页面重置样式 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+#__next {
+  height: 100%;
+  width: 100%;
+}
+
+/* 移除默认滚动条 */
+body::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/**
+ * Table
+ */
+.rowClassName {
+  background-color: #e6f4ff;
+}
+
+/**
+ * Helper Classes - Spacing
+ */
+
+/* Margin Classes */
+.m-0 {
+  margin: 0px !important;
+}
+.m-8 {
+  margin: 8px !important;
+}
+.m-16 {
+  margin: 16px !important;
+}
+.m-24 {
+  margin: 24px !important;
+}
+
+/* Margin Top */
+.mt-0 {
+  margin-top: 0px !important;
+}
+.mt-8 {
+  margin-top: 8px !important;
+}
+.mt-16 {
+  margin-top: 16px !important;
+}
+.mt-24 {
+  margin-top: 24px !important;
+}
+
+/* Margin Right */
+.mr-0 {
+  margin-right: 0px !important;
+}
+.mr-8 {
+  margin-right: 8px !important;
+}
+.mr-16 {
+  margin-right: 16px !important;
+}
+.mr-24 {
+  margin-right: 24px !important;
+}
+
+/* Margin Bottom */
+.mb-0 {
+  margin-bottom: 0px !important;
+}
+.mb-8 {
+  margin-bottom: 8px !important;
+}
+.mb-16 {
+  margin-bottom: 16px !important;
+}
+.mb-24 {
+  margin-bottom: 24px !important;
+}
+
+/* Margin Left */
+.ml-0 {
+  margin-left: 0px !important;
+}
+.ml-8 {
+  margin-left: 8px !important;
+}
+.ml-16 {
+  margin-left: 16px !important;
+}
+.ml-24 {
+  margin-left: 24px !important;
+}
+
+/* Margin Horizontal */
+.mh-0 {
+  margin-left: 0px !important;
+  margin-right: 0px !important;
+}
+.mh-8 {
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+}
+.mh-16 {
+  margin-left: 16px !important;
+  margin-right: 16px !important;
+}
+.mh-24 {
+  margin-left: 24px !important;
+  margin-right: 24px !important;
+}
+
+/* Margin Vertical */
+.mv-0 {
+  margin-top: 0px !important;
+  margin-bottom: 0px !important;
+}
+.mv-8 {
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
+}
+.mv-16 {
+  margin-top: 16px !important;
+  margin-bottom: 16px !important;
+}
+.mv-24 {
+  margin-top: 24px !important;
+  margin-bottom: 24px !important;
+}
+
+/* Padding Classes */
+.p-0 {
+  padding: 0px !important;
+}
+.p-8 {
+  padding: 8px !important;
+}
+.p-16 {
+  padding: 16px !important;
+}
+.p-24 {
+  padding: 24px !important;
+}
+
+/* Padding Top */
+.pt-0 {
+  padding-top: 0px !important;
+}
+.pt-8 {
+  padding-top: 8px !important;
+}
+.pt-16 {
+  padding-top: 16px !important;
+}
+.pt-24 {
+  padding-top: 24px !important;
+}
+
+/* Padding Right */
+.pr-0 {
+  padding-right: 0px !important;
+}
+.pr-8 {
+  padding-right: 8px !important;
+}
+.pr-16 {
+  padding-right: 16px !important;
+}
+.pr-24 {
+  padding-right: 24px !important;
+}
+
+/* Padding Bottom */
+.pb-0 {
+  padding-bottom: 0px !important;
+}
+.pb-8 {
+  padding-bottom: 8px !important;
+}
+.pb-16 {
+  padding-bottom: 16px !important;
+}
+.pb-24 {
+  padding-bottom: 24px !important;
+}
+
+/* Padding Left */
+.pl-0 {
+  padding-left: 0px !important;
+}
+.pl-8 {
+  padding-left: 8px !important;
+}
+.pl-16 {
+  padding-left: 16px !important;
+}
+.pl-24 {
+  padding-left: 24px !important;
+}
+
+/* Padding Horizontal */
+.ph-0 {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+}
+.ph-8 {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+.ph-16 {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+.ph-24 {
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+/* Padding Vertical */
+.pv-0 {
+  padding-top: 0px !important;
+  padding-bottom: 0px !important;
+}
+.pv-8 {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+.pv-16 {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+.pv-24 {
+  padding-top: 24px !important;
+  padding-bottom: 24px !important;
+}

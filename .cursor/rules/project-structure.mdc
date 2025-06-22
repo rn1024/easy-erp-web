@@ -1,0 +1,75 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 项目结构规范
+
+## 总体架构
+
+这是一个基于 Next.js 14 的全栈 CMS 管理系统，采用现代化的前后端一体化架构。
+
+### 核心技术栈
+- **前端框架**: Next.js 14 (App Router)
+- **UI库**: Ant Design
+- **状态管理**: Zustand
+- **数据库**: PostgreSQL + Prisma ORM
+- **身份验证**: JWT
+- **文件存储**: 阿里云OSS
+- **国际化**: react-intl
+- **开发工具**: TypeScript + ESLint + Prettier
+
+## 目录结构说明
+
+### 应用层 (`src/app/`)
+- **页面路由**: 遵循 Next.js App Router 约定
+  - [page.tsx](mdc:src/app/page.tsx) - 首页仪表板
+  - [layout.tsx](mdc:src/app/layout.tsx) - 根布局
+  - [login/page.tsx](mdc:src/app/login/page.tsx) - 登录页面
+  - [dashboard/page.tsx](mdc:src/app/dashboard/page.tsx) - 管理后台主页
+  - [system/](mdc:src/app/system) - 系统管理模块
+  - [files/page.tsx](mdc:src/app/files/page.tsx) - 文件管理
+
+- **API路由**: 后端接口实现
+  - [api/v1/auth/](mdc:src/app/api/v1/auth) - 身份验证相关接口
+  - [api/v1/me/route.ts](mdc:src/app/api/v1/me/route.ts) - 用户信息接口
+  - [api/v1/upload/route.ts](mdc:src/app/api/v1/upload/route.ts) - 文件上传接口
+
+### 组件层 (`src/components/`)
+- **管理布局**: [admin-layout.tsx](mdc:src/components/admin-layout.tsx)
+- **业务组件**:
+  - [search-user.tsx](mdc:src/components/search-user.tsx) - 用户搜索
+  - [search-form-select-operator.tsx](mdc:src/components/search-form-select-operator.tsx) - 操作员选择
+  - [upload-drawer.tsx](mdc:src/components/upload-drawer.tsx) - 文件上传抽屉
+- **UI组件**: [ui/](mdc:src/components/ui) - 通用UI组件
+- **表格单元格**: [table-cell/](mdc:src/components/table-cell) - 表格专用组件
+
+### 服务层 (`src/services/`)
+- **API服务**: 统一的接口调用封装
+  - [index.ts](mdc:src/services/index.ts) - Axios配置和拦截器
+  - [auth.ts](mdc:src/services/auth.ts) - 身份验证服务
+  - [account.ts](mdc:src/services/account.ts) - 账户管理服务
+  - [roles.ts](mdc:src/services/roles.ts) - 角色管理服务
+  - [logs.ts](mdc:src/services/logs.ts) - 系统日志服务
+  - [common.ts](mdc:src/services/common.ts) - 通用服务
+
+### 工具层 (`src/lib/`)
+- **核心工具**:
+  - [auth.ts](mdc:src/lib/auth.ts) - JWT工具类
+  - [db.ts](mdc:src/lib/db.ts) - 数据库连接
+  - [oss.ts](mdc:src/lib/oss.ts) - 文件存储工具
+  - [middleware.ts](mdc:src/lib/middleware.ts) - 中间件工具
+
+### 配置层
+- **数据库**: [prisma/schema.prisma](mdc:prisma/schema.prisma)
+- **类型定义**: [src/types/api.ts](mdc:src/types/api.ts)
+- **常量配置**: [src/const/](mdc:src/const)
+- **国际化**: [src/locales/](mdc:src/locales)
+
+## 设计原则
+
+1. **模块化**: 每个功能模块独立，便于维护和扩展
+2. **类型安全**: 全面使用 TypeScript，确保类型安全
+3. **一致性**: 统一的代码风格和命名规范
+4. **可复用**: 组件和工具函数高度可复用
+5. **可测试**: 便于单元测试和集成测试

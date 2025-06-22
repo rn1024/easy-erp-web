@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 管理员账户表
+model Account {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  operator  String
+  password  String
+  status    AccountStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // 关联关系
+  roles     AccountRole[]
+  logs      Log[]
+
+  @@map("accounts")
+}
+
+// 角色表
+model Role {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  status      RoleStatus    @default(ACTIVE)
+  operator    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // 关联关系
+  accounts    AccountRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+// 权限表
+model Permission {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  code        String           @unique
+  category    String
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // 关联关系
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+// 账户角色关联表
+model AccountRole {
+  id        String   @id @default(cuid())
+  accountId String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, roleId])
+  @@map("account_roles")
+}
+
+// 角色权限关联表
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// 系统日志表
+model Log {
+  id                String   @id @default(cuid())
+  category          String
+  module            String
+  operation         String
+  operatorAccountId String
+  status            String   @default("SUCCESS")
+  details           Json?
+  createdAt         DateTime @default(now())
+
+  // 关联关系
+  operator          Account  @relation(fields: [operatorAccountId], references: [id])
+
+  @@map("logs")
+}
+
+// 导出记录表
+model ExportRecord {
+  id                String       @id @default(cuid())
+  taskId            String       @unique
+  type              String
+  status            ExportStatus @default(PENDING)
+  filename          String?
+  downloadUrl       String?
+  operatorAccountId String
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@map("export_records")
+}
+
+// 枚举定义
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum RoleStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}

@@ -1,0 +1,99 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+// 安全响应头
+const securityHeaders = {
+  'X-DNS-Prefetch-Control': 'on',
+  'X-XSS-Protection': '1; mode=block',
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
+
+// 受保护的路由（需要认证）
+const protectedRoutes = ['/dashboard', '/system', '/files'];
+
+// 公开路由（不需要认证）
+const publicRoutes = ['/login', '/api/v1/auth/login', '/api/v1/auth/verifycode'];
+
+// 获取客户端IP
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const realIP = request.headers.get('x-real-ip');
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+
+  if (realIP) {
+    return realIP;
+  }
+
+  return request.ip || 'unknown';
+}
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // 创建响应
+  let response = NextResponse.next();
+
+  // 添加安全响应头
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+
+  // 生产环境强制HTTPS
+  if (process.env.NODE_ENV === 'production' && !request.url.startsWith('https://')) {
+    return NextResponse.redirect(request.url.replace('http://', 'https://'), 301);
+  }
+
+  // 检查是否是公开路由
+  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+
+  // 如果是受保护的路由，检查认证状态
+  if (isProtectedRoute && !isPublicRoute) {
+    const token =
+      request.cookies.get('token')?.value ||
+      request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      // 如果是API路由，返回401
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ code: 1, msg: '未授权访问', data: null }, { status: 401 });
+      }
+
+      // 重定向到登录页
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // 记录访问日志（仅在开发环境）
+  if (process.env.NODE_ENV === 'development') {
+    const ip = getClientIP(request);
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+    console.log(
+      `[${new Date().toISOString()}] ${request.method} ${pathname} - IP: ${ip} - UA: ${userAgent.substring(0, 100)}`
+    );
+  }
+
+  return response;
+}
+
+// 配置中间件匹配路径
+export const config = {
+  matcher: [
+    /*
+     * 匹配所有路径除了：
+     * - api/health (健康检查)
+     * - _next/static (静态文件)
+     * - _next/image (图片优化)
+     * - favicon.ico (网站图标)
+     * - 静态资源文件
+     */
+    '/((?!api/health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+};

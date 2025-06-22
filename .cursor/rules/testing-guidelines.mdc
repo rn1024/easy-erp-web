@@ -1,0 +1,458 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 测试规范
+
+## 测试策略
+
+### 测试金字塔
+
+1. **单元测试 (70%)**
+   - 测试独立的函数和组件
+   - 快速执行，易于维护
+   - 使用 Jest + React Testing Library
+
+2. **集成测试 (20%)**
+   - 测试组件间交互
+   - API 接口测试
+   - 数据库操作测试
+
+3. **端到端测试 (10%)**
+   - 完整用户流程测试
+   - 使用 Playwright 或 Cypress
+   - 关键业务路径验证
+
+## 单元测试规范
+
+### 组件测试
+
+1. **测试文件命名**
+   ```
+   src/
+     components/
+       UserCard.tsx
+       UserCard.test.tsx        # 组件测试
+       __tests__/
+         UserCard.test.tsx      # 或放在 __tests__ 目录
+   ```
+
+2. **基本测试结构**
+   ```typescript
+   // 参考组件: [admin-layout.tsx](mdc:src/components/admin-layout.tsx)
+   import { render, screen, fireEvent } from '@testing-library/react';
+   import { AdminLayout } from '../admin-layout';
+
+   describe('AdminLayout', () => {
+     it('should render children correctly', () => {
+       render(
+         <AdminLayout>
+           <div>Test Content</div>
+         </AdminLayout>
+       );
+
+       expect(screen.getByText('Test Content')).toBeInTheDocument();
+     });
+
+     it('should handle navigation correctly', () => {
+       const mockNavigate = jest.fn();
+       // 测试逻辑...
+     });
+   });
+   ```
+
+3. **测试覆盖范围**
+   - 组件渲染
+   - 用户交互
+   - 条件渲染
+   - 错误状态
+   - 边界情况
+
+### API 测试
+
+1. **服务层测试**
+   ```typescript
+   // 参考服务: [auth.ts](mdc:src/services/auth.ts)
+   import { loginApi } from '../auth';
+   import { mockAxios } from '../__mocks__/axios';
+
+   describe('AuthService', () => {
+     beforeEach(() => {
+       mockAxios.reset();
+     });
+
+     it('should login successfully', async () => {
+       const mockResponse = {
+         data: { token: 'mock-token', user: { id: 1 } }
+       };
+       mockAxios.post.mockResolvedValue(mockResponse);
+
+       const result = await loginApi({
+         username: 'test',
+         password: 'password'
+       });
+
+       expect(result.data.token).toBe('mock-token');
+       expect(mockAxios.post).toHaveBeenCalledWith('/auth/login', {
+         username: 'test',
+         password: 'password'
+       });
+     });
+   });
+   ```
+
+2. **API 路由测试**
+   ```typescript
+   // 参考路由: [route.ts](mdc:src/app/api/v1/auth/login/route.ts)
+   import { POST } from '../route';
+   import { NextRequest } from 'next/server';
+
+   describe('/api/v1/auth/login', () => {
+     it('should authenticate user', async () => {
+       const req = new NextRequest('http://localhost:3000/api/v1/auth/login', {
+         method: 'POST',
+         body: JSON.stringify({
+           username: 'test',
+           password: 'password'
+         })
+       });
+
+       const response = await POST(req);
+       const data = await response.json();
+
+       expect(response.status).toBe(200);
+       expect(data.token).toBeDefined();
+     });
+   });
+   ```
+
+### 工具函数测试
+
+1. **纯函数测试**
+   ```typescript
+   // 参考工具: [auth.ts](mdc:src/lib/auth.ts)
+   import { validateToken, generateToken } from '../auth';
+
+   describe('Auth Utils', () => {
+     describe('generateToken', () => {
+       it('should generate valid JWT token', () => {
+         const payload = { userId: 1, role: 'admin' };
+         const token = generateToken(payload);
+
+         expect(token).toBeDefined();
+         expect(typeof token).toBe('string');
+       });
+     });
+
+     describe('validateToken', () => {
+       it('should validate token correctly', () => {
+         const validToken = 'valid.jwt.token';
+         const result = validateToken(validToken);
+
+         expect(result.valid).toBe(true);
+         expect(result.payload).toBeDefined();
+       });
+
+       it('should reject invalid token', () => {
+         const invalidToken = 'invalid.token';
+         const result = validateToken(invalidToken);
+
+         expect(result.valid).toBe(false);
+       });
+     });
+   });
+   ```
+
+## 集成测试规范
+
+### 数据库测试
+
+1. **测试数据库配置**
+   ```typescript
+   // 参考数据库: [db.ts](mdc:src/lib/db.ts)
+   import { PrismaClient } from '@prisma/client';
+
+   const testDb = new PrismaClient({
+     datasources: {
+       db: {
+         url: process.env.TEST_DATABASE_URL
+       }
+     }
+   });
+
+   describe('Database Operations', () => {
+     beforeEach(async () => {
+       // 清理测试数据
+       await testDb.user.deleteMany();
+     });
+
+     afterAll(async () => {
+       await testDb.$disconnect();
+     });
+
+     it('should create user', async () => {
+       const user = await testDb.user.create({
+         data: {
+           username: 'testuser',
+           email: 'test@example.com'
+         }
+       });
+
+       expect(user.id).toBeDefined();
+       expect(user.username).toBe('testuser');
+     });
+   });
+   ```
+
+### 组件集成测试
+
+1. **页面级测试**
+   ```typescript
+   // 参考页面: [page.tsx](mdc:src/app/login/page.tsx)
+   import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+   import { LoginPage } from '../page';
+   import { mockRouter } from '../__mocks__/next/router';
+
+   describe('LoginPage Integration', () => {
+     it('should complete login flow', async () => {
+       render(<LoginPage />);
+
+       // 输入用户名和密码
+       fireEvent.change(screen.getByLabelText('用户名'), {
+         target: { value: 'testuser' }
+       });
+       fireEvent.change(screen.getByLabelText('密码'), {
+         target: { value: 'password' }
+       });
+
+       // 提交表单
+       fireEvent.click(screen.getByRole('button', { name: '登录' }));
+
+       // 验证重定向
+       await waitFor(() => {
+         expect(mockRouter.push).toHaveBeenCalledWith('/dashboard');
+       });
+     });
+   });
+   ```
+
+## 端到端测试规范
+
+### Playwright 配置
+
+1. **测试配置**
+   ```typescript
+   // playwright.config.ts
+   import { defineConfig } from '@playwright/test';
+
+   export default defineConfig({
+     testDir: './e2e',
+     fullyParallel: true,
+     retries: process.env.CI ? 2 : 0,
+     workers: process.env.CI ? 1 : undefined,
+     reporter: 'html',
+     use: {
+       baseURL: 'http://localhost:3000',
+       trace: 'on-first-retry',
+     },
+     projects: [
+       {
+         name: 'chromium',
+         use: { ...devices['Desktop Chrome'] },
+       },
+     ],
+     webServer: {
+       command: 'pnpm dev',
+       url: 'http://localhost:3000',
+       reuseExistingServer: !process.env.CI,
+     },
+   });
+   ```
+
+2. **用户流程测试**
+   ```typescript
+   // e2e/auth.spec.ts
+   import { test, expect } from '@playwright/test';
+
+   test.describe('Authentication Flow', () => {
+     test('should login and access dashboard', async ({ page }) => {
+       // 访问登录页面
+       await page.goto('/login');
+
+       // 填写登录表单
+       await page.fill('input[name="username"]', 'admin');
+       await page.fill('input[name="password"]', 'password');
+
+       // 点击登录按钮
+       await page.click('button[type="submit"]');
+
+       // 验证重定向到仪表板
+       await expect(page).toHaveURL('/dashboard');
+
+       // 验证用户信息显示
+       await expect(page.locator('[data-testid="user-menu"]')).toBeVisible();
+     });
+
+     test('should handle invalid credentials', async ({ page }) => {
+       await page.goto('/login');
+
+       await page.fill('input[name="username"]', 'invalid');
+       await page.fill('input[name="password"]', 'wrong');
+       await page.click('button[type="submit"]');
+
+       // 验证错误消息
+       await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
+     });
+   });
+   ```
+
+## Mock 数据和服务
+
+### API Mock
+
+1. **MSW (Mock Service Worker)**
+   ```typescript
+   // src/__mocks__/handlers.ts
+   import { rest } from 'msw';
+
+   export const handlers = [
+     // 登录接口 Mock
+     rest.post('/api/v1/auth/login', (req, res, ctx) => {
+       const { username, password } = req.body;
+
+       if (username === 'admin' && password === 'password') {
+         return res(
+           ctx.status(200),
+           ctx.json({
+             token: 'mock-jwt-token',
+             user: { id: 1, username: 'admin' }
+           })
+         );
+       }
+
+       return res(
+         ctx.status(401),
+         ctx.json({ message: '用户名或密码错误' })
+       );
+     }),
+
+     // 用户信息接口 Mock
+     rest.get('/api/v1/me', (req, res, ctx) => {
+       const token = req.headers.get('authorization');
+
+       if (token === 'Bearer mock-jwt-token') {
+         return res(
+           ctx.status(200),
+           ctx.json({
+             id: 1,
+             username: 'admin',
+             role: 'admin'
+           })
+         );
+       }
+
+       return res(ctx.status(401));
+     }),
+   ];
+   ```
+
+### 测试数据
+
+1. **测试数据工厂**
+   ```typescript
+   // src/__mocks__/data/factories.ts
+   export const createMockUser = (overrides = {}) => ({
+     id: 1,
+     username: 'testuser',
+     email: 'test@example.com',
+     role: 'user',
+     createdAt: new Date().toISOString(),
+     ...overrides
+   });
+
+   export const createMockRole = (overrides = {}) => ({
+     id: 1,
+     name: 'admin',
+     permissions: ['read', 'write'],
+     ...overrides
+   });
+   ```
+
+## 测试执行
+
+### 命令行工具
+
+```bash
+# 运行所有测试
+pnpm test
+
+# 运行单元测试
+pnpm test:unit
+
+# 运行集成测试
+pnpm test:integration
+
+# 运行 E2E 测试
+pnpm test:e2e
+
+# 生成测试覆盖率报告
+pnpm test:coverage
+
+# 监视模式运行测试
+pnpm test:watch
+```
+
+### CI/CD 集成
+
+1. **GitHub Actions**
+   ```yaml
+   # .github/workflows/test.yml
+   name: Tests
+
+   on: [push, pull_request]
+
+   jobs:
+     test:
+       runs-on: ubuntu-latest
+
+       steps:
+         - uses: actions/checkout@v3
+         - uses: actions/setup-node@v3
+           with:
+             node-version: '18'
+
+         - name: Install dependencies
+           run: pnpm install
+
+         - name: Run unit tests
+           run: pnpm test:unit
+
+         - name: Run E2E tests
+           run: pnpm test:e2e
+   ```
+
+## 测试最佳实践
+
+### 测试编写原则
+
+1. **AAA 模式**
+   - **Arrange**: 准备测试数据和环境
+   - **Act**: 执行被测试的操作
+   - **Assert**: 验证结果
+
+2. **独立性**
+   - 每个测试独立运行
+   - 不依赖其他测试的状态
+   - 清理测试数据
+
+3. **可读性**
+   - 清晰的测试描述
+   - 有意义的变量命名
+   - 适当的注释
+
+4. **覆盖关键路径**
+   - 正常流程
+   - 错误处理
+   - 边界条件
+   - 安全相关功能

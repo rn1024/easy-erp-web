@@ -1,0 +1,102 @@
+/* 登录页面整体容器 */
+.auth-login {
+  min-height: 100vh;
+}
+
+/* 左侧登录表单容器 */
+.auth-login-form {
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 左上角Logo区域 */
+.logo-section {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  z-index: 10;
+}
+
+/* Logo图标 */
+.auth-login-logo {
+  width: 24px;
+  height: 24px;
+  vertical-align: top;
+}
+
+/* 登录表单内容包装器 */
+.auth-login-form-wrap {
+  width: 400px;
+  margin: 0 auto;
+}
+
+/* 登录标题 */
+.login-title {
+  font-size: 32px !important;
+  font-weight: 600 !important;
+  color: #000000 !important;
+  margin-bottom: 24px !important;
+  text-align: left;
+  width: 100%;
+}
+
+/* 底部版权区域 */
+.copyright-section {
+  position: absolute;
+  bottom: 40px;
+  left: 40px;
+  color: #8c8c8c;
+  font-size: 14px;
+  z-index: 10;
+}
+
+/* 右侧背景图片容器 */
+.authLogin :global(.ant-col:last-child) {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 右侧背景图片 */
+.auth-login-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  vertical-align: top;
+}
+
+/* 工具类 */
+.p-24 {
+  padding: 24px !important;
+}
+
+.mb-24 {
+  margin-bottom: 24px !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .auth-login {
+    flex-direction: column;
+  }
+
+  .auth-login-form-wrap {
+    padding: 0 32px;
+    max-width: 100%;
+  }
+
+  .logo-section,
+  .copyright-section {
+    position: relative;
+    text-align: center;
+    width: 100%;
+    left: auto;
+    top: auto;
+    bottom: auto;
+    padding: 20px;
+  }
+
+  .auth-login-image {
+    height: 300px;
+  }
+}
