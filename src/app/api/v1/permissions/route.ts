@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+// 标记为动态路由
+export const dynamic = 'force-dynamic';
+
 // GET /api/v1/permissions - 获取权限列表
 export async function GET(request: NextRequest) {
   try {

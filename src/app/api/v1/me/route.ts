@@ -1,6 +1,10 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, withAuth } from '@/lib/middleware';
 import { prisma } from '@/lib/db';
+import { verifyRequestToken } from '@/lib/auth';
+
+// 标记为动态路由
+export const dynamic = 'force-dynamic';
 
 // GET /api/v1/me - 获取当前用户信息
 async function getMeHandler(request: NextRequest, user: any) {

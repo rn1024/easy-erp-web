@@ -36,7 +36,7 @@ export function uAccount(id: string, data: UAccountData) {
 
 // 删除账号信息
 export function dAccount(id: string) {
-  return axios<ResType>(`/v1/accounts/${id}`, {
+  return axios<ResType<null>>(`/v1/accounts/${id}`, {
     method: 'delete',
   });
 }

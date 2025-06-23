@@ -1,25 +1,26 @@
 import axios from './index';
+import type { ResType } from '@/types/api';
 
 /**
  * APIs
  */
 // check group id
 export const checkGroupId = (id: number | string) => {
-  return axios<ResType>(`/v1/check/gid/${id}`, {
+  return axios<ResType<any>>(`/v1/check/gid/${id}`, {
     method: 'get',
   });
 };
 
 // check post id
 export const checkPostId = (id: number | string) => {
-  return axios<ResType>(`/v1/check/pid/${id}`, {
+  return axios<ResType<any>>(`/v1/check/pid/${id}`, {
     method: 'get',
   });
 };
 
 // check user id
 export const checkUserId = (id: number | string) => {
-  return axios<ResType>(`/v1/check/uid/${id}`, {
+  return axios<ResType<any>>(`/v1/check/uid/${id}`, {
     method: 'get',
   });
 };
@@ -62,7 +63,6 @@ export const gOperators = (model: string) => {
 /**
  * Types
  */
-import type { ResType } from '@/types/api';
 
 // upload image
 export type UploadImageData = {

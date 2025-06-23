@@ -1,3 +1,5 @@
+// 标记为动态路由
+export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { ApiResponse, withAuth } from '@/lib/middleware';
 import { OSSService } from '@/lib/oss';
