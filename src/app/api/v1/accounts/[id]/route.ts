@@ -63,7 +63,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json({
       code: 0,
-      message: '获取成功',
+      msg: '获取成功',
       data: formattedAccount,
     });
   } catch (error) {

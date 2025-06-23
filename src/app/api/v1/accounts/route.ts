@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status');
+    const name = searchParams.get('name');
     const withRole = searchParams.get('withRole') === 'true';
 
     const skip = (page - 1) * limit;
@@ -17,6 +18,11 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     if (status !== null && status !== undefined && status !== '') {
       where.status = status === '1' ? 'ACTIVE' : 'INACTIVE';
+    }
+    if (name) {
+      where.name = {
+        contains: name,
+      };
     }
 
     // 构建include条件
@@ -77,13 +83,15 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       code: 0,
-      message: '获取成功',
-      data: formattedAccounts,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+      msg: '获取成功',
+      data: {
+        list: formattedAccounts,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
       },
     });
   } catch (error) {
@@ -91,7 +99,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         code: 1,
-        message: '服务器内部错误',
+        msg: '服务器内部错误',
         data: null,
       },
       { status: 500 }
@@ -110,7 +118,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           code: 1,
-          message: '缺少必填字段',
+          msg: '缺少必填字段',
           data: null,
         },
         { status: 400 }
@@ -126,7 +134,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           code: 1,
-          message: '账户名已存在',
+          msg: '账户名已存在',
           data: null,
         },
         { status: 400 }
@@ -169,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       code: 0,
-      message: '创建成功',
+      msg: '创建成功',
       data: formattedAccount,
     });
   } catch (error) {
@@ -177,7 +185,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         code: 1,
-        message: '服务器内部错误',
+        msg: '服务器内部错误',
         data: null,
       },
       { status: 500 }

@@ -59,6 +59,7 @@ export type AccountsParams = {
   limit?: number | string;
   page?: number | string;
   status?: number | string;
+  name?: string;
   withRole?: boolean;
 };
 

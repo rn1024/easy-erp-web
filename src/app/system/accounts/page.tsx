@@ -30,7 +30,7 @@ import type { ColumnsType } from 'antd/es/table';
 /**
  * APIs
  */
-import { accounts, cAccount, uAccount, dAccount, rAccount } from '@/services/account';
+import { accounts, cAccount, uAccount, dAccount, rAccount, cAccountPwd } from '@/services/account';
 import { roleListApi } from '@/services/roles';
 
 /**
@@ -116,6 +116,29 @@ const AccountsPage: React.FC = () => {
       }
     },
   });
+
+  // 修改密码
+  const { loading: changingPassword, run: changePassword } = useRequest(
+    async (values: { old_password: string; new_password: string }) => {
+      if (!state.editingRecord) return;
+      return cAccountPwd(state.editingRecord.id, values);
+    },
+    {
+      manual: true,
+      onSuccess: (response: any) => {
+        if (response?.data?.code === 0) {
+          message.success('密码修改成功');
+          setState({ passwordModalVisible: false, editingRecord: null });
+          passwordForm.resetFields();
+        } else {
+          message.error(response?.data?.msg || '密码修改失败');
+        }
+      },
+      onError: () => {
+        message.error('密码修改失败');
+      },
+    }
+  );
 
   const columns: ColumnsType<AccountsResponse> = [
     {
@@ -229,6 +252,42 @@ const AccountsPage: React.FC = () => {
   return (
     <>
       <Card>
+        {/* 搜索栏 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col span={8}>
+            <Input.Search
+              placeholder="搜索账户名"
+              allowClear
+              onSearch={(value) => {
+                setSearchParams({
+                  ...searchParams,
+                  page: 1,
+                  name: value || undefined,
+                });
+              }}
+              style={{ width: '100%' }}
+            />
+          </Col>
+          <Col>
+            <Select
+              placeholder="选择状态"
+              allowClear
+              style={{ width: 120 }}
+              onChange={(value) => {
+                setSearchParams({
+                  ...searchParams,
+                  page: 1,
+                  status: value,
+                });
+              }}
+            >
+              <Select.Option value={1}>启用</Select.Option>
+              <Select.Option value={0}>禁用</Select.Option>
+            </Select>
+          </Col>
+        </Row>
+
+        {/* 操作按钮 */}
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
@@ -240,6 +299,43 @@ const AccountsPage: React.FC = () => {
               刷新
             </Button>
           </Col>
+          {state.selectedRowKeys.length > 0 && (
+            <>
+              <Col>
+                <Popconfirm
+                  title={`确定删除选中的 ${state.selectedRowKeys.length} 个账户吗？`}
+                  onConfirm={() => {
+                    // TODO: 实现批量删除功能
+                    message.info('批量删除功能开发中');
+                  }}
+                  okText="确定"
+                  cancelText="取消"
+                >
+                  <Button danger>批量删除 ({state.selectedRowKeys.length})</Button>
+                </Popconfirm>
+              </Col>
+              <Col>
+                <Button
+                  onClick={() => {
+                    // TODO: 实现批量启用功能
+                    message.info('批量操作功能开发中');
+                  }}
+                >
+                  批量启用
+                </Button>
+              </Col>
+              <Col>
+                <Button
+                  onClick={() => {
+                    // TODO: 实现批量禁用功能
+                    message.info('批量操作功能开发中');
+                  }}
+                >
+                  批量禁用
+                </Button>
+              </Col>
+            </>
+          )}
         </Row>
 
         <Table
@@ -329,16 +425,14 @@ const AccountsPage: React.FC = () => {
         open={state.passwordModalVisible}
         onOk={() => {
           passwordForm.validateFields().then((values) => {
-            // TODO: 实现修改密码API调用
-            message.success('密码修改成功');
-            setState({ passwordModalVisible: false });
-            passwordForm.resetFields();
+            changePassword(values);
           });
         }}
         onCancel={() => {
-          setState({ passwordModalVisible: false });
+          setState({ passwordModalVisible: false, editingRecord: null });
           passwordForm.resetFields();
         }}
+        confirmLoading={changingPassword}
         destroyOnHidden
         width={500}
       >

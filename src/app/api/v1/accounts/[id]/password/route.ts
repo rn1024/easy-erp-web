@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json(
         {
           code: 1,
-          message: '缺少必填字段',
+          msg: '缺少必填字段',
           data: null,
         },
         { status: 400 }
@@ -26,7 +26,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json(
         {
           code: 1,
-          message: '新密码长度至少6位',
+          msg: '新密码长度至少6位',
           data: null,
         },
         { status: 400 }
@@ -42,7 +42,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json(
         {
           code: 1,
-          message: '账户不存在',
+          msg: '账户不存在',
           data: null,
         },
         { status: 404 }
@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json(
         {
           code: 1,
-          message: '旧密码错误',
+          msg: '旧密码错误',
           data: null,
         },
         { status: 400 }
@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json({
       code: 0,
-      message: '密码修改成功',
+      msg: '密码修改成功',
       data: null,
     });
   } catch (error) {
@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json(
       {
         code: 1,
-        message: '服务器内部错误',
+        msg: '服务器内部错误',
         data: null,
       },
       { status: 500 }
