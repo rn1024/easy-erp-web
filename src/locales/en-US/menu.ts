@@ -52,5 +52,9 @@ export default {
     'Inventory-Management': 'Inventory Management',
     'Inventory-Management_Finished': 'Finished Inventory',
     'Inventory-Management_Spare': 'Spare Inventory',
+
+    // Purchase Management
+    'Purchase-Management': 'Purchase Management',
+    'Purchase-Management_Orders': 'Purchase Orders',
   },
 };

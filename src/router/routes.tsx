@@ -15,6 +15,7 @@ import {
   TagOutlined,
   AppstoreOutlined,
   DropboxOutlined,
+  ShoppingCartOutlined,
 } from '@ant-design/icons';
 import type { MenuDataItem } from '@ant-design/pro-components';
 
@@ -71,6 +72,21 @@ const routes: MenuDataItem[] = [
         name: 'Inventory-Management_Spare',
         path: '/system/spare-inventory',
         key: '/system/spare-inventory',
+      },
+    ],
+  },
+
+  /* 采购管理 */
+  {
+    name: 'Purchase-Management',
+    icon: <ShoppingCartOutlined />,
+    key: '/purchase',
+    children: [
+      {
+        icon: <ShoppingCartOutlined />,
+        name: 'Purchase-Management_Orders',
+        path: '/system/purchase-orders',
+        key: '/system/purchase-orders',
       },
     ],
   },

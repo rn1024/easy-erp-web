@@ -52,5 +52,9 @@ export default {
     'Inventory-Management': '库存管理',
     'Inventory-Management_Finished': '成品库存',
     'Inventory-Management_Spare': '散件库存',
+
+    // 采购管理
+    'Purchase-Management': '采购管理',
+    'Purchase-Management_Orders': '采购订单',
   },
 };
