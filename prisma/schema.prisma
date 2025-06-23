@@ -159,7 +159,7 @@ model Shop {
   nickname          String   @unique
   avatarUrl         String?
   responsiblePerson String
-  remark            String?  @db.Text
+    remark            String?  @db.Text
   operatorId        String
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -215,7 +215,7 @@ model Forwarder {
   bankName      String?
   bankAccount   String?
   bankAddress   String?
-  remark        String?  @db.Text
+  remark        String?
   operatorId    String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -261,7 +261,7 @@ model ProductInfo {
   imageUrl      String?
   styleInfo     String?  @db.Text
   accessoryInfo String?  @db.Text
-  remark        String?  @db.Text
+  remark        String?
   operatorId    String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -334,10 +334,10 @@ model PurchaseOrder {
   supplierId  String
   productId   String
   quantity    Int
-  totalAmount Decimal              @db.Decimal(12, 2)
+  totalAmount Decimal @db.Decimal(12, 2)
   status      PurchaseOrderStatus  @default(PENDING)
   urgent      Boolean              @default(false)
-  remark      String?              @db.Text
+  remark      String?
   operatorId  String
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
@@ -407,9 +407,9 @@ model DeliveryRecord {
   channel                   String?
   forwarderId               String
   shippingChannel           String?
-  warehouseShippingDeadline DateTime?           @db.Date
+    warehouseShippingDeadline DateTime?           @db.Date
   warehouseReceiptDeadline  DateTime?           @db.Date
-  shippingDetails           String?             @db.Text
+  shippingDetails           String?  @db.Text
   date                      DateTime            @db.Date
   status                    DeliveryRecordStatus @default(PREPARING)
   operatorId                String

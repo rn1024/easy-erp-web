@@ -3,14 +3,11 @@ import { ApiResponse, withAuth } from '@/lib/middleware';
 import { prisma } from '@/lib/db';
 
 // GET /api/v1/me - 获取当前用户信息
-async function getMeHandler(request: NextRequest) {
+async function getMeHandler(request: NextRequest, user: any) {
   try {
-    // 从中间件获取用户信息
-    const user = (request as any).user;
-
     // 从数据库获取最新的账户信息
     const account = await prisma.account.findUnique({
-      where: { id: user.accountId },
+      where: { id: user.id },
       include: {
         roles: {
           include: {

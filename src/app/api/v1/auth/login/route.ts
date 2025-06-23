@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证验证码
-    const storedCaptcha = await redisService.get<string>(`captcha:${key}`);
-    if (!storedCaptcha || storedCaptcha !== captcha.toLowerCase()) {
+    const storedCaptcha = await redisService.get<{ code: string }>(`captcha:${key}`);
+    if (!storedCaptcha || storedCaptcha.code !== captcha.toLowerCase()) {
       return NextResponse.json({ code: 1, msg: '验证码错误', data: null }, { status: 400 });
     }
 
