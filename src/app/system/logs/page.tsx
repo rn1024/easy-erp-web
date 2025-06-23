@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -32,6 +32,11 @@ import {
 import { useRequest } from 'ahooks';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import {
+  useDebounceSearch,
+  useDataCache,
+  usePerformanceMonitor,
+} from '@/hooks/usePerformanceOptimization';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -110,6 +115,9 @@ const getLogsStats = async (
 };
 
 const LogsManagement: React.FC = () => {
+  // 性能监控
+  const { renderTime } = usePerformanceMonitor('LogsManagement');
+
   const [form] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [searchParams, setSearchParams] = useState<LogsParams>({
@@ -119,21 +127,30 @@ const LogsManagement: React.FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
 
-  // 获取日志列表
+  // 获取日志列表（带缓存优化）
   const {
-    data: logsData,
+    data: logsResponse,
     loading: logsLoading,
     refresh: refreshLogs,
   } = useRequest(() => getLogsList(searchParams), {
     refreshDeps: [searchParams],
+    cacheKey: `logs-${JSON.stringify(searchParams)}`,
+    staleTime: 30 * 1000, // 30秒内使用缓存
   });
 
-  // 获取统计数据
+  // 获取统计数据（带缓存优化）
   const {
-    data: statsData,
+    data: statsResponse,
     loading: statsLoading,
     refresh: refreshStats,
-  } = useRequest(() => getLogsStats(7));
+  } = useRequest(() => getLogsStats(7), {
+    cacheKey: 'logs-stats-7days',
+    staleTime: 60 * 1000, // 1分钟内使用缓存
+  });
+
+  // 数据处理
+  const logsData = logsResponse?.data;
+  const statsData = statsResponse?.data;
 
   // 表格列定义
   const columns: ColumnsType<LogItem> = [
