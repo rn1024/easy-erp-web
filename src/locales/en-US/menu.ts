@@ -56,5 +56,11 @@ export default {
     // Purchase Management
     'Purchase-Management': 'Purchase Management',
     'Purchase-Management_Orders': 'Purchase Orders',
+    'Warehouse-Management': 'Warehouse Management',
+    'Warehouse-Management_Tasks': 'Warehouse Tasks',
+    'Delivery-Management': 'Delivery Management',
+    'Delivery-Management_Records': 'Delivery Records',
+    'Financial-Management': 'Financial Management',
+    'Financial-Management_Reports': 'Financial Reports',
   },
 };

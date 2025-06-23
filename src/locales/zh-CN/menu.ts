@@ -56,5 +56,11 @@ export default {
     // 采购管理
     'Purchase-Management': '采购管理',
     'Purchase-Management_Orders': '采购订单',
+    'Warehouse-Management': '仓库管理',
+    'Warehouse-Management_Tasks': '仓库任务',
+    'Delivery-Management': '发货管理',
+    'Delivery-Management_Records': '发货记录',
+    'Financial-Management': '财务管理',
+    'Financial-Management_Reports': '财务报表',
   },
 };

@@ -16,6 +16,7 @@ import {
   AppstoreOutlined,
   DropboxOutlined,
   ShoppingCartOutlined,
+  DollarOutlined,
 } from '@ant-design/icons';
 import type { MenuDataItem } from '@ant-design/pro-components';
 
@@ -87,6 +88,51 @@ const routes: MenuDataItem[] = [
         name: 'Purchase-Management_Orders',
         path: '/system/purchase-orders',
         key: '/system/purchase-orders',
+      },
+    ],
+  },
+
+  /* 仓库管理 */
+  {
+    name: 'Warehouse-Management',
+    icon: <InboxOutlined />,
+    key: '/warehouse',
+    children: [
+      {
+        icon: <InboxOutlined />,
+        name: 'Warehouse-Management_Tasks',
+        path: '/system/warehouse-tasks',
+        key: '/system/warehouse-tasks',
+      },
+    ],
+  },
+
+  /* 发货管理 */
+  {
+    name: 'Delivery-Management',
+    icon: <TruckOutlined />,
+    key: '/delivery',
+    children: [
+      {
+        icon: <TruckOutlined />,
+        name: 'Delivery-Management_Records',
+        path: '/system/delivery-records',
+        key: '/system/delivery-records',
+      },
+    ],
+  },
+
+  /* 财务管理 */
+  {
+    name: 'Financial-Management',
+    icon: <DollarOutlined />,
+    key: '/financial',
+    children: [
+      {
+        icon: <DollarOutlined />,
+        name: 'Financial-Management_Reports',
+        path: '/system/financial-reports',
+        key: '/system/financial-reports',
       },
     ],
   },
