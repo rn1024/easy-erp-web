@@ -24,9 +24,18 @@ model Account {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  // 关联关系
+  // 关联关系 - 原有系统
   roles     AccountRole[]
   logs      Log[]
+
+  // 关联关系 - ERP业务扩展
+  operatedShops         Shop[]             @relation("ShopOperator")
+  operatedSuppliers     Supplier[]         @relation("SupplierOperator")
+  operatedForwarders    Forwarder[]        @relation("ForwarderOperator")
+  operatedProducts      ProductInfo[]      @relation("ProductOperator")
+  operatedPurchases     PurchaseOrder[]    @relation("PurchaseOperator")
+  operatedWarehouseTasks WarehouseTask[]   @relation("WarehouseTaskOperator")
+  operatedDeliveries    DeliveryRecord[]   @relation("DeliveryOperator")
 
   @@map("accounts")
 }
@@ -140,4 +149,313 @@ enum ExportStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+// ========== ERP 业务模块扩展 ==========
+
+// 店铺表
+model Shop {
+  id                String   @id @default(cuid())
+  nickname          String   @unique
+  avatarUrl         String?
+  responsiblePerson String
+  remark            String?  @db.Text
+  operatorId        String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // 关联关系
+  operator          Account         @relation("ShopOperator", fields: [operatorId], references: [id])
+  products          ProductInfo[]
+  finishedInventory FinishedInventory[]
+  spareInventory    SpareInventory[]
+  purchaseOrders    PurchaseOrder[]
+  warehouseTasks    WarehouseTask[]
+  deliveryRecords   DeliveryRecord[]
+  financialReports  FinancialReport[]
+
+  @@map("shops")
+}
+
+// 供应商表
+model Supplier {
+  id             String   @id @default(cuid())
+  avatarUrl      String?
+  nickname       String   @unique
+  contactPerson  String
+  contactPhone   String
+  companyName    String
+  creditCode     String?  @unique
+  bankName       String?
+  bankAccount    String?
+  bankAddress    String?
+  productionDays Int      @default(0)
+  deliveryDays   Int      @default(0)
+  remark         String?  @db.Text
+  operatorId     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // 关联关系
+  operator       Account        @relation("SupplierOperator", fields: [operatorId], references: [id])
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+// 货代表
+model Forwarder {
+  id            String   @id @default(cuid())
+  avatarUrl     String?
+  nickname      String   @unique
+  contactPerson String
+  contactPhone  String
+  companyName   String
+  creditCode    String?  @unique
+  bankName      String?
+  bankAccount   String?
+  bankAddress   String?
+  remark        String?  @db.Text
+  operatorId    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // 关联关系
+  operator        Account          @relation("ForwarderOperator", fields: [operatorId], references: [id])
+  deliveryRecords DeliveryRecord[]
+
+  @@map("forwarders")
+}
+
+// 产品分类表
+model ProductCategory {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // 关联关系
+  products  ProductInfo[]
+  finishedInventory FinishedInventory[]
+  spareInventory    SpareInventory[]
+  warehouseTasks    WarehouseTask[]
+
+  @@map("product_categories")
+}
+
+// 产品信息表
+model ProductInfo {
+  id            String   @id @default(cuid())
+  shopId        String
+  categoryId    String
+  code          String
+  specification String?
+  color         String?
+  setQuantity   Int      @default(1)
+  internalSize  String?
+  externalSize  String?
+  weight        Decimal? @db.Decimal(10, 2)
+  sku           String   @unique
+  label         String?
+  codeFileUrl   String?
+  imageUrl      String?
+  styleInfo     String?  @db.Text
+  accessoryInfo String?  @db.Text
+  remark        String?  @db.Text
+  operatorId    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // 关联关系
+  shop             Shop                @relation(fields: [shopId], references: [id])
+  category         ProductCategory     @relation(fields: [categoryId], references: [id])
+  operator         Account             @relation("ProductOperator", fields: [operatorId], references: [id])
+  finishedInventory FinishedInventory[]
+  spareInventory   SpareInventory[]
+  purchaseOrders   PurchaseOrder[]
+  warehouseTasks   WarehouseTask[]
+  deliveryRecords  DeliveryRecord[]
+
+  @@index([shopId])
+  @@index([categoryId])
+  @@index([code])
+  @@map("product_info")
+}
+
+// 成品库存表
+model FinishedInventory {
+  id            String   @id @default(cuid())
+  shopId        String
+  categoryId    String
+  productId     String
+  boxSize       String?
+  packQuantity  Int      @default(1)
+  weight        Decimal? @db.Decimal(10, 2)
+  location      String?
+  stockQuantity Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // 关联关系
+  shop     Shop            @relation(fields: [shopId], references: [id])
+  category ProductCategory @relation(fields: [categoryId], references: [id])
+  product  ProductInfo     @relation(fields: [productId], references: [id])
+
+  @@index([shopId, productId])
+  @@index([location])
+  @@map("finished_inventory")
+}
+
+// 散件库存表
+model SpareInventory {
+  id         String   @id @default(cuid())
+  shopId     String
+  categoryId String
+  productId  String
+  spareType  String
+  location   String?
+  quantity   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // 关联关系
+  shop     Shop            @relation(fields: [shopId], references: [id])
+  category ProductCategory @relation(fields: [categoryId], references: [id])
+  product  ProductInfo     @relation(fields: [productId], references: [id])
+
+  @@index([shopId, productId, spareType])
+  @@map("spare_inventory")
+}
+
+// 采购订单表
+model PurchaseOrder {
+  id          String               @id @default(cuid())
+  shopId      String
+  supplierId  String
+  productId   String
+  quantity    Int
+  totalAmount Decimal              @db.Decimal(12, 2)
+  status      PurchaseOrderStatus  @default(PENDING)
+  urgent      Boolean              @default(false)
+  remark      String?              @db.Text
+  operatorId  String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  // 关联关系
+  shop     Shop        @relation(fields: [shopId], references: [id])
+  supplier Supplier    @relation(fields: [supplierId], references: [id])
+  product  ProductInfo @relation(fields: [productId], references: [id])
+  operator Account     @relation("PurchaseOperator", fields: [operatorId], references: [id])
+
+  @@index([shopId, status])
+  @@index([supplierId])
+  @@index([urgent])
+  @@map("purchase_orders")
+}
+
+// 财务报表表
+model FinancialReport {
+  id          String   @id @default(cuid())
+  shopId      String
+  reportMonth String
+  details     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联关系
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, reportMonth])
+  @@map("financial_reports")
+}
+
+// 仓库任务表
+model WarehouseTask {
+  id            String              @id @default(cuid())
+  shopId        String
+  categoryId    String
+  productId     String
+  totalQuantity Int
+  progress      Decimal             @default(0.00) @db.Decimal(5, 2)
+  status        WarehouseTaskStatus @default(PENDING)
+  type          WarehouseTaskType
+  operatorId    String
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // 关联关系
+  shop     Shop            @relation(fields: [shopId], references: [id])
+  category ProductCategory @relation(fields: [categoryId], references: [id])
+  product  ProductInfo     @relation(fields: [productId], references: [id])
+  operator Account         @relation("WarehouseTaskOperator", fields: [operatorId], references: [id])
+
+  @@index([shopId, status])
+  @@index([type, status])
+  @@map("warehouse_tasks")
+}
+
+// 发货记录表
+model DeliveryRecord {
+  id                        String              @id @default(cuid())
+  shopId                    String
+  productId                 String
+  totalBoxes                Int
+  fbaShipmentCode           String?
+  fbaWarehouseCode          String?
+  country                   String?
+  channel                   String?
+  forwarderId               String
+  shippingChannel           String?
+  warehouseShippingDeadline DateTime?           @db.Date
+  warehouseReceiptDeadline  DateTime?           @db.Date
+  shippingDetails           String?             @db.Text
+  date                      DateTime            @db.Date
+  status                    DeliveryRecordStatus @default(PREPARING)
+  operatorId                String
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  // 关联关系
+  shop      Shop      @relation(fields: [shopId], references: [id])
+  product   ProductInfo @relation(fields: [productId], references: [id])
+  forwarder Forwarder @relation(fields: [forwarderId], references: [id])
+  operator  Account   @relation("DeliveryOperator", fields: [operatorId], references: [id])
+
+  @@index([shopId, status])
+  @@index([date, status])
+  @@index([fbaShipmentCode])
+  @@index([forwarderId])
+  @@map("delivery_records")
+}
+
+// ========== ERP 业务枚举定义 ==========
+
+enum PurchaseOrderStatus {
+  PENDING
+  CONFIRMED
+  PRODUCTION
+  SHIPPED
+  RECEIVED
+  CANCELLED
+}
+
+enum WarehouseTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WarehouseTaskType {
+  PACKAGING
+  SHIPPING
+}
+
+enum DeliveryRecordStatus {
+  PREPARING
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
 }
