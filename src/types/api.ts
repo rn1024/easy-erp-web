@@ -1,9 +1,9 @@
 // 基础响应类型
-export interface ResType<T = any> {
+export type ResType<T> = {
   code: number;
   msg: string;
   data: T;
-}
+};
 
 // 分页响应元数据
 export interface PageMeta {
@@ -13,13 +13,20 @@ export interface PageMeta {
   totalPages: number;
 }
 
-// 标准分页响应类型
-export interface PageResType<T = any> {
+// 通用分页响应类型
+export type PageResType<T> = {
   code: number;
   msg: string;
-  data: T[];
-  meta: PageMeta;
-}
+  data: {
+    list: T[];
+    meta: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  };
+};
 
 // 错误响应类型
 export interface ErrorResponse {

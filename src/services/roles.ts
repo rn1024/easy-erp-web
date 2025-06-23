@@ -48,6 +48,14 @@ export const queryRoleByNameApi = (name: string) => {
   });
 };
 
+// get permissions list
+export const getPermissionsApi = (type?: string) => {
+  return axios<ResType<PermissionsResult>>('/v1/permissions', {
+    method: 'get',
+    params: type ? { type } : {},
+  });
+};
+
 /**
  * Types
  */
@@ -70,9 +78,21 @@ export type CreateRoleData = {
   name: string;
   status: number;
   operator: string;
+  permissions?: string[];
 };
 
 export type UpdateRoleData = {
   updated_at: string;
   permissions: string[] | null;
 } & CreateRoleData;
+
+// permissions result
+export type PermissionsResult = {
+  list: Permission[];
+  grouped: Record<string, Permission[]>;
+};
+
+export type Permission = {
+  code: string;
+  name: string;
+};

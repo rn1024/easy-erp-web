@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status');
+    const name = searchParams.get('name');
 
     const skip = (page - 1) * limit;
 
@@ -15,6 +16,13 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     if (status !== null && status !== undefined && status !== '') {
       where.status = status === '1' ? 'ACTIVE' : 'INACTIVE';
+    }
+
+    // 添加名称搜索
+    if (name) {
+      where.name = {
+        contains: name,
+      };
     }
 
     // 获取角色列表
@@ -51,13 +59,15 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       code: 0,
-      message: '获取成功',
-      data: formattedRoles,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+      msg: '获取成功',
+      data: {
+        list: formattedRoles,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
       },
     });
   } catch (error) {
@@ -65,7 +75,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         code: 1,
-        message: '服务器内部错误',
+        msg: '服务器内部错误',
         data: null,
       },
       { status: 500 }
@@ -77,14 +87,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, status = 1, operator } = body;
+    const { name, status = 1, operator, permissions = [] } = body;
 
     // 验证必填字段
     if (!name || !operator) {
       return NextResponse.json(
         {
           code: 1,
-          message: '缺少必填字段',
+          msg: '缺少必填字段',
           data: null,
         },
         { status: 400 }
@@ -100,7 +110,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           code: 1,
-          message: '角色名已存在',
+          msg: '角色名已存在',
           data: null,
         },
         { status: 400 }
@@ -116,11 +126,31 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // 如果提供了权限列表，创建权限关联
+    if (permissions.length > 0) {
+      // 获取权限ID
+      const permissionRecords = await prisma.permission.findMany({
+        where: {
+          code: { in: permissions },
+        },
+      });
+
+      // 创建权限关联
+      if (permissionRecords.length > 0) {
+        await prisma.rolePermission.createMany({
+          data: permissionRecords.map((permission) => ({
+            roleId: role.id,
+            permissionId: permission.id,
+          })),
+        });
+      }
+    }
+
     const formattedRole = {
       id: role.id,
       name: role.name,
       status: role.status === 'ACTIVE' ? 1 : 0,
-      permissions: [],
+      permissions,
       operator: role.operator,
       created_at: role.createdAt.toISOString(),
       updated_at: role.updatedAt.toISOString(),
@@ -129,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       code: 0,
-      message: '创建成功',
+      msg: '创建成功',
       data: formattedRole,
     });
   } catch (error) {
@@ -137,7 +167,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         code: 1,
-        message: '服务器内部错误',
+        msg: '服务器内部错误',
         data: null,
       },
       { status: 500 }

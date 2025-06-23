@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json(
         {
           code: 1,
-          message: '角色不存在',
+          msg: '角色不存在',
           data: null,
         },
         { status: 404 }
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json({
       code: 0,
-      message: '获取成功',
+      msg: '获取成功',
       data: formattedRole,
     });
   } catch (error) {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json(
       {
         code: 1,
-        message: '服务器内部错误',
+        msg: '服务器内部错误',
         data: null,
       },
       { status: 500 }
@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json(
         {
           code: 1,
-          message: '缺少必填字段',
+          msg: '缺少必填字段',
           data: null,
         },
         { status: 400 }
@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json(
         {
           code: 1,
-          message: '角色不存在',
+          msg: '角色不存在',
           data: null,
         },
         { status: 404 }
@@ -102,7 +102,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         return NextResponse.json(
           {
             code: 1,
-            message: '角色名已存在',
+            msg: '角色名已存在',
             data: null,
           },
           { status: 400 }
@@ -120,13 +120,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       },
     });
 
+    // 删除现有权限关联
+    await prisma.rolePermission.deleteMany({
+      where: { roleId: id },
+    });
+
     // 如果提供了权限列表，更新权限关联
     if (permissions.length > 0) {
-      // 删除现有权限关联
-      await prisma.rolePermission.deleteMany({
-        where: { roleId: id },
-      });
-
       // 获取权限ID
       const permissionRecords = await prisma.permission.findMany({
         where: {
@@ -158,7 +158,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     return NextResponse.json({
       code: 0,
-      message: '更新成功',
+      msg: '更新成功',
       data: formattedRole,
     });
   } catch (error) {
@@ -166,7 +166,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json(
       {
         code: 1,
-        message: '服务器内部错误',
+        msg: '服务器内部错误',
         data: null,
       },
       { status: 500 }
@@ -188,7 +188,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json(
         {
           code: 1,
-          message: '角色不存在',
+          msg: '角色不存在',
           data: null,
         },
         { status: 404 }
@@ -204,7 +204,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json(
         {
           code: 1,
-          message: '该角色正在被使用，无法删除',
+          msg: '该角色正在被使用，无法删除',
           data: null,
         },
         { status: 400 }
@@ -223,7 +223,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({
       code: 0,
-      message: '删除成功',
+      msg: '删除成功',
       data: null,
     });
   } catch (error) {
@@ -231,7 +231,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json(
       {
         code: 1,
-        message: '服务器内部错误',
+        msg: '服务器内部错误',
         data: null,
       },
       { status: 500 }
