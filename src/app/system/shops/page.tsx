@@ -1,6 +1,8 @@
 'use client';
 
+// 第三方库
 import React, { useState } from 'react';
+import { useRequest } from 'ahooks';
 import { Button, Form, Input, message, Space, Avatar, Popconfirm, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
@@ -11,23 +13,20 @@ import {
   ReloadOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
-import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 
-/**
- * Components
- */
+// Utils工具类
+import { Pagination } from '@/components/ui/pagination';
 import ShopFormDrawer from './components/shop-form-drawer';
 
-/**
- * APIs
- */
+// APIs接口
 import { getShops, deleteShop, type Shop, type ShopsParams } from '@/services/shops';
 
 const ShopsPage: React.FC = () => {
+  // Hooks
   const [searchForm] = Form.useForm();
 
+  // State
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingShop, setEditingShop] = useState<Shop | null>(null);
   const [searchParams, setSearchParams] = useState<ShopsParams>({
@@ -35,7 +34,7 @@ const ShopsPage: React.FC = () => {
     pageSize: 10,
   });
 
-  // 获取店铺列表
+  // Requests
   const {
     data: shopsData,
     loading,
@@ -44,7 +43,6 @@ const ShopsPage: React.FC = () => {
     refreshDeps: [searchParams],
   });
 
-  // 删除店铺
   const { run: handleDelete } = useRequest(deleteShop, {
     manual: true,
     onSuccess: () => {
@@ -56,7 +54,7 @@ const ShopsPage: React.FC = () => {
     },
   });
 
-  // 搜索功能
+  // Event Handlers
   const handleSearch = (values: any) => {
     setSearchParams({
       ...searchParams,
@@ -65,7 +63,6 @@ const ShopsPage: React.FC = () => {
     });
   };
 
-  // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
     setSearchParams({
@@ -74,19 +71,16 @@ const ShopsPage: React.FC = () => {
     });
   };
 
-  // 打开创建抽屉
   const handleCreateClick = () => {
     setEditingShop(null);
     setDrawerVisible(true);
   };
 
-  // 打开编辑抽屉
   const handleEditClick = (record: Shop) => {
     setEditingShop(record);
     setDrawerVisible(true);
   };
 
-  // 关闭抽屉
   const closeDrawer = (reload?: boolean) => {
     setDrawerVisible(false);
     setEditingShop(null);
@@ -95,7 +89,7 @@ const ShopsPage: React.FC = () => {
     }
   };
 
-  // 表格列定义
+  // Table Columns
   const columns: ProColumns<Shop>[] = [
     {
       title: '店铺头像',
@@ -156,7 +150,7 @@ const ShopsPage: React.FC = () => {
     },
   ];
 
-  // ProTable 配置
+  // ProTable Props
   const proTableProps: ProTableProps<Shop, any> = {
     columns,
     dataSource: shopsData?.data?.data?.list || [],

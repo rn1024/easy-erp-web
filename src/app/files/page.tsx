@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRequest } from 'ahooks';
 import {
   App,
@@ -24,15 +25,25 @@ import {
   CopyOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { useState } from 'react';
-import type { UploadFile, UploadProps } from 'antd';
 
 /**
  * APIs
  */
 import axios from '@/services/index';
 
-const { Text } = Typography;
+// 格式化文件大小
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+/**
+ * Types
+ */
+import type { UploadFile, UploadProps } from 'antd';
 
 interface UploadedFile {
   id: string;
@@ -44,11 +55,20 @@ interface UploadedFile {
 }
 
 const FilesPage: React.FC = () => {
+  /**
+   * Hooks
+   */
   const { message } = App.useApp();
+
+  /**
+   * State
+   */
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
-  // 文件上传API
+  /**
+   * Requests
+   */
   const { loading: uploadLoading, run: uploadFile } = useRequest(
     async (file: File) => {
       const formData = new FormData();
@@ -89,6 +109,9 @@ const FilesPage: React.FC = () => {
     }
   );
 
+  /**
+   * UploadProps
+   */
   const uploadProps: UploadProps = {
     name: 'file',
     fileList,
@@ -126,6 +149,9 @@ const FilesPage: React.FC = () => {
     },
   };
 
+  /**
+   * Event Handlers
+   */
   const handleUpload = () => {
     if (fileList.length === 0) {
       message.warning('请先选择文件');
@@ -149,20 +175,14 @@ const FilesPage: React.FC = () => {
     message.success('文件已删除');
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   const refresh = () => {
     // 刷新文件列表
     setUploadedFiles([]);
     setFileList([]);
     message.success('页面已刷新');
   };
+
+  const { Text } = Typography;
 
   return (
     <>

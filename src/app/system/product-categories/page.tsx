@@ -1,6 +1,8 @@
 'use client';
 
+// 第三方库
 import React, { useState } from 'react';
+import { useRequest } from 'ahooks';
 import { Button, Form, Input, Space, Popconfirm, message, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
@@ -10,32 +12,13 @@ import {
   SearchOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 
-/**
- * Components
- */
+// Utils工具类
+import { Pagination } from '@/components/ui/pagination';
 import CategoryFormDrawer from './components/category-form-drawer';
 
-interface ProductCategory {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  _count: {
-    products: number;
-  };
-}
-
-interface SearchFormData {
-  name?: string;
-  page?: number;
-  pageSize?: number;
-}
-
-// 内嵌API调用函数
+// 工具函数定义
 const getCategoryList = async (params: any = {}) => {
   const response = await fetch('/api/v1/product-categories?' + new URLSearchParams(params), {
     headers: {
@@ -79,8 +62,28 @@ const deleteCategory = async (id: string) => {
   return response.json();
 };
 
-export default function ProductCategoriesPage() {
+// Types类型定义
+interface ProductCategory {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    products: number;
+  };
+}
+
+interface SearchFormData {
+  name?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+const ProductCategoriesPage: React.FC = () => {
+  // Hooks
   const [searchForm] = Form.useForm();
+
+  // State
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ProductCategory | null>(null);
   const [searchParams, setSearchParams] = useState<SearchFormData>({
@@ -88,7 +91,7 @@ export default function ProductCategoriesPage() {
     pageSize: 20,
   });
 
-  // 获取分类列表
+  // Requests
   const {
     data: categoryData,
     loading,
@@ -97,7 +100,6 @@ export default function ProductCategoriesPage() {
     refreshDeps: [searchParams],
   });
 
-  // 删除分类
   const { run: handleDelete } = useRequest(deleteCategory, {
     manual: true,
     onSuccess: (result) => {
@@ -113,6 +115,7 @@ export default function ProductCategoriesPage() {
     },
   });
 
+  // Event Handlers
   const handleSearch = (values: SearchFormData) => {
     setSearchParams({ ...searchParams, ...values, page: 1 });
   };
@@ -140,6 +143,7 @@ export default function ProductCategoriesPage() {
     }
   };
 
+  // Table Columns
   const columns: ProColumns<ProductCategory>[] = [
     {
       title: 'ID',
@@ -202,10 +206,10 @@ export default function ProductCategoriesPage() {
     },
   ];
 
+  // ProTable Props
   const categories = categoryData?.data?.list || [];
   const meta = categoryData?.data?.meta || {};
 
-  // ProTable 配置
   const proTableProps: ProTableProps<ProductCategory, any> = {
     columns,
     dataSource: categories,
@@ -263,4 +267,6 @@ export default function ProductCategoriesPage() {
       <CategoryFormDrawer open={drawerVisible} entity={editingRecord} closeDrawer={closeDrawer} />
     </>
   );
-}
+};
+
+export default ProductCategoriesPage;

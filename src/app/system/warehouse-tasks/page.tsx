@@ -54,7 +54,7 @@ import { getProductsApi } from '@/services/products';
 
 const { Option } = Select;
 
-export default function WarehouseTasksPage() {
+const WarehouseTasksPage: React.FC = () => {
   const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -66,7 +66,6 @@ export default function WarehouseTasksPage() {
     pageSize: 10,
   });
 
-  // 获取仓库任务列表
   const {
     data: tasksData,
     loading,
@@ -75,13 +74,10 @@ export default function WarehouseTasksPage() {
     refreshDeps: [searchParams],
   });
 
-  // 获取店铺列表
   const { data: shopsData } = useRequest(() => getShops({}));
 
-  // 获取产品分类列表
   const { data: categoriesData } = useRequest(() => getProductCategoriesApi());
 
-  // 获取产品列表
   const { data: productsData } = useRequest(() => getProductsApi());
 
   const shops = shopsData?.data?.data?.list || [];
@@ -90,7 +86,6 @@ export default function WarehouseTasksPage() {
   const tasks = tasksData?.data?.list || [];
   const total = tasksData?.data?.total || 0;
 
-  // 搜索处理
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
     setSearchParams({
@@ -100,7 +95,6 @@ export default function WarehouseTasksPage() {
     });
   };
 
-  // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
     setSearchParams({
@@ -109,7 +103,6 @@ export default function WarehouseTasksPage() {
     });
   };
 
-  // 显示新增/编辑弹窗
   const showModal = (task?: WarehouseTaskInfo) => {
     setEditingTask(task || null);
     setIsModalVisible(true);
@@ -129,7 +122,6 @@ export default function WarehouseTasksPage() {
     }
   };
 
-  // 显示详情弹窗
   const showDetailModal = async (taskId: string) => {
     try {
       const response = await getWarehouseTaskApi(taskId);
@@ -142,7 +134,6 @@ export default function WarehouseTasksPage() {
     }
   };
 
-  // 创建/更新仓库任务
   const handleSubmit = async (values: any) => {
     try {
       if (editingTask) {
@@ -176,7 +167,6 @@ export default function WarehouseTasksPage() {
     }
   };
 
-  // 删除仓库任务
   const handleDelete = async (id: string) => {
     try {
       await deleteWarehouseTaskApi(id);
@@ -294,7 +284,6 @@ export default function WarehouseTasksPage() {
     },
   ];
 
-  // ProTable 配置
   const proTableProps: ProTableProps<WarehouseTaskInfo, any> = {
     columns,
     dataSource: tasks,
@@ -317,7 +306,6 @@ export default function WarehouseTasksPage() {
 
   return (
     <>
-      {/* 搜索区域 */}
       <ProCard className="mb-16">
         <Form form={searchForm} layout="inline">
           <Flex gap={16} wrap={true}>
@@ -363,10 +351,8 @@ export default function WarehouseTasksPage() {
         </Form>
       </ProCard>
 
-      {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 分页区域 */}
       <Pagination
         current={Number(searchParams.page) || 1}
         size={Number(searchParams.pageSize) || 10}
@@ -383,7 +369,6 @@ export default function WarehouseTasksPage() {
         isLoading={loading}
       />
 
-      {/* 新增/编辑弹窗 */}
       <Modal
         title={editingTask ? '编辑仓库任务' : '新增仓库任务'}
         open={isModalVisible}
@@ -505,7 +490,6 @@ export default function WarehouseTasksPage() {
         </Form>
       </Modal>
 
-      {/* 详情弹窗 */}
       <Modal
         title="仓库任务详情"
         open={isDetailModalVisible}
@@ -566,4 +550,6 @@ export default function WarehouseTasksPage() {
       </Modal>
     </>
   );
-}
+};
+
+export default WarehouseTasksPage;

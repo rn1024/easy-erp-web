@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRequest, useSetState } from 'ahooks';
 import { App, Button, Col, Form, Input, Select, Space, Tag, Tooltip, Popconfirm, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
@@ -12,9 +13,6 @@ import {
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { useState } from 'react';
-import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 
 /**
  * Components
@@ -33,6 +31,12 @@ import {
   type RoleDataResult,
 } from '@/services/roles';
 
+/**
+ * Types
+ */
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
+
 interface RolesParams {
   page: number;
   limit: number;
@@ -40,15 +44,28 @@ interface RolesParams {
   name?: string;
 }
 
+interface State {
+  drawerVisible: boolean;
+  permissionDrawerVisible: boolean;
+  editingRecord: RoleDataResult | null;
+  currentRoleId: string;
+  currentRoleName: string;
+}
+
 const RolesPage: React.FC = () => {
+  /**
+   * Hooks
+   */
   const { message } = App.useApp();
   const [searchForm] = Form.useForm();
 
-  const [state, setState] = useSetState({
+  /**
+   * State
+   */
+  const [state, setState] = useSetState<State>({
     drawerVisible: false,
-    editingRecord: null as RoleDataResult | null,
-    selectedRowKeys: [] as string[],
     permissionDrawerVisible: false,
+    editingRecord: null,
     currentRoleId: '',
     currentRoleName: '',
   });
@@ -58,7 +75,9 @@ const RolesPage: React.FC = () => {
     limit: 20,
   });
 
-  // 获取角色列表
+  /**
+   * Requests
+   */
   const {
     data: rolesData,
     loading,
@@ -67,157 +86,74 @@ const RolesPage: React.FC = () => {
     refreshDeps: [searchParams],
   });
 
-  // 获取权限列表
-  const { data: permissionsData, loading: permissionsLoading } = useRequest(
-    () => getPermissionsApi(),
+  const { data: permissionsData, loading: permissionsLoading } = useRequest(getPermissionsApi);
+
+  const { run: handleDelete } = useRequest(
+    async (id: string) => {
+      await deleteRoleByIdApi(id);
+      message.success('角色删除成功');
+    },
     {
-      onSuccess: (data) => {
-        console.log('权限数据:', data);
+      manual: true,
+      onSuccess: () => {
+        refresh();
+      },
+      onError: (error: any) => {
+        message.error(error.response?.data?.msg || '删除失败');
       },
     }
   );
 
-  // 删除角色
-  const { run: handleDelete } = useRequest(deleteRoleByIdApi, {
-    manual: true,
-    onSuccess: (response: any) => {
-      if (response?.data?.code === 0) {
-        message.success('删除成功');
-        refresh();
-      } else {
-        message.error(response?.data?.msg || '删除失败');
-      }
+  const { run: fetchRoleDetail } = useRequest(
+    async (id: string) => {
+      const res = await queryRoleByIdApi(id);
+      setState({ editingRecord: res.data.data, drawerVisible: true });
     },
-  });
+    {
+      manual: true,
+      onError: (error: any) => {
+        message.error(error.response?.data?.msg || '获取角色详情失败');
+      },
+    }
+  );
 
-  // 搜索处理
+  /**
+   * Event Handlers
+   */
+  const handleCreateClick = () => {
+    setState({ editingRecord: null, drawerVisible: true });
+  };
+
+  const handleEditClick = (record: RoleDataResult) => {
+    fetchRoleDetail(record.id.toString());
+  };
+
+  const handleDeleteClick = (record: RoleDataResult) => {
+    handleDelete(record.id.toString());
+  };
+
+  const handleManagePermissions = (record: RoleDataResult) => {
+    setState({
+      currentRoleId: record.id.toString(),
+      currentRoleName: record.name,
+      permissionDrawerVisible: true,
+    });
+  };
+
   const handleSearch = (values: any) => {
     setSearchParams({
       ...searchParams,
       page: 1,
-      ...values,
+      name: values.name,
+      status: values.status,
     });
   };
 
-  // 重置搜索
   const handleResetSearch = () => {
     searchForm.resetFields();
     setSearchParams({
       page: 1,
       limit: 20,
-    });
-  };
-
-  const columns: ProColumns<RoleDataResult>[] = [
-    {
-      title: 'ID',
-      dataIndex: 'id',
-      width: 80,
-    },
-    {
-      title: '角色名称',
-      dataIndex: 'name',
-      render: (_, record) => (
-        <Space>
-          <UserOutlined />
-          <span>{record.name}</span>
-        </Space>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      render: (_, record) => (
-        <Tag color={record.status === 1 ? 'green' : 'red'}>
-          {record.status === 1 ? '启用' : '禁用'}
-        </Tag>
-      ),
-    },
-    {
-      title: '权限数量',
-      dataIndex: 'permissions',
-      width: 120,
-      render: (_, record) => <Tag color="blue">{record.permissions?.length || 0} 个权限</Tag>,
-    },
-    {
-      title: '权限详情',
-      dataIndex: 'permissions',
-      width: 300,
-      render: (_, record) => (
-        <div>
-          {record.permissions?.slice(0, 3).map((permission) => (
-            <Tag key={permission} style={{ marginBottom: 4, fontSize: '12px' }}>
-              {permission}
-            </Tag>
-          ))}
-          {(record.permissions?.length || 0) > 3 && (
-            <Tag color="default" style={{ fontSize: '12px' }}>
-              +{(record.permissions?.length || 0) - 3} 更多
-            </Tag>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      width: 180,
-      render: (_, record) => new Date(record.created_at).toLocaleString(),
-    },
-    {
-      title: '操作',
-      width: 200,
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="编辑">
-            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          </Tooltip>
-          <Tooltip title="权限管理">
-            <Button
-              type="text"
-              icon={<SettingOutlined />}
-              onClick={() => handlePermissionManage(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="确定删除此角色吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Tooltip title="删除">
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
-  const handleCreate = () => {
-    setState({ drawerVisible: true, editingRecord: null });
-  };
-
-  const handleEdit = async (record: RoleDataResult) => {
-    try {
-      const response = await queryRoleByIdApi(record.id);
-      if (response?.data?.code === 0) {
-        setState({
-          drawerVisible: true,
-          editingRecord: response.data.data,
-        });
-      }
-    } catch (error) {
-      message.error('获取角色信息失败');
-    }
-  };
-
-  const handlePermissionManage = (record: RoleDataResult) => {
-    setState({
-      permissionDrawerVisible: true,
-      currentRoleId: record.id,
-      currentRoleName: record.name,
     });
   };
 
@@ -228,61 +164,138 @@ const RolesPage: React.FC = () => {
     }
   };
 
-  const closePermissionDrawer = () => {
-    setState({ permissionDrawerVisible: false });
-  };
-
-  // 批量操作
-  const handleBatchEnable = () => {
-    if (state.selectedRowKeys.length === 0) {
-      message.warning('请选择要操作的角色');
-      return;
+  const closePermissionDrawer = (reload?: boolean) => {
+    setState({ permissionDrawerVisible: false, currentRoleId: '', currentRoleName: '' });
+    if (reload) {
+      refresh();
     }
-    message.info('批量启用功能开发中...');
   };
 
-  const handleBatchDisable = () => {
-    if (state.selectedRowKeys.length === 0) {
-      message.warning('请选择要操作的角色');
-      return;
-    }
-    message.info('批量禁用功能开发中...');
-  };
+  /**
+   * Table Columns
+   */
+  const columns: ProColumns<RoleDataResult>[] = [
+    {
+      title: '序号',
+      dataIndex: 'index',
+      valueType: 'index',
+      width: 50,
+      align: 'center',
+    },
+    {
+      title: '角色名称',
+      dataIndex: 'name',
+      ellipsis: true,
+      render: (_, record: RoleDataResult) => (
+        <Space>
+          <UserOutlined />
+          <span>{record.name}</span>
+        </Space>
+      ),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 80,
+      align: 'center',
+      render: (_, record: RoleDataResult) => (
+        <Tag color={record.status === 1 ? 'green' : 'red'}>
+          {record.status === 1 ? '启用' : '禁用'}
+        </Tag>
+      ),
+    },
+    {
+      title: '权限数量',
+      dataIndex: 'permissions',
+      width: 100,
+      align: 'center',
+      render: (_, record: RoleDataResult) => (
+        <Tag color="blue">{record.permissions ? record.permissions.length : 0}</Tag>
+      ),
+    },
+    {
+      title: '操作员',
+      dataIndex: 'operator',
+      width: 120,
+      ellipsis: true,
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      width: 180,
+      valueType: 'dateTime',
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updated_at',
+      width: 180,
+      valueType: 'dateTime',
+    },
+    {
+      title: '操作',
+      valueType: 'option',
+      width: 180,
+      fixed: 'right',
+      render: (_, record: RoleDataResult) => [
+        <Button
+          key="edit"
+          type="link"
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => handleEditClick(record)}
+        >
+          编辑
+        </Button>,
+        <Button
+          key="permission"
+          type="link"
+          size="small"
+          icon={<SettingOutlined />}
+          onClick={() => handleManagePermissions(record)}
+        >
+          权限
+        </Button>,
+        <Popconfirm
+          key="delete"
+          title="确定要删除这个角色吗？"
+          onConfirm={() => handleDeleteClick(record)}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+            删除
+          </Button>
+        </Popconfirm>,
+      ],
+    },
+  ];
 
-  // ProTable 配置
-  const proTableProps: ProTableProps<RoleDataResult, any> = {
+  /**
+   * ProTableProps
+   */
+  const proTableProps: ProTableProps<RoleDataResult, RolesParams> = {
     columns,
     dataSource: rolesData?.data?.data?.list || [],
     loading,
     rowKey: 'id',
-    search: false,
     pagination: false,
+    search: false,
     options: {
       reload: refresh,
+      density: false,
+      fullScreen: false,
+      setting: false,
     },
     toolBarRender: () => [
-      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
         新建角色
       </Button>,
       <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
         刷新
       </Button>,
     ],
-    rowSelection: {
-      selectedRowKeys: state.selectedRowKeys,
-      onChange: (keys) => setState({ selectedRowKeys: keys as string[] }),
-    },
-    tableAlertRender: ({ selectedRowKeys }) => (
-      <Space>
-        <span>已选择 {selectedRowKeys.length} 项</span>
-        <Button type="link" size="small" onClick={handleBatchEnable}>
-          批量启用
-        </Button>
-        <Button type="link" size="small" onClick={handleBatchDisable}>
-          批量禁用
-        </Button>
-      </Space>
-    ),
+    scroll: { x: 1000 },
+    size: 'middle',
   };
 
   return (

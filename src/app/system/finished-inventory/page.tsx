@@ -99,7 +99,7 @@ const getCategories = async () => {
   return result.data?.list || [];
 };
 
-export default function FinishedInventoryPage() {
+const FinishedInventoryPage: React.FC = () => {
   const [searchForm] = Form.useForm();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinishedInventoryItem | null>(null);
@@ -371,4 +371,6 @@ export default function FinishedInventoryPage() {
       />
     </>
   );
-}
+};
+
+export default FinishedInventoryPage;

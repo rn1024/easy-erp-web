@@ -1,5 +1,6 @@
 'use client';
 
+// 第三方库
 import React, { useState, useCallback } from 'react';
 import { useRequest } from 'ahooks';
 import { App, Button, Space, Form, Input, Tag, Avatar, Tooltip, Popconfirm, Flex } from 'antd';
@@ -13,14 +14,12 @@ import {
   GlobalOutlined,
 } from '@ant-design/icons';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 
-/**
- * Components
- */
+// Utils工具类
+import { Pagination } from '@/components/ui/pagination';
 import SupplierFormDrawer from './components/supplier-form-drawer';
 
-// 服务
+// APIs接口
 import {
   getSuppliers,
   deleteSupplier as deleteSupplierApi,
@@ -28,15 +27,17 @@ import {
   type SuppliersParams,
 } from '@/services/suppliers';
 
+// Types类型定义
 interface SearchFormData {
   nickname?: string;
 }
 
 const SuppliersPage: React.FC = () => {
+  // Hooks
   const { message } = App.useApp();
   const [searchForm] = Form.useForm();
 
-  // 状态管理
+  // State
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [searchParams, setSearchParams] = useState<SuppliersParams>({
@@ -44,7 +45,7 @@ const SuppliersPage: React.FC = () => {
     pageSize: 10,
   });
 
-  // 获取供应商列表
+  // Requests
   const {
     data: suppliersData,
     loading,
@@ -57,7 +58,6 @@ const SuppliersPage: React.FC = () => {
     },
   });
 
-  // 删除供应商
   const { loading: deleting, run: deleteSupplier } = useRequest(deleteSupplierApi, {
     manual: true,
     onSuccess: (response: any) => {
@@ -74,7 +74,7 @@ const SuppliersPage: React.FC = () => {
     },
   });
 
-  // 搜索处理
+  // Event Handlers
   const handleSearch = useCallback((values: SearchFormData) => {
     setSearchParams((prev: SuppliersParams) => ({
       ...prev,
@@ -83,7 +83,6 @@ const SuppliersPage: React.FC = () => {
     }));
   }, []);
 
-  // 重置搜索
   const handleResetSearch = useCallback(() => {
     searchForm.resetFields();
     setSearchParams({
@@ -92,13 +91,11 @@ const SuppliersPage: React.FC = () => {
     });
   }, [searchForm]);
 
-  // 打开创建/编辑抽屉
   const handleOpenDrawer = useCallback((supplier?: Supplier) => {
     setEditingSupplier(supplier || null);
     setDrawerVisible(true);
   }, []);
 
-  // 关闭抽屉
   const closeDrawer = useCallback(
     (reload?: boolean) => {
       setDrawerVisible(false);
@@ -110,7 +107,6 @@ const SuppliersPage: React.FC = () => {
     [refresh]
   );
 
-  // 删除供应商
   const handleDelete = useCallback(
     (id: string) => {
       deleteSupplier(id);
@@ -118,7 +114,7 @@ const SuppliersPage: React.FC = () => {
     [deleteSupplier]
   );
 
-  // 表格列定义
+  // Table Columns
   const columns: ProColumns<Supplier>[] = [
     {
       title: '供应商信息',
@@ -223,10 +219,10 @@ const SuppliersPage: React.FC = () => {
     },
   ];
 
+  // ProTable Props
   const suppliers = suppliersData?.data?.data?.list || [];
   const meta = suppliersData?.data?.data?.meta || { total: 0, page: 1, pageSize: 10 };
 
-  // ProTable 配置
   const proTableProps: ProTableProps<Supplier, any> = {
     columns,
     dataSource: suppliers,

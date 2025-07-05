@@ -51,7 +51,7 @@ import { getShops } from '@/services/shops';
 const { Option } = Select;
 const { TabPane } = Tabs;
 
-export default function FinancialReportsPage() {
+const FinancialReportsPage: React.FC = () => {
   const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -448,4 +448,6 @@ export default function FinancialReportsPage() {
       </Modal>
     </>
   );
-}
+};
+
+export default FinancialReportsPage;

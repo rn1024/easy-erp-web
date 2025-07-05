@@ -141,7 +141,7 @@ const getProducts = async (categoryId: string) => {
   return result.data?.list || [];
 };
 
-export default function SpareInventoryPage() {
+const SpareInventoryPage: React.FC = () => {
   const [searchForm] = Form.useForm();
   const [modalForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -559,4 +559,6 @@ export default function SpareInventoryPage() {
       </Modal>
     </>
   );
-}
+};
+
+export default SpareInventoryPage;

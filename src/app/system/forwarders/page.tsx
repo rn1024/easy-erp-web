@@ -12,18 +12,16 @@ import {
   SearchOutlined,
   TruckOutlined,
 } from '@ant-design/icons';
-import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 
 /**
  * Components
  */
 import ForwarderFormDrawer from './components/forwarder-form-drawer';
-import type { Forwarder, ForwardersParams } from './components/forwarder-form-drawer';
 
-// 使用货代API（复用forwarders路由）
+/**
+ * APIs
+ */
 import axios from '@/services/index';
-import type { ResType } from '@/types/api';
 
 // 获取货代列表
 const getForwarders = (params: ForwardersParams) => {
@@ -50,84 +48,116 @@ const deleteForwarder = (id: string) => {
   });
 };
 
-interface SearchFormData {
-  nickname?: string;
-}
+// 获取单个货代信息
+const getForwarder = (id: string) => {
+  return axios<ResType<Forwarder>>(`/forwarding-agents/${id}`, {
+    method: 'get',
+  });
+};
+
+/**
+ * Types
+ */
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
+import type { Forwarder, ForwardersParams } from './components/forwarder-form-drawer';
+import type { ResType } from '@/types/api';
 
 const ForwardersPage: React.FC = () => {
+  /**
+   * Hooks
+   */
   const { message } = App.useApp();
   const [searchForm] = Form.useForm();
 
-  // 状态管理
+  /**
+   * State
+   */
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingForwarder, setEditingForwarder] = useState<Forwarder | null>(null);
   const [searchParams, setSearchParams] = useState<ForwardersParams>({
     page: 1,
-    pageSize: 10,
+    pageSize: 20,
   });
 
-  // 获取货代列表
+  /**
+   * Requests
+   */
   const {
     data: forwardersData,
     loading,
     refresh,
   } = useRequest(() => getForwarders(searchParams), {
     refreshDeps: [searchParams],
-    onError: (error) => {
-      console.error('获取货代列表失败:', error);
-      message.error('获取货代列表失败');
-    },
   });
 
-  // 删除货代
-  const { loading: deleting, run: deleteForwarderRun } = useRequest(deleteForwarder, {
+  const { run: handleDelete } = useRequest(deleteForwarder, {
     manual: true,
-    onSuccess: (response: any) => {
-      if (response?.data?.code === 200) {
-        message.success('删除货代成功');
-        refresh();
-      } else {
-        message.error(response?.data?.msg || '删除货代失败');
-      }
+    onSuccess: () => {
+      message.success('货代删除成功');
+      refresh();
     },
-    onError: (error) => {
-      console.error('删除货代失败:', error);
-      message.error('删除货代失败');
+    onError: (error: any) => {
+      message.error(error.response?.data?.msg || '删除失败');
     },
   });
 
-  // 搜索处理
-  const handleSearch = useCallback(() => {
-    const values = searchForm.getFieldsValue();
-    setSearchParams((prev: ForwardersParams) => ({
-      ...prev,
-      page: 1,
-      nickname: values.nickname || undefined,
-    }));
-  }, [searchForm]);
+  const { run: fetchForwarderDetail } = useRequest(
+    async (id: string) => {
+      const res = await getForwarder(id);
+      setEditingForwarder(res.data.data);
+      setDrawerVisible(true);
+    },
+    {
+      manual: true,
+      onError: (error: any) => {
+        message.error(error.response?.data?.msg || '获取货代详情失败');
+      },
+    }
+  );
 
-  // 重置搜索
-  const handleResetSearch = useCallback(() => {
-    searchForm.resetFields();
-    setSearchParams({
-      page: 1,
-      pageSize: 10,
-    });
-  }, [searchForm]);
-
-  // 打开创建抽屉
-  const handleCreate = useCallback(() => {
+  /**
+   * Event Handlers
+   */
+  const handleCreateClick = useCallback(() => {
     setEditingForwarder(null);
     setDrawerVisible(true);
   }, []);
 
-  // 打开编辑抽屉
-  const handleEdit = useCallback((forwarder: Forwarder) => {
-    setEditingForwarder(forwarder);
-    setDrawerVisible(true);
-  }, []);
+  const handleEditClick = useCallback(
+    (forwarder: Forwarder) => {
+      fetchForwarderDetail(forwarder.id);
+    },
+    [fetchForwarderDetail]
+  );
 
-  // 关闭抽屉
+  const handleDeleteClick = useCallback(
+    (forwarder: Forwarder) => {
+      handleDelete(forwarder.id);
+    },
+    [handleDelete]
+  );
+
+  const handleSearch = useCallback(
+    (values: any) => {
+      setSearchParams({
+        ...searchParams,
+        page: 1,
+        nickname: values.nickname?.trim(),
+        companyName: values.companyName?.trim(),
+      });
+    },
+    [searchParams]
+  );
+
+  const handleResetSearch = useCallback(() => {
+    searchForm.resetFields();
+    setSearchParams({
+      page: 1,
+      pageSize: 20,
+    });
+  }, [searchForm]);
+
   const closeDrawer = useCallback(
     (reload?: boolean) => {
       setDrawerVisible(false);
@@ -139,152 +169,155 @@ const ForwardersPage: React.FC = () => {
     [refresh]
   );
 
-  // 删除货代
-  const handleDelete = useCallback(
-    (id: string) => {
-      deleteForwarderRun(id);
-    },
-    [deleteForwarderRun]
-  );
-
-  // 表格列定义
+  /**
+   * Table Columns
+   */
   const columns: ProColumns<Forwarder>[] = [
     {
+      title: '序号',
+      dataIndex: 'index',
+      valueType: 'index',
+      width: 50,
+      align: 'center',
+    },
+    {
       title: '货代信息',
+      dataIndex: 'nickname',
       width: 200,
-      render: (_, record) => (
+      render: (_, record: Forwarder) => (
         <Space>
-          <Avatar src={record.avatarUrl} icon={<TruckOutlined />} size="small" />
+          <Avatar
+            size={40}
+            src={record.avatarUrl}
+            icon={<TruckOutlined />}
+            style={{ backgroundColor: '#1890ff' }}
+          />
           <div>
-            <div style={{ fontWeight: 'bold' }}>{record.nickname}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>{record.companyName}</div>
+            <div style={{ fontWeight: 500 }}>{record.nickname}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              {record.companyName || '个人货代'}
+            </div>
           </div>
         </Space>
       ),
     },
     {
-      title: '联系信息',
-      width: 160,
-      render: (_, record) => (
-        <div>
-          <div>{record.contactPerson}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.contactPhone}</div>
-        </div>
+      title: '联系人',
+      dataIndex: 'contactPerson',
+      width: 120,
+      ellipsis: true,
+    },
+    {
+      title: '联系电话',
+      dataIndex: 'contactPhone',
+      width: 140,
+      ellipsis: true,
+    },
+    {
+      title: '公司名称',
+      dataIndex: 'companyName',
+      width: 180,
+      ellipsis: true,
+      render: (_, record: Forwarder) => (
+        <Tooltip title={record.companyName}>
+          <span>{record.companyName || '-'}</span>
+        </Tooltip>
       ),
     },
     {
       title: '统一社会信用代码',
       dataIndex: 'creditCode',
-      width: 180,
-      render: (_, record) => (
-        <Tooltip title={record.creditCode}>
-          <Tag color="green">{record.creditCode}</Tag>
-        </Tooltip>
-      ),
-    },
-    {
-      title: '银行信息',
-      width: 200,
-      render: (_, record) => (
-        <div>
-          <div>{record.bankName}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.bankAccount}</div>
-        </div>
-      ),
+      width: 150,
+      ellipsis: true,
+      render: (_, record: Forwarder) => <span>{record.creditCode || '-'}</span>,
     },
     {
       title: '操作员',
       dataIndex: 'operator',
-      width: 100,
-      render: (_, record) => record.operator?.name || '-',
+      width: 120,
+      ellipsis: true,
+      render: (_, record: Forwarder) => <span>{record.operator?.name || '-'}</span>,
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
-      width: 120,
-      render: (_, record) => new Date(record.createdAt).toLocaleDateString(),
+      width: 180,
+      valueType: 'dateTime',
     },
     {
       title: '操作',
-      width: 120,
+      valueType: 'option',
+      width: 160,
       fixed: 'right',
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="编辑">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title="删除">
-            <Popconfirm
-              title="确定要删除这个货代吗？"
-              description="删除后将无法恢复"
-              onConfirm={() => handleDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-                loading={deleting}
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
-      ),
+      render: (_, record: Forwarder) => [
+        <Button
+          key="edit"
+          type="link"
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => handleEditClick(record)}
+        >
+          编辑
+        </Button>,
+        <Popconfirm
+          key="delete"
+          title="确定要删除这个货代吗？"
+          onConfirm={() => handleDeleteClick(record)}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+            删除
+          </Button>
+        </Popconfirm>,
+      ],
     },
   ];
 
-  const forwarders = forwardersData?.data?.data?.list || [];
-  const meta = forwardersData?.data?.data?.meta || { total: 0, page: 1, pageSize: 10 };
-
-  // ProTable 配置
-  const proTableProps: ProTableProps<Forwarder, any> = {
+  /**
+   * ProTableProps
+   */
+  const proTableProps: ProTableProps<Forwarder, ForwardersParams> = {
     columns,
-    dataSource: forwarders,
+    dataSource: forwardersData?.data?.data?.list || [],
     loading,
     rowKey: 'id',
-    search: false,
     pagination: false,
+    search: false,
     options: {
       reload: refresh,
+      density: false,
+      fullScreen: false,
+      setting: false,
     },
     toolBarRender: () => [
-      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
         新建货代
       </Button>,
-      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
         刷新
       </Button>,
     ],
-    scroll: { x: 1000 },
+    scroll: { x: 1200 },
+    size: 'middle',
   };
 
   return (
     <>
       {/* 搜索区域 */}
       <ProCard className="mb-16">
-        <Form form={searchForm} layout="inline">
+        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
           <Flex gap={16} wrap={true}>
             <Form.Item name="nickname" style={{ marginRight: 0 }}>
-              <Input placeholder="请输入货代昵称" style={{ width: 200 }} allowClear />
+              <Input allowClear placeholder="货代名称" style={{ width: 150 }} />
             </Form.Item>
-            <Button
-              type="primary"
-              icon={<SearchOutlined />}
-              onClick={handleSearch}
-              loading={loading}
-            >
+            <Form.Item name="companyName" style={{ marginRight: 0 }}>
+              <Input allowClear placeholder="公司名称" style={{ width: 150 }} />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
               搜索
             </Button>
-            <Button icon={<ReloadOutlined />} onClick={handleResetSearch}>
-              重置
-            </Button>
+            <Button onClick={handleResetSearch}>重置</Button>
           </Flex>
         </Form>
       </ProCard>
@@ -294,17 +327,13 @@ const ForwardersPage: React.FC = () => {
 
       {/* 分页区域 */}
       <Pagination
-        current={Number(searchParams.page) || 1}
-        size={Number(searchParams.pageSize) || 10}
-        total={meta.total}
+        current={searchParams.page || 1}
+        size={searchParams.pageSize || 20}
+        total={forwardersData?.data?.data?.meta?.total || 0}
         hasMore={false}
         searchAfter=""
         onChange={({ page, size }) => {
-          setSearchParams({
-            ...searchParams,
-            page,
-            pageSize: size || 10,
-          });
+          setSearchParams({ ...searchParams, page, pageSize: size || 20 });
         }}
         isLoading={loading}
       />

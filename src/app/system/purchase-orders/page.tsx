@@ -65,7 +65,7 @@ interface SearchFormData {
   pageSize?: number;
 }
 
-export default function PurchaseOrdersPage() {
+const PurchaseOrdersPage: React.FC = () => {
   const [searchForm] = Form.useForm();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PurchaseOrderInfo | null>(null);
@@ -402,4 +402,6 @@ export default function PurchaseOrdersPage() {
       />
     </>
   );
-}
+};
+
+export default PurchaseOrdersPage;

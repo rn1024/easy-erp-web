@@ -1,5 +1,7 @@
 'use client';
 
+// 第三方库
+import React, { useState } from 'react';
 import { useRequest, useSetState } from 'ahooks';
 import { App, Button, Form, Input, Select, Space, Tag, Tooltip, Popconfirm, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
@@ -11,37 +13,39 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { useState } from 'react';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 
-/**
- * Components
- */
+// Utils工具类
+import { Pagination } from '@/components/ui/pagination';
 import AccountFormDrawer from './components/account-form-drawer';
 import AccountPasswordDrawer from './components/account-password-drawer';
 
-/**
- * APIs
- */
+// APIs接口
 import { accounts, dAccount, rAccount } from '@/services/account';
 import { roleListApi } from '@/services/roles';
 
-/**
- * Types
- */
+// Types类型定义
 import type { AccountsParams, AccountsResponse } from '@/services/account';
 import type { RoleDataResult } from '@/services/roles';
 
+interface State {
+  drawerVisible: boolean;
+  passwordDrawerVisible: boolean;
+  editingRecord: AccountsResponse | null;
+  selectedRowKeys: string[];
+}
+
 const AccountsPage: React.FC = () => {
+  // Hooks
   const { message } = App.useApp();
   const [searchForm] = Form.useForm();
 
-  const [state, setState] = useSetState({
+  // State
+  const [state, setState] = useSetState<State>({
     drawerVisible: false,
     passwordDrawerVisible: false,
-    editingRecord: null as AccountsResponse | null,
-    selectedRowKeys: [] as string[],
+    editingRecord: null,
+    selectedRowKeys: [],
   });
 
   const [searchParams, setSearchParams] = useState<AccountsParams>({
@@ -50,7 +54,7 @@ const AccountsPage: React.FC = () => {
     withRole: true,
   });
 
-  // 获取账户列表
+  // Requests
   const {
     data: accountsData,
     loading,
@@ -64,7 +68,6 @@ const AccountsPage: React.FC = () => {
     },
   });
 
-  // 获取角色列表
   const { data: rolesData } = useRequest(() => roleListApi({ page: 1, limit: 100 }), {
     onSuccess: (response: any) => {
       if (response?.data?.code !== 0) {
@@ -73,7 +76,6 @@ const AccountsPage: React.FC = () => {
     },
   });
 
-  // 删除账户
   const { run: handleDelete } = useRequest(dAccount, {
     manual: true,
     onSuccess: (response: any) => {
@@ -86,7 +88,7 @@ const AccountsPage: React.FC = () => {
     },
   });
 
-  // 搜索处理
+  // Event Handlers
   const handleSearch = (values: any) => {
     setSearchParams({
       ...searchParams,
@@ -95,7 +97,6 @@ const AccountsPage: React.FC = () => {
     });
   };
 
-  // 重置搜索
   const handleResetSearch = () => {
     searchForm.resetFields();
     setSearchParams({
@@ -105,6 +106,67 @@ const AccountsPage: React.FC = () => {
     });
   };
 
+  const handleCreate = () => {
+    setState({ drawerVisible: true, editingRecord: null });
+  };
+
+  const handleEdit = async (record: AccountsResponse) => {
+    try {
+      const response = await rAccount(record.id);
+      if (response?.data?.code === 0) {
+        setState({
+          drawerVisible: true,
+          editingRecord: response.data.data,
+        });
+      }
+    } catch (error) {
+      message.error('获取账户信息失败');
+    }
+  };
+
+  const handleChangePassword = (record: AccountsResponse) => {
+    setState({ passwordDrawerVisible: true, editingRecord: record });
+  };
+
+  const closeAccountDrawer = (reload?: boolean) => {
+    setState({ drawerVisible: false, editingRecord: null });
+    if (reload) {
+      refresh();
+    }
+  };
+
+  const closePasswordDrawer = (reload?: boolean) => {
+    setState({ passwordDrawerVisible: false, editingRecord: null });
+    if (reload) {
+      refresh();
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (state.selectedRowKeys.length === 0) {
+      message.warning('请选择要删除的账户');
+      return;
+    }
+    message.info('批量删除功能开发中');
+  };
+
+  const handleBatchEnable = () => {
+    if (state.selectedRowKeys.length === 0) {
+      message.warning('请选择要操作的账户');
+      return;
+    }
+    message.info('批量启用功能开发中');
+  };
+
+  const handleBatchDisable = () => {
+    if (state.selectedRowKeys.length === 0) {
+      message.warning('请选择要操作的账户');
+      return;
+    }
+    message.info('批量禁用功能开发中');
+  };
+
+  // Table Columns
   const columns: ProColumns<AccountsResponse>[] = [
     {
       title: 'ID',
@@ -172,74 +234,13 @@ const AccountsPage: React.FC = () => {
     },
   ];
 
-  const handleCreate = () => {
-    setState({ drawerVisible: true, editingRecord: null });
-  };
-
-  const handleEdit = async (record: AccountsResponse) => {
-    try {
-      const response = await rAccount(record.id);
-      if (response?.data?.code === 0) {
-        setState({
-          drawerVisible: true,
-          editingRecord: response.data.data,
-        });
-      }
-    } catch (error) {
-      message.error('获取账户信息失败');
-    }
-  };
-
-  const handleChangePassword = (record: AccountsResponse) => {
-    setState({ passwordDrawerVisible: true, editingRecord: record });
-  };
-
-  const closeAccountDrawer = (reload?: boolean) => {
-    setState({ drawerVisible: false, editingRecord: null });
-    if (reload) {
-      refresh();
-    }
-  };
-
-  const closePasswordDrawer = (reload?: boolean) => {
-    setState({ passwordDrawerVisible: false, editingRecord: null });
-    if (reload) {
-      refresh();
-    }
-  };
-
-  // 批量操作
-  const handleBatchDelete = () => {
-    if (state.selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的账户');
-      return;
-    }
-    message.info('批量删除功能开发中');
-  };
-
-  const handleBatchEnable = () => {
-    if (state.selectedRowKeys.length === 0) {
-      message.warning('请选择要操作的账户');
-      return;
-    }
-    message.info('批量启用功能开发中');
-  };
-
-  const handleBatchDisable = () => {
-    if (state.selectedRowKeys.length === 0) {
-      message.warning('请选择要操作的账户');
-      return;
-    }
-    message.info('批量禁用功能开发中');
-  };
-
+  // ProTable Props
   const roleOptions =
     rolesData?.data?.data?.list?.map((role: RoleDataResult) => ({
       label: role.name,
       value: role.id,
     })) || [];
 
-  // ProTable 配置
   const proTableProps: ProTableProps<AccountsResponse, any> = {
     columns,
     dataSource: accountsData?.data?.data?.list || [],
