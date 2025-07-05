@@ -27,6 +27,8 @@ export default {
     search: '查询',
     transfer: '转移',
     upload: '上传',
+    prev: '上一页',
+    next: '下一页',
   },
   /**
    * Common
@@ -57,6 +59,14 @@ export default {
       sureNewPassword: '确认新密码',
       inputPasswordNotMatch: '新密码与确认密码不一致',
     },
+  },
+  /**
+   * Pagination
+   */
+  p: {
+    total: '总计',
+    page: '页码',
+    perPage: '每页',
   },
   /**
    * SMA (System Management Admin)
@@ -119,6 +129,6 @@ export default {
    * Message
    */
   m: {
-    exportTips: '导出中，稍后请至“系统管理-下载管理”查看',
+    exportTips: '导出中，稍后请至"系统管理-下载管理"查看',
   },
 };

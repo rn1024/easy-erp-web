@@ -27,6 +27,8 @@ export default {
     search: 'Search',
     transfer: 'Transfer',
     upload: 'Upload',
+    prev: 'Prev',
+    next: 'Next',
   },
   /**
    * Common
@@ -58,6 +60,14 @@ export default {
       sureNewPassword: 'Confirm password',
       inputPasswordNotMatch: 'Password confirmation does not match',
     },
+  },
+  /**
+   * Pagination
+   */
+  p: {
+    total: 'Total',
+    page: 'Page',
+    perPage: 'per page',
   },
   /**
    * SMA (System Management Admin)

@@ -28,6 +28,7 @@ import {
   BarChartOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { omitBy, isEmpty } from 'lodash';
 
 /**
  * APIs
@@ -74,23 +75,19 @@ const LogsManagement: React.FC = () => {
    * Event Handlers
    */
   const handleSearch = (values: any) => {
-    const newParams: LogsParams = {
-      ...searchParams,
-      page: 1,
-      category: values.category,
-      module: values.module?.trim(),
-      operation: values.operation?.trim(),
-      status: values.status,
-      operator_account_id: values.operator_account_id,
-    };
+    const searchLogsParams: LogsParams = omitBy(
+      {
+        page: 1,
+        limit: 20,
+        start_time: values.dateRange?.[0]?.format('YYYY-MM-DD HH:mm:ss'),
+        end_time: values.dateRange?.[1]?.format('YYYY-MM-DD HH:mm:ss'),
+        operations: values.operation?.trim(),
+        operator: values.operator?.trim(),
+      },
+      isEmpty
+    );
 
-    // 处理日期范围
-    if (values.dateRange && values.dateRange.length === 2) {
-      newParams.operation_start = values.dateRange[0].startOf('day').format('YYYY-MM-DD');
-      newParams.operation_end = values.dateRange[1].endOf('day').format('YYYY-MM-DD');
-    }
-
-    setSearchParams(newParams);
+    setSearchParams(searchLogsParams);
   };
 
   const handleReset = () => {
@@ -296,13 +293,17 @@ const LogsManagement: React.FC = () => {
 
       {/* 分页区域 */}
       <Pagination
-        current={searchParams.page || 1}
-        size={searchParams.limit || 20}
-        total={logsData?.data?.data?.meta?.total || 0}
+        current={Number(searchParams.page) || 1}
         hasMore={false}
+        total={logsData?.data?.data?.meta?.total || 0}
+        size={Number(searchParams.limit) || 20}
         searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({ ...searchParams, page, limit: size || 20 });
+        onChange={(params) => {
+          setSearchParams({
+            ...searchParams,
+            page: params.page,
+            limit: params.size,
+          });
         }}
         isLoading={logsLoading}
       />

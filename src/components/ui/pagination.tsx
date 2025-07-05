@@ -1,5 +1,6 @@
 import { Button, Flex, Select, Typography } from 'antd';
 import { useEffect, useState } from 'react';
+import { useIntl } from 'react-intl';
 
 type PaginationChangeProps = {
   page: number;
@@ -22,6 +23,11 @@ export type PaginationProps = {
 };
 
 export const Pagination: React.FC<PaginationProps> = (props) => {
+  /**
+   * Hooks
+   */
+  const { formatMessage } = useIntl();
+
   /**
    * State
    */
@@ -73,10 +79,14 @@ export const Pagination: React.FC<PaginationProps> = (props) => {
 
   return (
     <Flex style={{ marginTop: '16px' }} align="center" justify="end" gap={8}>
-      <Typography.Text>Total: {props.total}</Typography.Text>
-      <Typography.Text>Page: {props.current || 1}</Typography.Text>
+      <Typography.Text>
+        {formatMessage({ id: 'p.total' })}: {props.total}
+      </Typography.Text>
+      <Typography.Text>
+        {formatMessage({ id: 'p.page' })}: {props.current || 1}
+      </Typography.Text>
       <Button loading={props.isLoading} disabled={searchAfter.length <= 2} onClick={onPrev}>
-        Prev
+        {formatMessage({ id: 'b.prev' })}
       </Button>
       <Button
         type="primary"
@@ -85,7 +95,7 @@ export const Pagination: React.FC<PaginationProps> = (props) => {
         disabled={!props.hasMore}
         onClick={onNext}
       >
-        Next
+        {formatMessage({ id: 'b.next' })}
       </Button>
       <Select
         style={{ width: 110 }}
@@ -96,7 +106,11 @@ export const Pagination: React.FC<PaginationProps> = (props) => {
           { label: '100', value: 100 },
         ]}
         labelRender={(option) => {
-          return <div style={{ textAlign: 'center' }}>{option.label} / page</div>;
+          return (
+            <div style={{ textAlign: 'center' }}>
+              {option.label} / {formatMessage({ id: 'p.perPage' })}
+            </div>
+          );
         }}
         value={size}
         onChange={onSizeChange}
