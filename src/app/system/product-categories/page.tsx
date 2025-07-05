@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Modal, Form, Input, Space, Popconfirm, message, Flex } from 'antd';
+import { Button, Form, Input, Space, Popconfirm, message, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -13,6 +13,11 @@ import {
 import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import { Pagination } from '@/components/ui/pagination';
+
+/**
+ * Components
+ */
+import CategoryFormDrawer from './components/category-form-drawer';
 
 interface ProductCategory {
   id: string;
@@ -76,9 +81,7 @@ const deleteCategory = async (id: string) => {
 
 export default function ProductCategoriesPage() {
   const [searchForm] = Form.useForm();
-  const [modalForm] = Form.useForm();
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<'create' | 'edit'>('create');
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ProductCategory | null>(null);
   const [searchParams, setSearchParams] = useState<SearchFormData>({
     page: 1,
@@ -93,34 +96,6 @@ export default function ProductCategoriesPage() {
   } = useRequest(() => getCategoryList(searchParams), {
     refreshDeps: [searchParams],
   });
-
-  // 创建/更新分类
-  const { run: submitCategory, loading: submitting } = useRequest(
-    async (values: any) => {
-      if (modalType === 'create') {
-        return createCategory(values);
-      } else {
-        return updateCategory(editingRecord!.id, values);
-      }
-    },
-    {
-      manual: true,
-      onSuccess: (result) => {
-        if (result.code === 200) {
-          message.success(modalType === 'create' ? '创建成功' : '更新成功');
-          setIsModalVisible(false);
-          modalForm.resetFields();
-          setEditingRecord(null);
-          refresh();
-        } else {
-          message.error(result.msg || '操作失败');
-        }
-      },
-      onError: () => {
-        message.error('操作失败');
-      },
-    }
-  );
 
   // 删除分类
   const { run: handleDelete } = useRequest(deleteCategory, {
@@ -148,33 +123,21 @@ export default function ProductCategoriesPage() {
   };
 
   const handleCreate = () => {
-    setModalType('create');
     setEditingRecord(null);
-    modalForm.resetFields();
-    setIsModalVisible(true);
+    setDrawerVisible(true);
   };
 
   const handleEdit = (record: ProductCategory) => {
-    setModalType('edit');
     setEditingRecord(record);
-    modalForm.setFieldsValue({
-      name: record.name,
-    });
-    setIsModalVisible(true);
+    setDrawerVisible(true);
   };
 
-  const handleModalOk = () => {
-    modalForm.submit();
-  };
-
-  const handleModalCancel = () => {
-    setIsModalVisible(false);
-    modalForm.resetFields();
+  const closeDrawer = (reload?: boolean) => {
+    setDrawerVisible(false);
     setEditingRecord(null);
-  };
-
-  const handleFormSubmit = (values: any) => {
-    submitCategory(values);
+    if (reload) {
+      refresh();
+    }
   };
 
   const columns: ProColumns<ProductCategory>[] = [
@@ -296,27 +259,8 @@ export default function ProductCategoriesPage() {
         isLoading={loading}
       />
 
-      <Modal
-        title={modalType === 'create' ? '新增产品分类' : '编辑产品分类'}
-        open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
-        confirmLoading={submitting}
-        destroyOnClose
-      >
-        <Form form={modalForm} layout="vertical" onFinish={handleFormSubmit} preserve={false}>
-          <Form.Item
-            name="name"
-            label="分类名称"
-            rules={[
-              { required: true, message: '请输入分类名称' },
-              { max: 50, message: '分类名称不能超过50个字符' },
-            ]}
-          >
-            <Input placeholder="请输入分类名称" maxLength={50} />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* 分类表单抽屉 */}
+      <CategoryFormDrawer open={drawerVisible} entity={editingRecord} closeDrawer={closeDrawer} />
     </>
   );
 }

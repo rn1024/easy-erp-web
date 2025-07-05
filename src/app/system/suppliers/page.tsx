@@ -2,22 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useRequest } from 'ahooks';
-import {
-  App,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Tag,
-  Row,
-  Col,
-  Avatar,
-  Tooltip,
-  Popconfirm,
-  InputNumber,
-  Flex,
-} from 'antd';
+import { App, Button, Space, Form, Input, Tag, Avatar, Tooltip, Popconfirm, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -30,15 +15,17 @@ import {
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import { Pagination } from '@/components/ui/pagination';
 
+/**
+ * Components
+ */
+import SupplierFormDrawer from './components/supplier-form-drawer';
+
 // 服务
 import {
   getSuppliers,
-  createSupplier as createSupplierApi,
-  updateSupplier as updateSupplierApi,
   deleteSupplier as deleteSupplierApi,
   type Supplier,
   type SuppliersParams,
-  type SupplierFormData,
 } from '@/services/suppliers';
 
 interface SearchFormData {
@@ -47,11 +34,10 @@ interface SearchFormData {
 
 const SuppliersPage: React.FC = () => {
   const { message } = App.useApp();
-  const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
 
   // 状态管理
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [searchParams, setSearchParams] = useState<SuppliersParams>({
     page: 1,
@@ -70,48 +56,6 @@ const SuppliersPage: React.FC = () => {
       message.error('获取供应商列表失败');
     },
   });
-
-  // 创建供应商
-  const { loading: creating, run: createSupplier } = useRequest(createSupplierApi, {
-    manual: true,
-    onSuccess: (response: any) => {
-      if (response?.data?.code === 200) {
-        message.success('创建供应商成功');
-        setIsModalVisible(false);
-        form.resetFields();
-        refresh();
-      } else {
-        message.error(response?.data?.msg || '创建供应商失败');
-      }
-    },
-    onError: (error) => {
-      console.error('创建供应商失败:', error);
-      message.error('创建供应商失败');
-    },
-  });
-
-  // 更新供应商
-  const { loading: updating, run: updateSupplier } = useRequest(
-    ({ id, data }: { id: string; data: Partial<SupplierFormData> }) => updateSupplierApi(id, data),
-    {
-      manual: true,
-      onSuccess: (response: any) => {
-        if (response?.data?.code === 200) {
-          message.success('更新供应商成功');
-          setIsModalVisible(false);
-          form.resetFields();
-          setEditingSupplier(null);
-          refresh();
-        } else {
-          message.error(response?.data?.msg || '更新供应商失败');
-        }
-      },
-      onError: (error) => {
-        console.error('更新供应商失败:', error);
-        message.error('更新供应商失败');
-      },
-    }
-  );
 
   // 删除供应商
   const { loading: deleting, run: deleteSupplier } = useRequest(deleteSupplierApi, {
@@ -148,67 +92,23 @@ const SuppliersPage: React.FC = () => {
     });
   }, [searchForm]);
 
-  // 打开创建/编辑模态框
-  const handleOpenModal = useCallback(
-    (supplier?: Supplier) => {
-      if (supplier) {
-        setEditingSupplier(supplier);
-        form.setFieldsValue({
-          nickname: supplier.nickname,
-          contactPerson: supplier.contactPerson,
-          contactPhone: supplier.contactPhone,
-          companyName: supplier.companyName,
-          creditCode: supplier.creditCode,
-          bankName: supplier.bankName,
-          bankAccount: supplier.bankAccount,
-          bankAddress: supplier.bankAddress,
-          productionDays: supplier.productionDays,
-          deliveryDays: supplier.deliveryDays,
-          remark: supplier.remark,
-        });
-      } else {
-        setEditingSupplier(null);
-        form.resetFields();
+  // 打开创建/编辑抽屉
+  const handleOpenDrawer = useCallback((supplier?: Supplier) => {
+    setEditingSupplier(supplier || null);
+    setDrawerVisible(true);
+  }, []);
+
+  // 关闭抽屉
+  const closeDrawer = useCallback(
+    (reload?: boolean) => {
+      setDrawerVisible(false);
+      setEditingSupplier(null);
+      if (reload) {
+        refresh();
       }
-      setIsModalVisible(true);
     },
-    [form]
+    [refresh]
   );
-
-  // 关闭模态框
-  const handleCloseModal = useCallback(() => {
-    setIsModalVisible(false);
-    setEditingSupplier(null);
-    form.resetFields();
-  }, [form]);
-
-  // 提交表单
-  const handleSubmit = useCallback(async () => {
-    try {
-      const values = await form.validateFields();
-      const data: SupplierFormData = {
-        nickname: values.nickname,
-        contactPerson: values.contactPerson,
-        contactPhone: values.contactPhone,
-        companyName: values.companyName,
-        creditCode: values.creditCode,
-        bankName: values.bankName,
-        bankAccount: values.bankAccount,
-        bankAddress: values.bankAddress,
-        productionDays: values.productionDays,
-        deliveryDays: values.deliveryDays,
-        remark: values.remark,
-      };
-
-      if (editingSupplier) {
-        updateSupplier({ id: editingSupplier.id, data });
-      } else {
-        createSupplier(data);
-      }
-    } catch (error) {
-      console.error('表单验证失败:', error);
-    }
-  }, [form, editingSupplier, createSupplier, updateSupplier]);
 
   // 删除供应商
   const handleDelete = useCallback(
@@ -297,7 +197,7 @@ const SuppliersPage: React.FC = () => {
             <Button
               type="link"
               icon={<EditOutlined />}
-              onClick={() => handleOpenModal(record)}
+              onClick={() => handleOpenDrawer(record)}
               size="small"
             />
           </Tooltip>
@@ -338,7 +238,12 @@ const SuppliersPage: React.FC = () => {
       reload: refresh,
     },
     toolBarRender: () => [
-      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+      <Button
+        key="create"
+        type="primary"
+        icon={<PlusOutlined />}
+        onClick={() => handleOpenDrawer()}
+      >
         新建供应商
       </Button>,
       <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
@@ -385,147 +290,8 @@ const SuppliersPage: React.FC = () => {
         isLoading={loading}
       />
 
-      {/* 创建/编辑模态框 */}
-      <Modal
-        title={editingSupplier ? '编辑供应商' : '新建供应商'}
-        open={isModalVisible}
-        onCancel={handleCloseModal}
-        onOk={handleSubmit}
-        confirmLoading={creating || updating}
-        width={800}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" requiredMark={false}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="nickname"
-                label="供应商昵称"
-                rules={[
-                  { required: true, message: '请输入供应商昵称' },
-                  { max: 50, message: '昵称长度不能超过50个字符' },
-                ]}
-              >
-                <Input placeholder="请输入供应商昵称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="companyName"
-                label="公司名称"
-                rules={[
-                  { required: true, message: '请输入公司名称' },
-                  { max: 100, message: '公司名称长度不能超过100个字符' },
-                ]}
-              >
-                <Input placeholder="请输入公司名称" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="contactPerson"
-                label="联系人"
-                rules={[
-                  { required: true, message: '请输入联系人' },
-                  { max: 50, message: '联系人长度不能超过50个字符' },
-                ]}
-              >
-                <Input placeholder="请输入联系人" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="contactPhone"
-                label="联系电话"
-                rules={[
-                  { required: true, message: '请输入联系电话' },
-                  {
-                    pattern: /^1[3-9]\d{9}$/,
-                    message: '请输入正确的手机号码',
-                  },
-                ]}
-              >
-                <Input placeholder="请输入联系电话" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="creditCode"
-                label="统一社会信用代码"
-                rules={[
-                  { required: true, message: '请输入统一社会信用代码' },
-                  { len: 18, message: '统一社会信用代码必须为18位' },
-                ]}
-              >
-                <Input placeholder="请输入统一社会信用代码" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="bankName" label="开户银行">
-                <Input placeholder="请输入开户银行" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="bankAccount" label="银行账号">
-                <Input placeholder="请输入银行账号" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="bankAddress" label="开户地址">
-                <Input placeholder="请输入开户地址" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="productionDays"
-                label="生产周期(天)"
-                rules={[{ required: true, message: '请输入生产周期' }]}
-              >
-                <InputNumber
-                  placeholder="请输入生产周期"
-                  min={1}
-                  max={365}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="deliveryDays"
-                label="交货周期(天)"
-                rules={[{ required: true, message: '请输入交货周期' }]}
-              >
-                <InputNumber
-                  placeholder="请输入交货周期"
-                  min={1}
-                  max={365}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="remark" label="备注">
-                <Input.TextArea placeholder="请输入备注" rows={4} maxLength={500} />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
+      {/* 供应商表单抽屉 */}
+      <SupplierFormDrawer open={drawerVisible} entity={editingSupplier} closeDrawer={closeDrawer} />
     </>
   );
 };

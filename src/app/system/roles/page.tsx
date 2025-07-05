@@ -1,25 +1,7 @@
 'use client';
 
 import { useRequest, useSetState } from 'ahooks';
-import {
-  App,
-  Button,
-  Col,
-  Form,
-  Input,
-  Modal,
-  Row,
-  Select,
-  Space,
-  Tag,
-  Tooltip,
-  Popconfirm,
-  Tree,
-  Checkbox,
-  Divider,
-  Alert,
-  Flex,
-} from 'antd';
+import { App, Button, Col, Form, Input, Select, Space, Tag, Tooltip, Popconfirm, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -30,23 +12,25 @@ import {
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
-import type { DataNode } from 'antd/es/tree';
+import { useState } from 'react';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import { Pagination } from '@/components/ui/pagination';
+
+/**
+ * Components
+ */
+import RoleFormDrawer from './components/role-form-drawer';
+import PermissionManageDrawer from './components/permission-manage-drawer';
 
 /**
  * APIs
  */
 import {
   roleListApi,
-  createRoleApi,
-  updateRoleApi,
   deleteRoleByIdApi,
   queryRoleByIdApi,
   getPermissionsApi,
   type RoleDataResult,
-  type Permission,
 } from '@/services/roles';
 
 interface RolesParams {
@@ -58,14 +42,13 @@ interface RolesParams {
 
 const RolesPage: React.FC = () => {
   const { message } = App.useApp();
-  const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
 
   const [state, setState] = useSetState({
-    modalVisible: false,
+    drawerVisible: false,
     editingRecord: null as RoleDataResult | null,
     selectedRowKeys: [] as string[],
-    permissionModalVisible: false,
+    permissionDrawerVisible: false,
     currentRoleId: '',
     currentRoleName: '',
   });
@@ -90,35 +73,6 @@ const RolesPage: React.FC = () => {
     {
       onSuccess: (data) => {
         console.log('权限数据:', data);
-      },
-    }
-  );
-
-  // 创建/更新角色
-  const { loading: submitting, run: submitRole } = useRequest(
-    async (values: any) => {
-      const params = {
-        ...values,
-        operator: 'admin', // 当前操作人
-      };
-
-      if (state.editingRecord) {
-        return updateRoleApi(state.editingRecord.id, params);
-      } else {
-        return createRoleApi(params);
-      }
-    },
-    {
-      manual: true,
-      onSuccess: (response: any) => {
-        if (response?.data?.code === 0) {
-          message.success(state.editingRecord ? '更新成功' : '创建成功');
-          setState({ modalVisible: false, editingRecord: null });
-          form.resetFields();
-          refresh();
-        } else {
-          message.error(response?.data?.msg || '操作失败');
-        }
       },
     }
   );
@@ -152,46 +106,6 @@ const RolesPage: React.FC = () => {
       page: 1,
       limit: 20,
     });
-  };
-
-  // 渲染权限树
-  const renderPermissionTree = () => {
-    const permissionsGrouped = (permissionsData?.data as any)?.grouped;
-    if (!permissionsGrouped) return [];
-
-    const treeData: DataNode[] = Object.entries(permissionsGrouped).map(
-      ([module, permissions]) => ({
-        title: getModuleName(module),
-        key: module,
-        children: (permissions as Permission[]).map((permission) => ({
-          title: permission.name,
-          key: permission.code,
-        })),
-      })
-    );
-
-    return treeData;
-  };
-
-  // 获取模块中文名
-  const getModuleName = (module: string) => {
-    const moduleNames: Record<string, string> = {
-      admin: '系统管理',
-      account: '账户管理',
-      role: '角色管理',
-      log: '日志管理',
-      file: '文件管理',
-      shop: '店铺管理',
-      supplier: '供应商管理',
-      forwarder: '货代管理',
-      product: '产品管理',
-      purchase: '采购管理',
-      warehouse: '仓库管理',
-      export: '出口管理',
-      delivery: '配送管理',
-      financial: '财务管理',
-    };
-    return moduleNames[module] || module;
   };
 
   const columns: ProColumns<RoleDataResult>[] = [
@@ -282,10 +196,7 @@ const RolesPage: React.FC = () => {
   ];
 
   const handleCreate = () => {
-    setState({ modalVisible: true, editingRecord: null });
-    setTimeout(() => {
-      form.resetFields();
-    }, 0);
+    setState({ drawerVisible: true, editingRecord: null });
   };
 
   const handleEdit = async (record: RoleDataResult) => {
@@ -293,16 +204,9 @@ const RolesPage: React.FC = () => {
       const response = await queryRoleByIdApi(record.id);
       if (response?.data?.code === 0) {
         setState({
-          modalVisible: true,
-          editingRecord: record,
+          drawerVisible: true,
+          editingRecord: response.data.data,
         });
-        setTimeout(() => {
-          form.setFieldsValue({
-            name: response.data.data.name,
-            status: response.data.data.status,
-            permissions: response.data.data.permissions || [],
-          });
-        }, 0);
       }
     } catch (error) {
       message.error('获取角色信息失败');
@@ -311,16 +215,21 @@ const RolesPage: React.FC = () => {
 
   const handlePermissionManage = (record: RoleDataResult) => {
     setState({
-      permissionModalVisible: true,
+      permissionDrawerVisible: true,
       currentRoleId: record.id,
       currentRoleName: record.name,
     });
   };
 
-  const handleSubmit = () => {
-    form.validateFields().then((values) => {
-      submitRole(values);
-    });
+  const closeRoleDrawer = (reload?: boolean) => {
+    setState({ drawerVisible: false, editingRecord: null });
+    if (reload) {
+      refresh();
+    }
+  };
+
+  const closePermissionDrawer = () => {
+    setState({ permissionDrawerVisible: false });
   };
 
   // 批量操作
@@ -415,94 +324,24 @@ const RolesPage: React.FC = () => {
         isLoading={loading}
       />
 
-      {/* 创建/编辑角色模态框 */}
-      <Modal
-        title={state.editingRecord ? '编辑角色' : '新建角色'}
-        open={state.modalVisible}
-        onOk={handleSubmit}
-        onCancel={() => {
-          setState({ modalVisible: false, editingRecord: null });
-          form.resetFields();
-        }}
-        confirmLoading={submitting}
-        destroyOnClose
-        width={800}
-      >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="角色名称"
-                rules={[{ required: true, message: '请输入角色名称' }]}
-              >
-                <Input placeholder="请输入角色名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="状态"
-                initialValue={1}
-                rules={[{ required: true, message: '请选择状态' }]}
-              >
-                <Select>
-                  <Select.Option value={1}>启用</Select.Option>
-                  <Select.Option value={0}>禁用</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+      {/* 角色表单抽屉 */}
+      <RoleFormDrawer
+        open={state.drawerVisible}
+        entity={state.editingRecord}
+        closeDrawer={closeRoleDrawer}
+        permissionsData={permissionsData}
+        permissionsLoading={permissionsLoading}
+      />
 
-          <Divider>权限配置</Divider>
-
-          {permissionsLoading ? (
-            <div style={{ textAlign: 'center', padding: 20 }}>加载权限列表中...</div>
-          ) : (
-            <Form.Item name="permissions" label="选择权限">
-              <Checkbox.Group style={{ width: '100%' }}>
-                {Object.entries((permissionsData?.data as any)?.grouped || {}).map(
-                  ([module, permissions]) => (
-                    <div key={module} style={{ marginBottom: 16 }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: 8 }}>
-                        {getModuleName(module)}
-                      </div>
-                      <Row gutter={[8, 8]}>
-                        {(permissions as Permission[]).map((permission) => (
-                          <Col span={8} key={permission.code}>
-                            <Checkbox value={permission.code}>{permission.name}</Checkbox>
-                          </Col>
-                        ))}
-                      </Row>
-                    </div>
-                  )
-                )}
-              </Checkbox.Group>
-            </Form.Item>
-          )}
-        </Form>
-      </Modal>
-
-      {/* 权限管理模态框 */}
-      <Modal
-        title={`权限管理 - ${state.currentRoleName}`}
-        open={state.permissionModalVisible}
-        onCancel={() => setState({ permissionModalVisible: false })}
-        footer={null}
-        width={600}
-      >
-        <Alert
-          message="权限管理功能"
-          description="此功能正在开发中，将支持更精细的权限配置。"
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-
-        {renderPermissionTree().length > 0 && (
-          <Tree checkable treeData={renderPermissionTree()} height={400} />
-        )}
-      </Modal>
+      {/* 权限管理抽屉 */}
+      <PermissionManageDrawer
+        open={state.permissionDrawerVisible}
+        currentRoleId={state.currentRoleId}
+        currentRoleName={state.currentRoleName}
+        closeDrawer={closePermissionDrawer}
+        permissionsData={permissionsData}
+        permissionsLoading={permissionsLoading}
+      />
     </>
   );
 };

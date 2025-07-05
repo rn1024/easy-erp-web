@@ -2,21 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useRequest } from 'ahooks';
-import {
-  App,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Tag,
-  Row,
-  Col,
-  Avatar,
-  Tooltip,
-  Popconfirm,
-  Flex,
-} from 'antd';
+import { App, Button, Space, Form, Input, Tag, Avatar, Tooltip, Popconfirm, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -29,53 +15,15 @@ import {
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import { Pagination } from '@/components/ui/pagination';
 
+/**
+ * Components
+ */
+import ForwarderFormDrawer from './components/forwarder-form-drawer';
+import type { Forwarder, ForwardersParams } from './components/forwarder-form-drawer';
+
 // 使用货代API（复用forwarders路由）
 import axios from '@/services/index';
 import type { ResType } from '@/types/api';
-
-// 货代数据类型
-export interface Forwarder {
-  id: string;
-  nickname: string;
-  avatarUrl?: string;
-  contactPerson: string;
-  contactPhone: string;
-  companyName: string;
-  creditCode?: string;
-  bankName?: string;
-  bankAccount?: string;
-  bankAddress?: string;
-  remark?: string;
-  operatorId: string;
-  createdAt: string;
-  updatedAt: string;
-  operator: {
-    id: string;
-    name: string;
-  };
-}
-
-// 货代查询参数
-export interface ForwardersParams {
-  page?: number;
-  pageSize?: number;
-  nickname?: string;
-  companyName?: string;
-}
-
-// 创建/更新货代参数
-export interface ForwarderFormData {
-  nickname: string;
-  avatarUrl?: string;
-  contactPerson: string;
-  contactPhone: string;
-  companyName: string;
-  creditCode?: string;
-  bankName?: string;
-  bankAccount?: string;
-  bankAddress?: string;
-  remark?: string;
-}
 
 // 获取货代列表
 const getForwarders = (params: ForwardersParams) => {
@@ -95,22 +43,6 @@ const getForwarders = (params: ForwardersParams) => {
   });
 };
 
-// 创建货代
-const createForwarder = (data: ForwarderFormData) => {
-  return axios<ResType<Forwarder>>('/forwarding-agents', {
-    method: 'post',
-    data,
-  });
-};
-
-// 更新货代
-const updateForwarder = (id: string, data: Partial<ForwarderFormData>) => {
-  return axios<ResType<Forwarder>>(`/forwarding-agents/${id}`, {
-    method: 'put',
-    data,
-  });
-};
-
 // 删除货代
 const deleteForwarder = (id: string) => {
   return axios<ResType<null>>(`/forwarding-agents/${id}`, {
@@ -124,11 +56,10 @@ interface SearchFormData {
 
 const ForwardersPage: React.FC = () => {
   const { message } = App.useApp();
-  const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
 
   // 状态管理
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingForwarder, setEditingForwarder] = useState<Forwarder | null>(null);
   const [searchParams, setSearchParams] = useState<ForwardersParams>({
     page: 1,
@@ -147,48 +78,6 @@ const ForwardersPage: React.FC = () => {
       message.error('获取货代列表失败');
     },
   });
-
-  // 创建货代
-  const { loading: creating, run: createForwarderRun } = useRequest(createForwarder, {
-    manual: true,
-    onSuccess: (response: any) => {
-      if (response?.data?.code === 200) {
-        message.success('创建货代成功');
-        setIsModalVisible(false);
-        form.resetFields();
-        refresh();
-      } else {
-        message.error(response?.data?.msg || '创建货代失败');
-      }
-    },
-    onError: (error) => {
-      console.error('创建货代失败:', error);
-      message.error('创建货代失败');
-    },
-  });
-
-  // 更新货代
-  const { loading: updating, run: updateForwarderRun } = useRequest(
-    ({ id, data }: { id: string; data: Partial<ForwarderFormData> }) => updateForwarder(id, data),
-    {
-      manual: true,
-      onSuccess: (response: any) => {
-        if (response?.data?.code === 200) {
-          message.success('更新货代成功');
-          setIsModalVisible(false);
-          form.resetFields();
-          setEditingForwarder(null);
-          refresh();
-        } else {
-          message.error(response?.data?.msg || '更新货代失败');
-        }
-      },
-      onError: (error) => {
-        console.error('更新货代失败:', error);
-        message.error('更新货代失败');
-      },
-    }
-  );
 
   // 删除货代
   const { loading: deleting, run: deleteForwarderRun } = useRequest(deleteForwarder, {
@@ -226,63 +115,29 @@ const ForwardersPage: React.FC = () => {
     });
   }, [searchForm]);
 
-  // 打开创建/编辑模态框
-  const handleOpenModal = useCallback(
-    (forwarder?: Forwarder) => {
-      if (forwarder) {
-        setEditingForwarder(forwarder);
-        form.setFieldsValue({
-          nickname: forwarder.nickname,
-          contactPerson: forwarder.contactPerson,
-          contactPhone: forwarder.contactPhone,
-          companyName: forwarder.companyName,
-          creditCode: forwarder.creditCode,
-          bankName: forwarder.bankName,
-          bankAccount: forwarder.bankAccount,
-          bankAddress: forwarder.bankAddress,
-          remark: forwarder.remark,
-        });
-      } else {
-        setEditingForwarder(null);
-        form.resetFields();
-      }
-      setIsModalVisible(true);
-    },
-    [form]
-  );
-
-  // 关闭模态框
-  const handleCloseModal = useCallback(() => {
-    setIsModalVisible(false);
+  // 打开创建抽屉
+  const handleCreate = useCallback(() => {
     setEditingForwarder(null);
-    form.resetFields();
-  }, [form]);
+    setDrawerVisible(true);
+  }, []);
 
-  // 提交表单
-  const handleSubmit = useCallback(async () => {
-    try {
-      const values = await form.validateFields();
-      const data: ForwarderFormData = {
-        nickname: values.nickname,
-        contactPerson: values.contactPerson,
-        contactPhone: values.contactPhone,
-        companyName: values.companyName,
-        creditCode: values.creditCode,
-        bankName: values.bankName,
-        bankAccount: values.bankAccount,
-        bankAddress: values.bankAddress,
-        remark: values.remark,
-      };
+  // 打开编辑抽屉
+  const handleEdit = useCallback((forwarder: Forwarder) => {
+    setEditingForwarder(forwarder);
+    setDrawerVisible(true);
+  }, []);
 
-      if (editingForwarder) {
-        updateForwarderRun({ id: editingForwarder.id, data });
-      } else {
-        createForwarderRun(data);
+  // 关闭抽屉
+  const closeDrawer = useCallback(
+    (reload?: boolean) => {
+      setDrawerVisible(false);
+      setEditingForwarder(null);
+      if (reload) {
+        refresh();
       }
-    } catch (error) {
-      console.error('表单验证失败:', error);
-    }
-  }, [form, editingForwarder, createForwarderRun, updateForwarderRun]);
+    },
+    [refresh]
+  );
 
   // 删除货代
   const handleDelete = useCallback(
@@ -359,7 +214,7 @@ const ForwardersPage: React.FC = () => {
             <Button
               type="link"
               icon={<EditOutlined />}
-              onClick={() => handleOpenModal(record)}
+              onClick={() => handleEdit(record)}
               size="small"
             />
           </Tooltip>
@@ -400,7 +255,7 @@ const ForwardersPage: React.FC = () => {
       reload: refresh,
     },
     toolBarRender: () => [
-      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
         新建货代
       </Button>,
       <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
@@ -454,109 +309,12 @@ const ForwardersPage: React.FC = () => {
         isLoading={loading}
       />
 
-      {/* 创建/编辑模态框 */}
-      <Modal
-        title={editingForwarder ? '编辑货代' : '新建货代'}
-        open={isModalVisible}
-        onCancel={handleCloseModal}
-        onOk={handleSubmit}
-        confirmLoading={creating || updating}
-        width={800}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" requiredMark={false}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="nickname"
-                label="货代昵称"
-                rules={[
-                  { required: true, message: '请输入货代昵称' },
-                  { max: 50, message: '昵称长度不能超过50个字符' },
-                ]}
-              >
-                <Input placeholder="请输入货代昵称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="companyName"
-                label="公司名称"
-                rules={[
-                  { required: true, message: '请输入公司名称' },
-                  { max: 100, message: '公司名称长度不能超过100个字符' },
-                ]}
-              >
-                <Input placeholder="请输入公司名称" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="contactPerson"
-                label="联系人"
-                rules={[
-                  { required: true, message: '请输入联系人' },
-                  { max: 50, message: '联系人长度不能超过50个字符' },
-                ]}
-              >
-                <Input placeholder="请输入联系人" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="contactPhone"
-                label="联系电话"
-                rules={[
-                  { required: true, message: '请输入联系电话' },
-                  {
-                    pattern: /^1[3-9]\d{9}$/,
-                    message: '请输入正确的手机号码',
-                  },
-                ]}
-              >
-                <Input placeholder="请输入联系电话" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="creditCode"
-                label="统一社会信用代码"
-                rules={[{ len: 18, message: '统一社会信用代码必须为18位' }]}
-              >
-                <Input placeholder="请输入统一社会信用代码" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="bankName" label="开户银行">
-                <Input placeholder="请输入开户银行" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="bankAccount" label="银行账号">
-                <Input placeholder="请输入银行账号" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="bankAddress" label="开户地址">
-                <Input placeholder="请输入开户地址" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={3} placeholder="请输入备注信息" maxLength={500} showCount />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* 货代表单抽屉 */}
+      <ForwarderFormDrawer
+        open={drawerVisible}
+        entity={editingForwarder}
+        closeDrawer={closeDrawer}
+      />
     </>
   );
 };

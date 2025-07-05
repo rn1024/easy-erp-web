@@ -1,21 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Button,
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Space,
-  Popconfirm,
-  message,
-  Row,
-  Col,
-  Tag,
-  Flex,
-} from 'antd';
+import { Button, Form, Input, Select, Space, Popconfirm, message, Tag, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -27,6 +13,11 @@ import {
 import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import { Pagination } from '@/components/ui/pagination';
+
+/**
+ * Components
+ */
+import InventoryFormDrawer from './components/inventory-form-drawer';
 
 const { Option } = Select;
 
@@ -78,30 +69,6 @@ const getInventoryList = async (params: any = {}) => {
   return response.json();
 };
 
-const createInventory = async (data: any) => {
-  const response = await fetch('/api/v1/finished-inventory', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-};
-
-const updateInventory = async (id: string, data: any) => {
-  const response = await fetch(`/api/v1/finished-inventory/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-};
-
 const deleteInventory = async (id: string) => {
   const response = await fetch(`/api/v1/finished-inventory/${id}`, {
     method: 'DELETE',
@@ -132,27 +99,14 @@ const getCategories = async () => {
   return result.data?.list || [];
 };
 
-const getProducts = async (categoryId: string) => {
-  const response = await fetch(`/api/v1/products?categoryId=${categoryId}&pageSize=100`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  const result = await response.json();
-  return result.data?.list || [];
-};
-
 export default function FinishedInventoryPage() {
   const [searchForm] = Form.useForm();
-  const [modalForm] = Form.useForm();
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<'create' | 'edit'>('create');
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinishedInventoryItem | null>(null);
   const [searchParams, setSearchParams] = useState<SearchFormData>({
     page: 1,
     pageSize: 10,
   });
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
 
   // 获取成品库存列表
   const {
@@ -168,42 +122,6 @@ export default function FinishedInventoryPage() {
 
   // 获取产品分类列表
   const { data: categoryData = [] } = useRequest(getCategories);
-
-  // 获取产品列表
-  const { data: productData = [] } = useRequest(
-    () => (selectedCategoryId ? getProducts(selectedCategoryId) : Promise.resolve([])),
-    {
-      refreshDeps: [selectedCategoryId],
-    }
-  );
-
-  // 创建/更新成品库存
-  const { run: submitInventory, loading: submitting } = useRequest(
-    async (values: any) => {
-      if (modalType === 'create') {
-        return createInventory(values);
-      } else {
-        return updateInventory(editingRecord!.id, values);
-      }
-    },
-    {
-      manual: true,
-      onSuccess: (result) => {
-        if (result.code === 200) {
-          message.success(modalType === 'create' ? '创建成功' : '更新成功');
-          setIsModalVisible(false);
-          modalForm.resetFields();
-          setEditingRecord(null);
-          refresh();
-        } else {
-          message.error(result.msg || '操作失败');
-        }
-      },
-      onError: () => {
-        message.error('操作失败');
-      },
-    }
-  );
 
   // 删除成品库存
   const { run: handleDelete } = useRequest(deleteInventory, {
@@ -242,29 +160,22 @@ export default function FinishedInventoryPage() {
 
   // 打开新建弹窗
   const handleCreate = () => {
-    setModalType('create');
     setEditingRecord(null);
-    setSelectedCategoryId(undefined);
-    modalForm.resetFields();
-    setIsModalVisible(true);
+    setDrawerVisible(true);
   };
 
   // 打开编辑弹窗
   const handleEdit = (record: FinishedInventoryItem) => {
-    setModalType('edit');
     setEditingRecord(record);
-    setSelectedCategoryId(record.categoryId);
-    modalForm.setFieldsValue({
-      shopId: record.shopId,
-      categoryId: record.categoryId,
-      productId: record.productId,
-      boxSize: record.boxSize,
-      packQuantity: record.packQuantity,
-      weight: record.weight,
-      location: record.location,
-      stockQuantity: record.stockQuantity,
-    });
-    setIsModalVisible(true);
+    setDrawerVisible(true);
+  };
+
+  const closeDrawer = (reload?: boolean) => {
+    setDrawerVisible(false);
+    setEditingRecord(null);
+    if (reload) {
+      refresh();
+    }
   };
 
   // 表格列配置
@@ -450,127 +361,14 @@ export default function FinishedInventoryPage() {
         isLoading={loading}
       />
 
-      {/* 新建/编辑弹窗 */}
-      <Modal
-        title={modalType === 'create' ? '新建成品库存' : '编辑成品库存'}
-        open={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false);
-          modalForm.resetFields();
-          setEditingRecord(null);
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form form={modalForm} layout="vertical" onFinish={submitInventory}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="shopId"
-                label="店铺"
-                rules={[{ required: true, message: '请选择店铺' }]}
-              >
-                <Select placeholder="选择店铺" showSearch optionFilterProp="children">
-                  {shopData.map((shop: any) => (
-                    <Option key={shop.id} value={shop.id}>
-                      {shop.nickname}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="categoryId"
-                label="产品分类"
-                rules={[{ required: true, message: '请选择产品分类' }]}
-              >
-                <Select
-                  placeholder="选择产品分类"
-                  showSearch
-                  optionFilterProp="children"
-                  onChange={(value) => {
-                    setSelectedCategoryId(value);
-                    modalForm.setFieldValue('productId', undefined);
-                  }}
-                >
-                  {categoryData.map((category: any) => (
-                    <Option key={category.id} value={category.id}>
-                      {category.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            name="productId"
-            label="产品"
-            rules={[{ required: true, message: '请选择产品' }]}
-          >
-            <Select
-              placeholder="选择产品"
-              showSearch
-              optionFilterProp="children"
-              disabled={!selectedCategoryId}
-            >
-              {productData.map((product: any) => (
-                <Option key={product.id} value={product.id}>
-                  {product.code} - {product.sku}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="boxSize" label="箱型规格">
-                <Input placeholder="输入箱型规格" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="packQuantity" label="装箱数量">
-                <InputNumber min={1} placeholder="装箱数量" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="weight" label="重量(kg)">
-                <InputNumber min={0} step={0.1} placeholder="产品重量" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="stockQuantity" label="库存数量">
-                <InputNumber min={0} placeholder="库存数量" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="location" label="存储位置">
-            <Input placeholder="输入存储位置" />
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" loading={submitting}>
-                {modalType === 'create' ? '创建' : '更新'}
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsModalVisible(false);
-                  modalForm.resetFields();
-                  setEditingRecord(null);
-                }}
-              >
-                取消
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* 成品库存表单抽屉 */}
+      <InventoryFormDrawer
+        open={drawerVisible}
+        entity={editingRecord}
+        closeDrawer={closeDrawer}
+        shopData={shopData}
+        categoryData={categoryData}
+      />
     </>
   );
 }

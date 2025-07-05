@@ -1,24 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Card,
-  Button,
-  Form,
-  Input,
-  Select,
-  Row,
-  Col,
-  Space,
-  Modal,
-  message,
-  Image,
-  Tag,
-  Tooltip,
-  Descriptions,
-  InputNumber,
-  Flex,
-} from 'antd';
+import { Button, Form, Input, Select, Space, message, Image, Tag, Tooltip, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -36,30 +19,29 @@ import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import { Pagination } from '@/components/ui/pagination';
 import dayjs from 'dayjs';
 
+/**
+ * Components
+ */
+import ProductFormDrawer from './components/product-form-drawer';
+import ProductDetailDrawer from './components/product-detail-drawer';
+
 // 导入相关服务
 import {
   getProductsApi,
-  createProductApi,
-  updateProductApi,
   deleteProductApi,
   getProductApi,
   getProductCategoriesApi,
   type ProductInfo,
   type ProductsParams,
-  type ProductFormData,
 } from '@/services/products';
 
-const { Option } = Select;
-const { TextArea } = Input;
-
 const ProductManagement: React.FC = () => {
-  const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductInfo | null>(null);
   const [viewingProduct, setViewingProduct] = useState<ProductInfo | null>(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [searchParams, setSearchParams] = useState<ProductsParams>({
     page: 1,
@@ -78,31 +60,6 @@ const ProductManagement: React.FC = () => {
   // 获取产品分类
   const { data: categoriesData } = useRequest(() =>
     getProductCategoriesApi({ page: 1, pageSize: 100 })
-  );
-
-  // 创建/更新产品
-  const { run: handleSubmit, loading: submitLoading } = useRequest(
-    async (values: ProductFormData) => {
-      if (editingProduct) {
-        await updateProductApi(editingProduct.id, values);
-        message.success('更新产品成功');
-      } else {
-        await createProductApi(values);
-        message.success('创建产品成功');
-      }
-    },
-    {
-      manual: true,
-      onSuccess: () => {
-        setIsModalOpen(false);
-        setEditingProduct(null);
-        form.resetFields();
-        refresh();
-      },
-      onError: (error: any) => {
-        message.error(error?.response?.data?.msg || '操作失败');
-      },
-    }
   );
 
   // 删除产品
@@ -127,7 +84,7 @@ const ProductManagement: React.FC = () => {
     async (id: string) => {
       const res = await getProductApi(id);
       setViewingProduct(res.data.data);
-      setIsViewModalOpen(true);
+      setDetailDrawerVisible(true);
     },
     {
       manual: true,
@@ -237,11 +194,10 @@ const ProductManagement: React.FC = () => {
               danger
               icon={<DeleteOutlined />}
               onClick={() => {
-                Modal.confirm({
-                  title: '确认删除',
-                  content: `确定要删除产品 "${record.code}" 吗？`,
-                  onOk: () => handleDelete(record.id),
-                });
+                const confirmed = window.confirm(`确定要删除产品 "${record.code}" 吗？`);
+                if (confirmed) {
+                  handleDelete(record.id);
+                }
               }}
             />
           </Tooltip>
@@ -264,28 +220,28 @@ const ProductManagement: React.FC = () => {
   // 处理编辑
   const handleEdit = (product: ProductInfo) => {
     setEditingProduct(product);
-    form.setFieldsValue({
-      ...product,
-      weight: product.weight?.toString(),
-    });
-    setIsModalOpen(true);
+    setDrawerVisible(true);
   };
 
   // 处理创建
   const handleCreate = () => {
     setEditingProduct(null);
-    form.resetFields();
-    setIsModalOpen(true);
+    setDrawerVisible(true);
   };
 
-  // 表单提交
-  const onFinish = (values: any) => {
-    const formData: ProductFormData = {
-      ...values,
-      weight: values.weight ? parseFloat(values.weight) : undefined,
-      setQuantity: values.setQuantity || 1,
-    };
-    handleSubmit(formData);
+  // 关闭表单抽屉
+  const closeFormDrawer = (reload?: boolean) => {
+    setDrawerVisible(false);
+    setEditingProduct(null);
+    if (reload) {
+      refresh();
+    }
+  };
+
+  // 关闭详情抽屉
+  const closeDetailDrawer = () => {
+    setDetailDrawerVisible(false);
+    setViewingProduct(null);
   };
 
   const productsList = (productsData?.data as any)?.list || [];
@@ -350,214 +306,20 @@ const ProductManagement: React.FC = () => {
         isLoading={loading}
       />
 
-      {/* 创建/编辑产品弹窗 */}
-      <Modal
-        title={editingProduct ? '编辑产品' : '新增产品'}
-        open={isModalOpen}
-        onCancel={() => {
-          setIsModalOpen(false);
-          setEditingProduct(null);
-          form.resetFields();
-        }}
-        footer={null}
-        width={800}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" onFinish={onFinish} className="mt-4">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="shopId"
-                label="所属店铺"
-                rules={[{ required: true, message: '请选择店铺' }]}
-              >
-                <Select placeholder="选择店铺">
-                  <Option value="test-shop-1">测试店铺1</Option>
-                  <Option value="test-shop-2">测试店铺2</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="categoryId"
-                label="产品分类"
-                rules={[{ required: true, message: '请选择分类' }]}
-              >
-                <Select placeholder="选择分类">
-                  {categoriesList.map((category: any) => (
-                    <Option key={category.id} value={category.id}>
-                      {category.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+      {/* 产品表单抽屉 */}
+      <ProductFormDrawer
+        open={drawerVisible}
+        entity={editingProduct}
+        closeDrawer={closeFormDrawer}
+        categoriesList={categoriesList}
+      />
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="code"
-                label="产品编码"
-                rules={[{ required: true, message: '请输入产品编码' }]}
-              >
-                <Input placeholder="产品编码" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="sku" label="SKU" rules={[{ required: true, message: '请输入SKU' }]}>
-                <Input placeholder="SKU" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="specification" label="规格">
-                <Input placeholder="规格" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="color" label="颜色">
-                <Input placeholder="颜色" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="setQuantity" label="套装数量">
-                <InputNumber min={1} placeholder="套装数量" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="internalSize" label="内部尺寸">
-                <Input placeholder="内部尺寸" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="externalSize" label="外部尺寸">
-                <Input placeholder="外部尺寸" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="weight" label="重量(g)">
-                <InputNumber min={0} placeholder="重量" style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="label" label="标签">
-                <Input placeholder="标签" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="imageUrl" label="产品图片">
-                <Input placeholder="图片URL" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="styleInfo" label="款式信息">
-            <TextArea rows={3} placeholder="款式信息" />
-          </Form.Item>
-
-          <Form.Item name="accessoryInfo" label="配件信息">
-            <TextArea rows={3} placeholder="配件信息" />
-          </Form.Item>
-
-          <Form.Item name="remark" label="备注">
-            <TextArea rows={3} placeholder="备注" />
-          </Form.Item>
-
-          <Form.Item className="mb-0 text-right">
-            <Space>
-              <Button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setEditingProduct(null);
-                  form.resetFields();
-                }}
-              >
-                取消
-              </Button>
-              <Button type="primary" htmlType="submit" loading={submitLoading}>
-                {editingProduct ? '更新' : '创建'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 产品详情弹窗 */}
-      <Modal
-        title="产品详情"
-        open={isViewModalOpen}
-        onCancel={() => setIsViewModalOpen(false)}
-        footer={null}
-        width={800}
-      >
-        {viewingProduct && (
-          <div className="mt-4">
-            <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label="产品编码">{viewingProduct.code}</Descriptions.Item>
-              <Descriptions.Item label="SKU">{viewingProduct.sku}</Descriptions.Item>
-              <Descriptions.Item label="所属店铺">
-                <Tag icon={<ShopOutlined />} color="blue">
-                  {viewingProduct.shop?.nickname || '未知店铺'}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="产品分类">
-                <Tag icon={<TagOutlined />} color="green">
-                  {viewingProduct.category?.name || '未分类'}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="规格">
-                {viewingProduct.specification || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="颜色">{viewingProduct.color || '-'}</Descriptions.Item>
-              <Descriptions.Item label="重量">
-                {viewingProduct.weight ? `${viewingProduct.weight}g` : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="套装数量">
-                {viewingProduct.setQuantity || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="内部尺寸">
-                {viewingProduct.internalSize || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="外部尺寸">
-                {viewingProduct.externalSize || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="标签">{viewingProduct.label || '-'}</Descriptions.Item>
-              <Descriptions.Item label="创建时间">
-                {dayjs(viewingProduct.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-              </Descriptions.Item>
-              <Descriptions.Item label="款式信息" span={2}>
-                {viewingProduct.styleInfo || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="配件信息" span={2}>
-                {viewingProduct.accessoryInfo || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="备注" span={2}>
-                {viewingProduct.remark || '-'}
-              </Descriptions.Item>
-            </Descriptions>
-
-            {viewingProduct.imageUrl && (
-              <div className="mt-4">
-                <h4 className="mb-2">产品图片</h4>
-                <Image
-                  width={200}
-                  src={viewingProduct.imageUrl}
-                  style={{ objectFit: 'cover', borderRadius: '4px' }}
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
+      {/* 产品详情抽屉 */}
+      <ProductDetailDrawer
+        open={detailDrawerVisible}
+        entity={viewingProduct}
+        closeDrawer={closeDetailDrawer}
+      />
     </>
   );
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Form, Input, Modal, message, Space, Avatar, Popconfirm, Flex } from 'antd';
+import { Button, Form, Input, message, Space, Avatar, Popconfirm, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -14,21 +14,21 @@ import {
 import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import { Pagination } from '@/components/ui/pagination';
-import {
-  getShops,
-  createShop,
-  updateShop,
-  deleteShop,
-  type Shop,
-  type ShopsParams,
-  type ShopFormData,
-} from '@/services/shops';
+
+/**
+ * Components
+ */
+import ShopFormDrawer from './components/shop-form-drawer';
+
+/**
+ * APIs
+ */
+import { getShops, deleteShop, type Shop, type ShopsParams } from '@/services/shops';
 
 const ShopsPage: React.FC = () => {
-  const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
 
-  const [modalVisible, setModalVisible] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingShop, setEditingShop] = useState<Shop | null>(null);
   const [searchParams, setSearchParams] = useState<ShopsParams>({
     page: 1,
@@ -43,38 +43,6 @@ const ShopsPage: React.FC = () => {
   } = useRequest(() => getShops(searchParams), {
     refreshDeps: [searchParams],
   });
-
-  // 创建店铺
-  const { run: handleCreate, loading: createLoading } = useRequest(createShop, {
-    manual: true,
-    onSuccess: () => {
-      message.success('店铺创建成功');
-      setModalVisible(false);
-      form.resetFields();
-      refresh();
-    },
-    onError: (error: any) => {
-      message.error(error.response?.data?.msg || '创建失败');
-    },
-  });
-
-  // 更新店铺
-  const { run: handleUpdate, loading: updateLoading } = useRequest(
-    (id: string, data: Partial<ShopFormData>) => updateShop(id, data),
-    {
-      manual: true,
-      onSuccess: () => {
-        message.success('店铺更新成功');
-        setModalVisible(false);
-        form.resetFields();
-        setEditingShop(null);
-        refresh();
-      },
-      onError: (error: any) => {
-        message.error(error.response?.data?.msg || '更新失败');
-      },
-    }
-  );
 
   // 删除店铺
   const { run: handleDelete } = useRequest(deleteShop, {
@@ -106,38 +74,25 @@ const ShopsPage: React.FC = () => {
     });
   };
 
-  // 表单提交
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-
-      if (editingShop) {
-        handleUpdate(editingShop.id, values);
-      } else {
-        handleCreate(values);
-      }
-    } catch (error) {
-      console.error('表单验证失败:', error);
-    }
-  };
-
-  // 打开创建模态框
+  // 打开创建抽屉
   const handleCreateClick = () => {
     setEditingShop(null);
-    form.resetFields();
-    setModalVisible(true);
+    setDrawerVisible(true);
   };
 
-  // 打开编辑模态框
+  // 打开编辑抽屉
   const handleEditClick = (record: Shop) => {
     setEditingShop(record);
-    form.setFieldsValue({
-      nickname: record.nickname,
-      avatarUrl: record.avatarUrl,
-      responsiblePerson: record.responsiblePerson,
-      remark: record.remark,
-    });
-    setModalVisible(true);
+    setDrawerVisible(true);
+  };
+
+  // 关闭抽屉
+  const closeDrawer = (reload?: boolean) => {
+    setDrawerVisible(false);
+    setEditingShop(null);
+    if (reload) {
+      refresh();
+    }
   };
 
   // 表格列定义
@@ -259,59 +214,8 @@ const ShopsPage: React.FC = () => {
         isLoading={loading}
       />
 
-      {/* 创建/编辑模态框 */}
-      <Modal
-        title={editingShop ? '编辑店铺' : '新建店铺'}
-        open={modalVisible}
-        onOk={handleSubmit}
-        onCancel={() => {
-          setModalVisible(false);
-          form.resetFields();
-          setEditingShop(null);
-        }}
-        confirmLoading={createLoading || updateLoading}
-        width={600}
-      >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item
-            name="nickname"
-            label="店铺昵称"
-            rules={[
-              { required: true, message: '请输入店铺昵称' },
-              { max: 50, message: '店铺昵称不能超过50个字符' },
-            ]}
-          >
-            <Input placeholder="请输入店铺昵称" />
-          </Form.Item>
-
-          <Form.Item
-            name="avatarUrl"
-            label="店铺头像"
-            rules={[{ type: 'url', message: '请输入有效的URL地址' }]}
-          >
-            <Input placeholder="请输入店铺头像URL（可选）" />
-          </Form.Item>
-
-          <Form.Item
-            name="responsiblePerson"
-            label="负责人"
-            rules={[
-              { required: true, message: '请输入负责人姓名' },
-              { max: 20, message: '负责人姓名不能超过20个字符' },
-            ]}
-          >
-            <Input placeholder="请输入负责人姓名" />
-          </Form.Item>
-
-          <Form.Item
-            name="remark"
-            label="备注"
-            rules={[{ max: 500, message: '备注不能超过500个字符' }]}
-          >
-            <Input.TextArea placeholder="请输入备注信息（可选）" rows={4} />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* 店铺表单抽屉 */}
+      <ShopFormDrawer open={drawerVisible} entity={editingShop} closeDrawer={closeDrawer} />
     </>
   );
 };

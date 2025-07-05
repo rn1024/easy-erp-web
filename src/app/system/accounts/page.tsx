@@ -1,21 +1,7 @@
 'use client';
 
 import { useRequest, useSetState } from 'ahooks';
-import {
-  App,
-  Button,
-  Col,
-  Form,
-  Input,
-  Modal,
-  Row,
-  Select,
-  Space,
-  Tag,
-  Tooltip,
-  Popconfirm,
-  Flex,
-} from 'antd';
+import { App, Button, Form, Input, Select, Space, Tag, Tooltip, Popconfirm, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -30,26 +16,30 @@ import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import { Pagination } from '@/components/ui/pagination';
 
 /**
+ * Components
+ */
+import AccountFormDrawer from './components/account-form-drawer';
+import AccountPasswordDrawer from './components/account-password-drawer';
+
+/**
  * APIs
  */
-import { accounts, cAccount, uAccount, dAccount, rAccount, cAccountPwd } from '@/services/account';
+import { accounts, dAccount, rAccount } from '@/services/account';
 import { roleListApi } from '@/services/roles';
 
 /**
  * Types
  */
-import type { AccountsParams, AccountsResponse, CAccountData } from '@/services/account';
+import type { AccountsParams, AccountsResponse } from '@/services/account';
 import type { RoleDataResult } from '@/services/roles';
 
 const AccountsPage: React.FC = () => {
   const { message } = App.useApp();
-  const [form] = Form.useForm();
-  const [passwordForm] = Form.useForm();
   const [searchForm] = Form.useForm();
 
   const [state, setState] = useSetState({
-    modalVisible: false,
-    passwordModalVisible: false,
+    drawerVisible: false,
+    passwordDrawerVisible: false,
     editingRecord: null as AccountsResponse | null,
     selectedRowKeys: [] as string[],
   });
@@ -83,30 +73,6 @@ const AccountsPage: React.FC = () => {
     },
   });
 
-  // 创建/更新账户
-  const { loading: submitting, run: submitAccount } = useRequest(
-    async (values: CAccountData) => {
-      if (state.editingRecord) {
-        return uAccount(state.editingRecord.id, values);
-      } else {
-        return cAccount(values);
-      }
-    },
-    {
-      manual: true,
-      onSuccess: (response: any) => {
-        if (response?.data?.code === 0) {
-          message.success(state.editingRecord ? '更新成功' : '创建成功');
-          setState({ modalVisible: false, editingRecord: null });
-          form.resetFields();
-          refresh();
-        } else {
-          message.error(response?.data?.msg || '操作失败');
-        }
-      },
-    }
-  );
-
   // 删除账户
   const { run: handleDelete } = useRequest(dAccount, {
     manual: true,
@@ -119,29 +85,6 @@ const AccountsPage: React.FC = () => {
       }
     },
   });
-
-  // 修改密码
-  const { loading: changingPassword, run: changePassword } = useRequest(
-    async (values: { old_password: string; new_password: string }) => {
-      if (!state.editingRecord) return;
-      return cAccountPwd(state.editingRecord.id, values);
-    },
-    {
-      manual: true,
-      onSuccess: (response: any) => {
-        if (response?.data?.code === 0) {
-          message.success('密码修改成功');
-          setState({ passwordModalVisible: false, editingRecord: null });
-          passwordForm.resetFields();
-        } else {
-          message.error(response?.data?.msg || '密码修改失败');
-        }
-      },
-      onError: () => {
-        message.error('密码修改失败');
-      },
-    }
-  );
 
   // 搜索处理
   const handleSearch = (values: any) => {
@@ -230,24 +173,17 @@ const AccountsPage: React.FC = () => {
   ];
 
   const handleCreate = () => {
-    setState({ modalVisible: true, editingRecord: null });
-    setTimeout(() => {
-      form.resetFields();
-    }, 0);
+    setState({ drawerVisible: true, editingRecord: null });
   };
 
   const handleEdit = async (record: AccountsResponse) => {
     try {
       const response = await rAccount(record.id);
       if (response?.data?.code === 0) {
-        setState({ modalVisible: true, editingRecord: record });
-        setTimeout(() => {
-          form.setFieldsValue({
-            name: response.data.data.name,
-            status: response.data.data.status,
-            roleIds: response.data.data.roles?.map((role: any) => role.id) || [],
-          });
-        }, 0);
+        setState({
+          drawerVisible: true,
+          editingRecord: response.data.data,
+        });
       }
     } catch (error) {
       message.error('获取账户信息失败');
@@ -255,16 +191,21 @@ const AccountsPage: React.FC = () => {
   };
 
   const handleChangePassword = (record: AccountsResponse) => {
-    setState({ passwordModalVisible: true, editingRecord: record });
-    setTimeout(() => {
-      passwordForm.resetFields();
-    }, 0);
+    setState({ passwordDrawerVisible: true, editingRecord: record });
   };
 
-  const handleSubmit = () => {
-    form.validateFields().then((values) => {
-      submitAccount(values);
-    });
+  const closeAccountDrawer = (reload?: boolean) => {
+    setState({ drawerVisible: false, editingRecord: null });
+    if (reload) {
+      refresh();
+    }
+  };
+
+  const closePasswordDrawer = (reload?: boolean) => {
+    setState({ passwordDrawerVisible: false, editingRecord: null });
+    if (reload) {
+      refresh();
+    }
   };
 
   // 批量操作
@@ -380,114 +321,20 @@ const AccountsPage: React.FC = () => {
         isLoading={loading}
       />
 
-      {/* 创建/编辑账户模态框 */}
-      <Modal
-        title={state.editingRecord ? '编辑账户' : '新建账户'}
-        open={state.modalVisible}
-        onOk={handleSubmit}
-        onCancel={() => {
-          setState({ modalVisible: false, editingRecord: null });
-          form.resetFields();
-        }}
-        confirmLoading={submitting}
-        destroyOnHidden
-        width={600}
-      >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item
-            name="name"
-            label="账户名称"
-            rules={[{ required: true, message: '请输入账户名称' }]}
-          >
-            <Input placeholder="请输入账户名称" />
-          </Form.Item>
+      {/* 账户表单抽屉 */}
+      <AccountFormDrawer
+        open={state.drawerVisible}
+        entity={state.editingRecord}
+        closeDrawer={closeAccountDrawer}
+        roleOptions={roleOptions}
+      />
 
-          {!state.editingRecord && (
-            <Form.Item
-              name="password"
-              label="密码"
-              rules={[{ required: true, message: '请输入密码' }]}
-            >
-              <Input.Password placeholder="请输入密码" />
-            </Form.Item>
-          )}
-
-          <Form.Item
-            name="status"
-            label="状态"
-            initialValue={1}
-            rules={[{ required: true, message: '请选择状态' }]}
-          >
-            <Select>
-              <Select.Option value={1}>启用</Select.Option>
-              <Select.Option value={0}>禁用</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="roleIds"
-            label="角色"
-            rules={[{ required: true, message: '请选择角色' }]}
-          >
-            <Select mode="multiple" placeholder="请选择角色" options={roleOptions} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 修改密码模态框 */}
-      <Modal
-        title="修改密码"
-        open={state.passwordModalVisible}
-        onOk={() => {
-          passwordForm.validateFields().then((values) => {
-            changePassword(values);
-          });
-        }}
-        onCancel={() => {
-          setState({ passwordModalVisible: false, editingRecord: null });
-          passwordForm.resetFields();
-        }}
-        confirmLoading={changingPassword}
-        destroyOnHidden
-        width={500}
-      >
-        <Form form={passwordForm} layout="vertical" preserve={false}>
-          <Form.Item
-            name="old_password"
-            label="当前密码"
-            rules={[{ required: true, message: '请输入当前密码' }]}
-          >
-            <Input.Password placeholder="请输入当前密码" />
-          </Form.Item>
-
-          <Form.Item
-            name="new_password"
-            label="新密码"
-            rules={[{ required: true, message: '请输入新密码' }]}
-          >
-            <Input.Password placeholder="请输入新密码" />
-          </Form.Item>
-
-          <Form.Item
-            name="confirm_password"
-            label="确认新密码"
-            dependencies={['new_password']}
-            rules={[
-              { required: true, message: '请确认新密码' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('new_password') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('两次输入的密码不一致'));
-                },
-              }),
-            ]}
-          >
-            <Input.Password placeholder="请确认新密码" />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* 密码修改抽屉 */}
+      <AccountPasswordDrawer
+        open={state.passwordDrawerVisible}
+        entity={state.editingRecord}
+        closeDrawer={closePasswordDrawer}
+      />
     </>
   );
 };
