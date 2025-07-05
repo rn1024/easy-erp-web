@@ -40,17 +40,16 @@ import { logs } from '@/services/logs';
  */
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import type { LogsParams, LogsResponse } from '@/services/logs';
-import { Pagination } from '@/components/ui/pagination';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 const { Text } = Typography;
 
-const LogsManagement: React.FC = () => {
+const LogsPage: React.FC = () => {
   /**
    * Hooks
    */
-  const [form] = Form.useForm();
+  const [searchForm] = Form.useForm();
 
   /**
    * State
@@ -91,7 +90,7 @@ const LogsManagement: React.FC = () => {
   };
 
   const handleReset = () => {
-    form.resetFields();
+    searchForm.resetFields();
     setSearchParams({
       page: 1,
       limit: 20,
@@ -103,56 +102,54 @@ const LogsManagement: React.FC = () => {
    */
   const columns: ProColumns<LogsResponse>[] = [
     {
-      title: '序号',
-      dataIndex: 'index',
-      valueType: 'index',
-      width: 50,
-      align: 'center',
-    },
-    {
-      title: '分类',
-      dataIndex: 'category',
-      width: 80,
-      align: 'center',
-      render: (_, record: LogsResponse) => <Tag color="blue">{record.category}</Tag>,
-    },
-    {
-      title: '模块',
-      dataIndex: 'module',
+      title: 'ID',
+      dataIndex: 'id',
       width: 100,
-      ellipsis: true,
+      render: (text) => text?.toString().slice(-8) || '-',
     },
     {
-      title: '操作',
+      title: '操作类型',
       dataIndex: 'operation',
       width: 120,
+      render: (text) => <Tag color="blue">{text || '-'}</Tag>,
+    },
+    {
+      title: '操作人',
+      dataIndex: 'operator',
+      width: 120,
+    },
+    {
+      title: 'IP地址',
+      dataIndex: 'ip',
+      width: 140,
+    },
+    {
+      title: '请求URL',
+      dataIndex: 'url',
       ellipsis: true,
+      width: 200,
     },
     {
       title: '状态',
       dataIndex: 'status',
-      width: 80,
-      align: 'center',
-      render: (_, record: LogsResponse) => (
-        <Tag
-          color={record.status === 'Success' ? 'green' : 'red'}
-          icon={record.status === 'Success' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-        >
-          {record.status === 'Success' ? '成功' : '失败'}
-        </Tag>
-      ),
-    },
-    {
-      title: '操作员',
-      dataIndex: 'operator',
-      width: 120,
-      ellipsis: true,
+      width: 100,
+      render: (status) => {
+        const isSuccess = status === 200 || status === 'success';
+        return (
+          <Tag
+            color={isSuccess ? 'green' : 'red'}
+            icon={isSuccess ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+          >
+            {status || '-'}
+          </Tag>
+        );
+      },
     },
     {
       title: '操作时间',
       dataIndex: 'created_at',
       width: 180,
-      render: (_, record: LogsResponse) => dayjs(record.created_at).format('YYYY-MM-DD HH:mm:ss'),
+      render: (text) => (text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
   ];
 
@@ -164,29 +161,57 @@ const LogsManagement: React.FC = () => {
     dataSource: logsData?.data?.data?.list || [],
     loading: logsLoading,
     rowKey: 'id',
-    pagination: false,
     search: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.limit) || 20,
+      total: logsData?.data?.data?.meta?.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({
+          ...searchParams,
+          page: page,
+          limit: pageSize || 20,
+        });
+      },
+    },
     options: {
       reload: refreshLogs,
-      density: false,
-      fullScreen: false,
-      setting: false,
     },
-    scroll: { x: 1000 },
-    size: 'middle',
+  };
+
+  /**
+   * Simple Statistics Calculation
+   */
+  const logsStats = {
+    total: logsData?.data?.data?.list?.length || 0,
+    success:
+      logsData?.data?.data?.list?.filter(
+        (log: any) => log.status === 200 || log.status === 'success'
+      )?.length || 0,
+    error:
+      logsData?.data?.data?.list?.filter(
+        (log: any) => log.status !== 200 && log.status !== 'success'
+      )?.length || 0,
+    today:
+      logsData?.data?.data?.list?.filter((log: any) =>
+        dayjs(log.created_at).isAfter(dayjs().startOf('day'))
+      )?.length || 0,
   };
 
   return (
     <>
-      {/* 统计面板 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      {/* 统计卡片 */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card>
             <Statistic
               title="总日志数"
-              value={logsData?.data?.data?.meta?.total || 0}
+              value={logsStats.total}
               prefix={<FileTextOutlined />}
-              loading={logsLoading}
+              valueStyle={{ color: '#1890ff' }}
             />
           </Card>
         </Col>
@@ -194,16 +219,9 @@ const LogsManagement: React.FC = () => {
           <Card>
             <Statistic
               title="成功操作"
-              value={
-                (
-                  logsData?.data?.data?.list?.filter(
-                    (item: LogsResponse) => item.status === 'Success'
-                  ) || []
-                ).length
-              }
+              value={logsStats.success}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#52c41a' }}
-              loading={logsLoading}
             />
           </Card>
         </Col>
@@ -211,38 +229,19 @@ const LogsManagement: React.FC = () => {
           <Card>
             <Statistic
               title="失败操作"
-              value={
-                (
-                  logsData?.data?.data?.list?.filter(
-                    (item: LogsResponse) => item.status === 'Failure'
-                  ) || []
-                ).length
-              }
+              value={logsStats.error}
               prefix={<CloseCircleOutlined />}
               valueStyle={{ color: '#ff4d4f' }}
-              loading={logsLoading}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
             <Statistic
-              title="成功率"
-              value={
-                logsData?.data?.data?.list?.length
-                  ? Math.round(
-                      (logsData.data.data.list.filter(
-                        (item: LogsResponse) => item.status === 'Success'
-                      ).length /
-                        logsData.data.data.list.length) *
-                        100
-                    )
-                  : 0
-              }
-              suffix="%"
+              title="今日操作"
+              value={logsStats.today}
               prefix={<BarChartOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-              loading={logsLoading}
+              valueStyle={{ color: '#722ed1' }}
             />
           </Card>
         </Col>
@@ -250,30 +249,21 @@ const LogsManagement: React.FC = () => {
 
       {/* 搜索区域 */}
       <ProCard className="mb-16">
-        <Form form={form} layout="inline" onFinish={handleSearch}>
+        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
           <Flex gap={16} wrap={true}>
-            <Form.Item name="category" style={{ marginRight: 0 }}>
-              <Select placeholder="选择分类" style={{ width: 120 }} allowClear>
-                <Option value="SYSTEM">系统</Option>
-                <Option value="SECURITY">安全</Option>
-                <Option value="BUSINESS">业务</Option>
-                <Option value="ERROR">错误</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item name="module" style={{ marginRight: 0 }}>
-              <Input placeholder="模块名称" style={{ width: 120 }} />
-            </Form.Item>
             <Form.Item name="operation" style={{ marginRight: 0 }}>
-              <Input placeholder="操作类型" style={{ width: 120 }} />
+              <Input placeholder="操作类型" style={{ width: 150 }} allowClear />
             </Form.Item>
-            <Form.Item name="status" style={{ marginRight: 0 }}>
-              <Select placeholder="选择状态" style={{ width: 100 }} allowClear>
-                <Option value="Success">成功</Option>
-                <Option value="Failure">失败</Option>
-              </Select>
+            <Form.Item name="operator" style={{ marginRight: 0 }}>
+              <Input placeholder="操作人" style={{ width: 150 }} allowClear />
             </Form.Item>
             <Form.Item name="dateRange" style={{ marginRight: 0 }}>
-              <RangePicker style={{ width: 240 }} />
+              <RangePicker
+                showTime
+                format="YYYY-MM-DD HH:mm:ss"
+                placeholder={['开始时间', '结束时间']}
+                style={{ width: 400 }}
+              />
             </Form.Item>
             <Button
               type="primary"
@@ -290,25 +280,8 @@ const LogsManagement: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={Number(searchParams.page) || 1}
-        hasMore={false}
-        total={logsData?.data?.data?.meta?.total || 0}
-        size={Number(searchParams.limit) || 20}
-        searchAfter=""
-        onChange={(params) => {
-          setSearchParams({
-            ...searchParams,
-            page: params.page,
-            limit: params.size,
-          });
-        }}
-        isLoading={logsLoading}
-      />
     </>
   );
 };
 
-export default LogsManagement;
+export default LogsPage;

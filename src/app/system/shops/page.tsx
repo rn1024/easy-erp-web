@@ -16,7 +16,6 @@ import {
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 
 // Utils工具类
-import { Pagination } from '@/components/ui/pagination';
 import ShopFormDrawer from './components/shop-form-drawer';
 
 // APIs接口
@@ -92,58 +91,60 @@ const ShopsPage: React.FC = () => {
   // Table Columns
   const columns: ProColumns<Shop>[] = [
     {
-      title: '店铺头像',
+      title: 'ID',
+      dataIndex: 'id',
+      width: 80,
+    },
+    {
+      title: '店铺Logo',
       dataIndex: 'avatarUrl',
       width: 80,
       render: (_, record) => (
-        <Avatar src={record.avatarUrl} icon={<ShopOutlined />} size={40}>
-          {!record.avatarUrl && record.nickname.charAt(0)}
-        </Avatar>
+        <Avatar
+          src={record.avatarUrl}
+          icon={<ShopOutlined />}
+          size="large"
+          shape="square"
+          style={{ backgroundColor: '#f0f0f0' }}
+        />
       ),
     },
     {
       title: '店铺昵称',
       dataIndex: 'nickname',
-      render: (_, record) => <strong>{record.nickname}</strong>,
     },
     {
-      title: '负责人',
-      dataIndex: 'responsiblePerson',
+      title: '店铺名称',
+      dataIndex: 'name',
     },
     {
-      title: '备注',
-      dataIndex: 'remark',
-      ellipsis: true,
-      render: (_, record) => record.remark || '-',
+      title: '店铺代码',
+      dataIndex: 'code',
+      width: 120,
     },
     {
-      title: '操作员',
-      dataIndex: 'operator',
-      render: (_, record) => record.operator?.name || '-',
+      title: '国家/地区',
+      dataIndex: 'country',
+      width: 120,
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
-      render: (_, record) => new Date(record.createdAt).toLocaleString(),
+      width: 180,
     },
     {
       title: '操作',
-      width: 150,
+      width: 120,
       render: (_, record) => (
         <Space>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditClick(record)}>
-            编辑
-          </Button>
+          <Button type="text" icon={<EditOutlined />} onClick={() => handleEditClick(record)} />
           <Popconfirm
-            title="确定要删除这个店铺吗？"
-            description="删除后将无法恢复，请谨慎操作。"
+            title="确定删除此店铺吗？"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
+            <Button type="text" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -151,19 +152,33 @@ const ShopsPage: React.FC = () => {
   ];
 
   // ProTable Props
-  const proTableProps: ProTableProps<Shop, any> = {
+  const proTableProps: ProTableProps<Shop, ShopsParams> = {
     columns,
     dataSource: shopsData?.data?.data?.list || [],
     loading,
     rowKey: 'id',
     search: false,
-    pagination: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.pageSize) || 10,
+      total: shopsData?.data?.data?.meta?.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({
+          ...searchParams,
+          page: page,
+          pageSize: pageSize || 10,
+        });
+      },
+    },
     options: {
       reload: refresh,
     },
     toolBarRender: () => [
       <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
-        新建店铺
+        新增店铺
       </Button>,
       <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
         刷新
@@ -178,7 +193,7 @@ const ShopsPage: React.FC = () => {
         <Form form={searchForm} layout="inline" onFinish={handleSearch}>
           <Flex gap={16} wrap={true}>
             <Form.Item name="nickname" style={{ marginRight: 0 }}>
-              <Input allowClear placeholder="请输入店铺昵称" style={{ width: 200 }} />
+              <Input placeholder="请输入店铺昵称" style={{ width: 200 }} allowClear />
             </Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
               搜索
@@ -190,23 +205,6 @@ const ShopsPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={Number(searchParams.page) || 1}
-        size={Number(searchParams.pageSize) || 10}
-        total={shopsData?.data?.data?.meta?.total || 0}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({
-            ...searchParams,
-            page: page,
-            pageSize: size || 10,
-          });
-        }}
-        isLoading={loading}
-      />
 
       {/* 店铺表单抽屉 */}
       <ShopFormDrawer open={drawerVisible} entity={editingShop} closeDrawer={closeDrawer} />

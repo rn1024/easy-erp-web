@@ -16,7 +16,6 @@ import {
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 
 // Utils工具类
-import { Pagination } from '@/components/ui/pagination';
 import AccountFormDrawer from './components/account-form-drawer';
 import AccountPasswordDrawer from './components/account-password-drawer';
 
@@ -241,19 +240,33 @@ const AccountsPage: React.FC = () => {
       value: role.id,
     })) || [];
 
-  const proTableProps: ProTableProps<AccountsResponse, any> = {
+  const proTableProps: ProTableProps<AccountsResponse, AccountsParams> = {
     columns,
     dataSource: accountsData?.data?.data?.list || [],
     loading,
     rowKey: 'id',
     search: false,
-    pagination: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.limit) || 20,
+      total: accountsData?.data?.data?.meta?.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({
+          ...searchParams,
+          page: page,
+          limit: pageSize || 20,
+        });
+      },
+    },
     options: {
       reload: refresh,
     },
     toolBarRender: () => [
       <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-        新建账户
+        新增账户
       </Button>,
       <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
         刷新
@@ -304,23 +317,6 @@ const AccountsPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={Number(searchParams.page) || 1}
-        size={Number(searchParams.limit) || 20}
-        total={accountsData?.data?.data?.meta?.total || 0}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({
-            ...searchParams,
-            page: page,
-            limit: size || 20,
-          });
-        }}
-        isLoading={loading}
-      />
 
       {/* 账户表单抽屉 */}
       <AccountFormDrawer
