@@ -271,7 +271,17 @@ const FinishedInventoryPage: React.FC = () => {
     loading,
     rowKey: 'id',
     search: false,
-    pagination: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.pageSize) || 20,
+      total: inventoryData?.data?.data?.meta?.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({ ...searchParams, page: page, pageSize: pageSize || 20 });
+      },
+    },
     options: {
       reload: refresh,
     },
@@ -342,23 +352,6 @@ const FinishedInventoryPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={Number(searchParams.page) || 1}
-        size={Number(searchParams.pageSize) || 10}
-        total={meta.total || 0}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({
-            ...searchParams,
-            page,
-            pageSize: size || 10,
-          });
-        }}
-        isLoading={loading}
-      />
 
       {/* 成品库存表单抽屉 */}
       <InventoryFormDrawer

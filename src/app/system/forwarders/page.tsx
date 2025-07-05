@@ -281,7 +281,17 @@ const ForwardersPage: React.FC = () => {
     dataSource: forwardersData?.data?.data?.list || [],
     loading,
     rowKey: 'id',
-    pagination: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.pageSize) || 20,
+      total: forwardersData?.data?.data?.meta?.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({ ...searchParams, page: page, pageSize: pageSize || 20 });
+      },
+    },
     search: false,
     options: {
       reload: refresh,
@@ -323,19 +333,6 @@ const ForwardersPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={searchParams.page || 1}
-        size={searchParams.pageSize || 20}
-        total={forwardersData?.data?.data?.meta?.total || 0}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({ ...searchParams, page, pageSize: size || 20 });
-        }}
-        isLoading={loading}
-      />
 
       {/* 货代表单抽屉 */}
       <ForwarderFormDrawer

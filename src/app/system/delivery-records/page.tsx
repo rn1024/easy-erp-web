@@ -312,7 +312,17 @@ const DeliveryRecordsPage: React.FC = () => {
     loading: recordsLoading,
     rowKey: 'id',
     search: false,
-    pagination: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.pageSize) || 20,
+      total: recordsData?.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({ ...searchParams, page: page, pageSize: pageSize || 20 });
+      },
+    },
     options: {
       reload: refreshRecords,
     },
@@ -380,23 +390,6 @@ const DeliveryRecordsPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={Number(searchParams.page) || 1}
-        size={Number(searchParams.pageSize) || 10}
-        total={recordsData?.total || 0}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({
-            ...searchParams,
-            page,
-            pageSize: size || 10,
-          });
-        }}
-        isLoading={recordsLoading}
-      />
 
       {/* 新增/编辑模态框 */}
       <Modal

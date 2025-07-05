@@ -277,7 +277,17 @@ const RolesPage: React.FC = () => {
     dataSource: rolesData?.data?.data?.list || [],
     loading,
     rowKey: 'id',
-    pagination: false,
+    pagination: {
+      current: searchParams.page,
+      pageSize: searchParams.limit,
+      total: rolesData?.data?.data?.meta?.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({ ...searchParams, page, limit: pageSize || 20 });
+      },
+    },
     search: false,
     options: {
       reload: refresh,
@@ -322,19 +332,6 @@ const RolesPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={searchParams.page}
-        size={searchParams.limit}
-        total={rolesData?.data?.data?.meta?.total || 0}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({ ...searchParams, page, limit: size || 20 });
-        }}
-        isLoading={loading}
-      />
 
       {/* 角色表单抽屉 */}
       <RoleFormDrawer

@@ -228,7 +228,21 @@ const SuppliersPage: React.FC = () => {
     loading,
     rowKey: 'id',
     search: false,
-    pagination: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.pageSize) || 10,
+      total: meta.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams((prev: SuppliersParams) => ({
+          ...prev,
+          page,
+          pageSize: pageSize || 10,
+        }));
+      },
+    },
     options: {
       reload: refresh,
     },
@@ -267,23 +281,6 @@ const SuppliersPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={Number(searchParams.page) || 1}
-        size={Number(searchParams.pageSize) || 10}
-        total={meta.total || 0}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams((prev: SuppliersParams) => ({
-            ...prev,
-            page,
-            pageSize: size || 10,
-          }));
-        }}
-        isLoading={loading}
-      />
 
       {/* 供应商表单抽屉 */}
       <SupplierFormDrawer open={drawerVisible} entity={editingSupplier} closeDrawer={closeDrawer} />

@@ -291,7 +291,17 @@ const FinancialReportsPage: React.FC = () => {
     loading,
     rowKey: 'id',
     search: false,
-    pagination: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.pageSize) || 20,
+      total: total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({ ...searchParams, page: page, pageSize: pageSize || 20 });
+      },
+    },
     options: {
       reload: refresh,
     },
@@ -347,23 +357,6 @@ const FinancialReportsPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={Number(searchParams.page) || 1}
-        size={Number(searchParams.pageSize) || 10}
-        total={total}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({
-            ...searchParams,
-            page,
-            pageSize: size || 10,
-          });
-        }}
-        isLoading={loading}
-      />
 
       {/* 新增/编辑弹窗 */}
       <Modal

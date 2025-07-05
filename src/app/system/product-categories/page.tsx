@@ -215,7 +215,17 @@ const ProductCategoriesPage: React.FC = () => {
     loading,
     rowKey: 'id',
     search: false,
-    pagination: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.pageSize) || 20,
+      total: meta.total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({ ...searchParams, page, pageSize: pageSize || 20 });
+      },
+    },
     options: {
       reload: refresh,
     },
@@ -248,19 +258,6 @@ const ProductCategoriesPage: React.FC = () => {
 
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
-
-      {/* 分页区域 */}
-      <Pagination
-        current={Number(searchParams.page) || 1}
-        size={Number(searchParams.pageSize) || 20}
-        total={meta.total || 0}
-        hasMore={false}
-        searchAfter=""
-        onChange={({ page, size }) => {
-          setSearchParams({ ...searchParams, page, pageSize: size || 20 });
-        }}
-        isLoading={loading}
-      />
 
       {/* 分类表单抽屉 */}
       <CategoryFormDrawer open={drawerVisible} entity={editingRecord} closeDrawer={closeDrawer} />

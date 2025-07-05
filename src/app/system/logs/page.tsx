@@ -149,7 +149,7 @@ const LogsPage: React.FC = () => {
       title: '操作时间',
       dataIndex: 'created_at',
       width: 180,
-      render: (text) => (text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-'),
+      render: (text) => (text ? dayjs(String(text)).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
   ];
 
