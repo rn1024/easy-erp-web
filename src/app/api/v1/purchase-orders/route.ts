@@ -3,12 +3,12 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { verifyRequestToken } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 // 获取采购订单列表
 export async function GET(request: NextRequest) {
   try {
-    const user = await verifyRequestToken(request);
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问' }, { status: 401 });
     }
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
 // 创建采购订单
 export async function POST(request: NextRequest) {
   try {
-    const user = await verifyRequestToken(request);
+    const user = await getCurrentUser(request);
     if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问' }, { status: 401 });
     }

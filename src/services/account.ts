@@ -5,7 +5,7 @@ import axios from './index';
  */
 // 获取账号列表
 export function accounts(params: AccountsParams) {
-  return axios<PageResType<AccountsResponse>>('/v1/accounts', {
+  return axios<PageResType<AccountsResponse>>('/accounts', {
     method: 'get',
     params,
   });
@@ -13,7 +13,7 @@ export function accounts(params: AccountsParams) {
 
 // 创建账号信息
 export function cAccount(data: CAccountData) {
-  return axios<ResType<AccountsResponse>>('/v1/accounts', {
+  return axios<ResType<AccountsResponse>>('/accounts', {
     data,
     method: 'post',
   });
@@ -21,14 +21,14 @@ export function cAccount(data: CAccountData) {
 
 // 获取账号信息
 export function rAccount(id: string) {
-  return axios<ResType<RAccountResponse>>(`/v1/accounts/${id}`, {
+  return axios<ResType<RAccountResponse>>(`/accounts/${id}`, {
     method: 'get',
   });
 }
 
 // 更新账号信息
 export function uAccount(id: string, data: UAccountData) {
-  return axios<ResType<AccountsResponse>>(`/v1/accounts/${id}`, {
+  return axios<ResType<AccountsResponse>>(`/accounts/${id}`, {
     data,
     method: 'put',
   });
@@ -36,14 +36,14 @@ export function uAccount(id: string, data: UAccountData) {
 
 // 删除账号信息
 export function dAccount(id: string) {
-  return axios<ResType<null>>(`/v1/accounts/${id}`, {
+  return axios<ResType<null>>(`/accounts/${id}`, {
     method: 'delete',
   });
 }
 
 // 修改账号密码
 export function cAccountPwd(id: string | number, data: UpdateAccountPasswordData) {
-  return axios<ResType<AccountsResponse>>(`/v1/accounts/${id}/password`, {
+  return axios<ResType<AccountsResponse>>(`/accounts/${id}/password`, {
     method: 'put',
     data,
   });

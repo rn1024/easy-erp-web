@@ -53,7 +53,7 @@ const { TextArea } = Input;
 
 // 获取货代列表的API函数
 const getForwardersApi = (params: any) => {
-  return axios('/api/v1/forwarding-agents', {
+  return axios('/forwarding-agents', {
     method: 'get',
     params,
   });

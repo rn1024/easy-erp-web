@@ -1,19 +1,22 @@
-// 标记为动态路由
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { verifyRequestToken } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
-// GET /api/v1/products/[id] - 获取产品详情
+export const dynamic = 'force-dynamic';
+
+// 获取产品信息详情
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证用户权限
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
     const { id } = params;
+
+    if (!id) {
+      return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
+    }
 
     const product = await prisma.productInfo.findUnique({
       where: { id },
@@ -36,36 +39,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             name: true,
           },
         },
-        finishedInventory: {
-          select: {
-            id: true,
-            boxSize: true,
-            packQuantity: true,
-            weight: true,
-            location: true,
-            stockQuantity: true,
-          },
-        },
-        spareInventory: {
-          select: {
-            id: true,
-            spareType: true,
-            location: true,
-            quantity: true,
-          },
-        },
-        _count: {
-          select: {
-            purchaseOrders: true,
-            warehouseTasks: true,
-            deliveryRecords: true,
-          },
-        },
       },
     });
 
     if (!product) {
-      return NextResponse.json({ code: 404, msg: '产品不存在', data: null }, { status: 404 });
+      return NextResponse.json({ code: 404, msg: '产品信息不存在' }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -74,7 +52,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       data: product,
     });
   } catch (error) {
-    console.error('获取产品详情失败:', error);
+    console.error('获取产品信息详情失败:', error);
     return NextResponse.json(
       {
         code: 500,
@@ -86,12 +64,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-// PUT /api/v1/products/[id] - 更新产品
+// 更新产品信息
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证用户权限
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
@@ -116,69 +93,66 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       remark,
     } = body;
 
+    if (!id) {
+      return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
+    }
+
     // 检查产品是否存在
     const existingProduct = await prisma.productInfo.findUnique({
       where: { id },
     });
 
     if (!existingProduct) {
-      return NextResponse.json({ code: 404, msg: '产品不存在', data: null }, { status: 404 });
+      return NextResponse.json({ code: 404, msg: '产品信息不存在' }, { status: 404 });
     }
 
-    // 验证必填字段
-    if (!shopId || !categoryId || !code || !sku) {
-      return NextResponse.json(
-        { code: 400, msg: '店铺、分类、产品编码和SKU不能为空', data: null },
-        { status: 400 }
-      );
-    }
+    // 如果要更新关联数据，验证其是否存在
+    if (shopId || categoryId) {
+      const [shop, category] = await Promise.all([
+        shopId ? prisma.shop.findUnique({ where: { id: shopId } }) : null,
+        categoryId ? prisma.productCategory.findUnique({ where: { id: categoryId } }) : null,
+      ]);
 
-    // 检查新SKU是否与其他产品重复
-    if (sku !== existingProduct.sku) {
-      const duplicateProduct = await prisma.productInfo.findUnique({
-        where: { sku },
-      });
+      if (shopId && !shop) {
+        return NextResponse.json({ code: 400, msg: '店铺不存在' }, { status: 400 });
+      }
 
-      if (duplicateProduct) {
-        return NextResponse.json({ code: 400, msg: 'SKU已存在', data: null }, { status: 400 });
+      if (categoryId && !category) {
+        return NextResponse.json({ code: 400, msg: '产品分类不存在' }, { status: 400 });
       }
     }
 
-    // 检查店铺和分类是否存在
-    const [shop, category] = await Promise.all([
-      prisma.shop.findUnique({ where: { id: shopId } }),
-      prisma.productCategory.findUnique({ where: { id: categoryId } }),
-    ]);
+    // 如果要更新SKU，检查是否与其他产品冲突
+    if (sku && sku !== existingProduct.sku) {
+      const skuConflict = await prisma.productInfo.findUnique({
+        where: { sku },
+      });
 
-    if (!shop) {
-      return NextResponse.json({ code: 400, msg: '店铺不存在', data: null }, { status: 400 });
+      if (skuConflict) {
+        return NextResponse.json({ code: 400, msg: 'SKU已存在' }, { status: 400 });
+      }
     }
 
-    if (!category) {
-      return NextResponse.json({ code: 400, msg: '产品分类不存在', data: null }, { status: 400 });
-    }
-
-    // 更新产品
-    const updatedProduct = await prisma.productInfo.update({
+    // 更新产品信息
+    const product = await prisma.productInfo.update({
       where: { id },
       data: {
-        shopId,
-        categoryId,
-        code,
-        specification,
-        color,
-        setQuantity: setQuantity || 1,
-        internalSize,
-        externalSize,
-        weight: weight ? parseFloat(weight) : null,
-        sku,
-        label,
-        codeFileUrl,
-        imageUrl,
-        styleInfo,
-        accessoryInfo,
-        remark,
-        updatedAt: new Date(),
+        ...(shopId && { shopId }),
+        ...(categoryId && { categoryId }),
+        ...(code && { code }),
+        ...(specification !== undefined && { specification }),
+        ...(color !== undefined && { color }),
+        ...(setQuantity !== undefined && { setQuantity }),
+        ...(internalSize !== undefined && { internalSize }),
+        ...(externalSize !== undefined && { externalSize }),
+        ...(weight !== undefined && { weight: weight ? parseFloat(weight) : null }),
+        ...(sku && { sku }),
+        ...(label !== undefined && { label }),
+        ...(codeFileUrl !== undefined && { codeFileUrl }),
+        ...(imageUrl !== undefined && { imageUrl }),
+        ...(styleInfo !== undefined && { styleInfo }),
+        ...(accessoryInfo !== undefined && { accessoryInfo }),
+        ...(remark !== undefined && { remark }),
       },
       include: {
         shop: {
@@ -205,10 +179,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({
       code: 200,
       msg: '更新成功',
-      data: updatedProduct,
+      data: product,
     });
   } catch (error) {
-    console.error('更新产品失败:', error);
+    console.error('更新产品信息失败:', error);
     return NextResponse.json(
       {
         code: 500,
@@ -220,53 +194,44 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-// DELETE /api/v1/products/[id] - 删除产品
+// 删除产品信息
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证用户权限
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
     const { id } = params;
 
-    // 检查产品是否存在并获取关联数据
-    const product = await prisma.productInfo.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            finishedInventory: true,
-            spareInventory: true,
-            purchaseOrders: true,
-            warehouseTasks: true,
-            deliveryRecords: true,
-          },
-        },
-      },
-    });
-
-    if (!product) {
-      return NextResponse.json({ code: 404, msg: '产品不存在', data: null }, { status: 404 });
+    if (!id) {
+      return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
     }
 
-    // 检查是否有关联数据
-    const relatedCount =
-      product._count.finishedInventory +
-      product._count.spareInventory +
-      product._count.purchaseOrders +
-      product._count.warehouseTasks +
-      product._count.deliveryRecords;
+    // 检查产品是否存在
+    const existingProduct = await prisma.productInfo.findUnique({
+      where: { id },
+    });
 
-    if (relatedCount > 0) {
+    if (!existingProduct) {
+      return NextResponse.json({ code: 404, msg: '产品信息不存在' }, { status: 404 });
+    }
+
+    // 检查是否有相关业务数据
+    const [finishedInventoryCount, spareInventoryCount, purchaseOrderCount] = await Promise.all([
+      prisma.finishedInventory.count({ where: { productId: id } }),
+      prisma.spareInventory.count({ where: { productId: id } }),
+      prisma.purchaseOrder.count({ where: { productId: id } }),
+    ]);
+
+    if (finishedInventoryCount > 0 || spareInventoryCount > 0 || purchaseOrderCount > 0) {
       return NextResponse.json(
-        { code: 400, msg: '该产品还有关联的库存、订单或任务记录，无法删除', data: null },
+        { code: 400, msg: '该产品存在相关业务数据，无法删除' },
         { status: 400 }
       );
     }
 
-    // 删除产品
+    // 删除产品信息
     await prisma.productInfo.delete({
       where: { id },
     });
@@ -277,7 +242,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       data: null,
     });
   } catch (error) {
-    console.error('删除产品失败:', error);
+    console.error('删除产品信息失败:', error);
     return NextResponse.json(
       {
         code: 500,

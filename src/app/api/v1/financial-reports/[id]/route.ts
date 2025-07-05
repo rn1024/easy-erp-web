@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { verifyRequestToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // 获取财务报表详情
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证token
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
-      return NextResponse.json({ message: '未授权' }, { status: 401 });
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
     const { id } = params;
@@ -22,24 +21,28 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           select: {
             id: true,
             nickname: true,
-            responsiblePerson: true,
           },
         },
       },
     });
 
     if (!report) {
-      return NextResponse.json({ message: '财务报表不存在' }, { status: 404 });
+      return NextResponse.json({ code: 404, msg: '财务报表不存在', data: null }, { status: 404 });
     }
 
     return NextResponse.json({
-      success: true,
+      code: 200,
+      msg: '获取成功',
       data: report,
     });
-  } catch (error: any) {
-    console.error('Get financial report error:', error);
+  } catch (error) {
+    console.error('获取财务报表详情失败:', error);
     return NextResponse.json(
-      { message: '获取财务报表详情失败', error: error.message },
+      {
+        code: 500,
+        msg: '服务器内部错误',
+        data: null,
+      },
       { status: 500 }
     );
   }
@@ -48,69 +51,87 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // 更新财务报表
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证token
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
-      return NextResponse.json({ message: '未授权' }, { status: 401 });
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
     const { id } = params;
     const body = await request.json();
-    const { reportMonth, details } = body;
+    const { shopId, reportMonth, details } = body;
 
-    // 检查财务报表是否存在
+    // 检查报表是否存在
     const existingReport = await prisma.financialReport.findUnique({
       where: { id },
     });
 
     if (!existingReport) {
-      return NextResponse.json({ message: '财务报表不存在' }, { status: 404 });
+      return NextResponse.json({ code: 404, msg: '财务报表不存在', data: null }, { status: 404 });
     }
 
-    // 如果修改了报表月份，检查是否冲突
-    if (reportMonth && reportMonth !== existingReport.reportMonth) {
+    // 构建更新数据
+    const updateData: any = {};
+    if (shopId !== undefined) updateData.shopId = shopId;
+    if (reportMonth !== undefined) updateData.reportMonth = reportMonth;
+    if (details !== undefined) updateData.details = details;
+
+    // 如果更新了shopId，验证店铺是否存在
+    if (shopId && shopId !== existingReport.shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json({ code: 400, msg: '店铺不存在' }, { status: 400 });
+      }
+    }
+
+    // 如果更新了shopId或reportMonth，检查唯一性
+    if (
+      (shopId && shopId !== existingReport.shopId) ||
+      (reportMonth && reportMonth !== existingReport.reportMonth)
+    ) {
       const conflictReport = await prisma.financialReport.findUnique({
         where: {
           shopId_reportMonth: {
-            shopId: existingReport.shopId,
-            reportMonth,
+            shopId: shopId || existingReport.shopId,
+            reportMonth: reportMonth || existingReport.reportMonth,
           },
         },
       });
 
-      if (conflictReport) {
-        return NextResponse.json({ message: '该月份的财务报表已存在' }, { status: 400 });
+      if (conflictReport && conflictReport.id !== id) {
+        return NextResponse.json(
+          { code: 400, msg: '该店铺该月份的财务报表已存在' },
+          { status: 400 }
+        );
       }
     }
 
     // 更新财务报表
-    const report = await prisma.financialReport.update({
+    const updatedReport = await prisma.financialReport.update({
       where: { id },
-      data: {
-        ...(reportMonth && { reportMonth }),
-        ...(details && { details }),
-        updatedAt: new Date(),
-      },
+      data: updateData,
       include: {
         shop: {
           select: {
             id: true,
             nickname: true,
-            responsiblePerson: true,
           },
         },
       },
     });
 
     return NextResponse.json({
-      success: true,
-      data: report,
-      message: '更新财务报表成功',
+      code: 200,
+      msg: '更新成功',
+      data: updatedReport,
     });
-  } catch (error: any) {
-    console.error('Update financial report error:', error);
+  } catch (error) {
+    console.error('更新财务报表失败:', error);
     return NextResponse.json(
-      { message: '更新财务报表失败', error: error.message },
+      {
+        code: 500,
+        msg: '服务器内部错误',
+        data: null,
+      },
       { status: 500 }
     );
   }
@@ -119,21 +140,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 // 删除财务报表
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证token
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
-      return NextResponse.json({ message: '未授权' }, { status: 401 });
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
     const { id } = params;
 
-    // 检查财务报表是否存在
+    // 检查报表是否存在
     const existingReport = await prisma.financialReport.findUnique({
       where: { id },
     });
 
     if (!existingReport) {
-      return NextResponse.json({ message: '财务报表不存在' }, { status: 404 });
+      return NextResponse.json({ code: 404, msg: '财务报表不存在', data: null }, { status: 404 });
     }
 
     // 删除财务报表
@@ -142,13 +162,18 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     });
 
     return NextResponse.json({
-      success: true,
-      message: '删除财务报表成功',
+      code: 200,
+      msg: '删除成功',
+      data: null,
     });
-  } catch (error: any) {
-    console.error('Delete financial report error:', error);
+  } catch (error) {
+    console.error('删除财务报表失败:', error);
     return NextResponse.json(
-      { message: '删除财务报表失败', error: error.message },
+      {
+        code: 500,
+        msg: '服务器内部错误',
+        data: null,
+      },
       { status: 500 }
     );
   }

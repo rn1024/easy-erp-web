@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { verifyRequestToken } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 // 标记为动态路由
 export const dynamic = 'force-dynamic';
@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 验证用户权限
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
@@ -85,24 +85,61 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // 计算每日日志统计
+    const dailyStats = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dayCount = await prisma.log.count({
+        where: {
+          createdAt: {
+            gte: dayStart,
+            lte: dayEnd,
+          },
+        },
+      });
+
+      dailyStats.push({
+        date: date.toISOString().split('T')[0],
+        count: dayCount,
+      });
+    }
+
+    // 格式化分类统计
+    const formattedCategoryStats = categoryStats.map((stat) => ({
+      category: stat.category,
+      count: stat._count.id,
+    }));
+
+    // 格式化模块统计
+    const formattedModuleStats = moduleStats.map((stat) => ({
+      module: stat.module,
+      count: stat._count.id,
+    }));
+
+    const successRate = totalLogs > 0 ? ((successLogs / totalLogs) * 100).toFixed(2) : '0.00';
+
     return NextResponse.json({
       code: 200,
-      msg: '获取统计信息成功',
+      msg: '获取日志统计成功',
       data: {
-        summary: {
-          total: totalLogs,
-          success: successLogs,
-          failure: failureLogs,
-          successRate: totalLogs > 0 ? ((successLogs / totalLogs) * 100).toFixed(2) : '0',
+        total: totalLogs,
+        success: successLogs,
+        failure: failureLogs,
+        successRate: parseFloat(successRate),
+        dailyStats,
+        categoryStats: formattedCategoryStats,
+        moduleStats: formattedModuleStats,
+        period: {
+          startDate: startDate.toISOString(),
+          endDate: new Date().toISOString(),
+          days,
         },
-        categoryStats: categoryStats.map((item) => ({
-          category: item.category,
-          count: item._count.id,
-        })),
-        moduleStats: moduleStats.map((item) => ({
-          module: item.module,
-          count: item._count.id,
-        })),
       },
     });
   } catch (error) {

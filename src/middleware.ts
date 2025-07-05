@@ -10,12 +10,6 @@ const securityHeaders = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 };
 
-// 受保护的路由（需要认证）
-const protectedRoutes = ['/dashboard', '/system', '/files'];
-
-// 公开路由（不需要认证）
-const publicRoutes = ['/login', '/api/v1/auth/login', '/api/v1/auth/verifycode'];
-
 // 获取客户端IP
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -46,29 +40,6 @@ export function middleware(request: NextRequest) {
   // 生产环境强制HTTPS
   if (process.env.NODE_ENV === 'production' && !request.url.startsWith('https://')) {
     return NextResponse.redirect(request.url.replace('http://', 'https://'), 301);
-  }
-
-  // 检查是否是公开路由
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
-  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
-
-  // 如果是受保护的路由，检查认证状态
-  if (isProtectedRoute && !isPublicRoute) {
-    const token =
-      request.cookies.get('token')?.value ||
-      request.headers.get('authorization')?.replace('Bearer ', '');
-
-    if (!token) {
-      // 如果是API路由，返回401
-      if (pathname.startsWith('/api/')) {
-        return NextResponse.json({ code: 1, msg: '未授权访问', data: null }, { status: 401 });
-      }
-
-      // 重定向到登录页
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
   }
 
   // 记录访问日志（仅在开发环境）

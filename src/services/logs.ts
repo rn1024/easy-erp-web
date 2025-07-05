@@ -5,7 +5,7 @@ import axios from './index';
  */
 // 获取日志列表
 export function logs(params: LogsParams) {
-  return axios<PageResType<LogsResponse>>('/v1/logs', {
+  return axios<PageResType<LogsResponse>>('/logs', {
     method: 'get',
     params,
   });

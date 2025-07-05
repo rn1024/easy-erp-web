@@ -5,7 +5,7 @@ import axios from './index';
  */
 // table list
 export const roleListApi = (query: Record<string, any>) => {
-  return axios<PageResType<RoleDataResult>>('/v1/roles', {
+  return axios<PageResType<RoleDataResult>>('/roles', {
     method: 'get',
     params: query,
   });
@@ -13,14 +13,14 @@ export const roleListApi = (query: Record<string, any>) => {
 
 // delete role by id
 export const deleteRoleByIdApi = (id: string) => {
-  return axios<ResType<RoleDataResult>>(`/v1/roles/${id}`, {
+  return axios<ResType<RoleDataResult>>(`/roles/${id}`, {
     method: 'delete',
   });
 };
 
 // create role
 export const createRoleApi = (data: CreateRoleData) => {
-  return axios<ResType<RoleDataResult>>('/v1/roles', {
+  return axios<ResType<RoleDataResult>>('/roles', {
     method: 'post',
     data,
   });
@@ -28,7 +28,7 @@ export const createRoleApi = (data: CreateRoleData) => {
 
 // update role
 export const updateRoleApi = (id: string, data: UpdateRoleData) => {
-  return axios<ResType<RoleDataResult>>(`/v1/roles/${id}`, {
+  return axios<ResType<RoleDataResult>>(`/roles/${id}`, {
     data,
     method: 'put',
   });
@@ -36,21 +36,21 @@ export const updateRoleApi = (id: string, data: UpdateRoleData) => {
 
 // query role by id
 export const queryRoleByIdApi = (id: string) => {
-  return axios<ResType<RoleDataResult>>(`v1/roles/${id}`, {
+  return axios<ResType<RoleDataResult>>(`/roles/${id}`, {
     method: 'get',
   });
 };
 
 // query role by name
 export const queryRoleByNameApi = (name: string) => {
-  return axios<ResType<RoleDataResult>>(`v1/roles/name/${name}`, {
+  return axios<ResType<RoleDataResult>>(`/roles/name/${name}`, {
     method: 'get',
   });
 };
 
 // get permissions list
 export const getPermissionsApi = (type?: string) => {
-  return axios<ResType<PermissionsResult>>('/v1/permissions', {
+  return axios<ResType<PermissionsResult>>('/permissions', {
     method: 'get',
     params: type ? { type } : {},
   });

@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { verifyRequestToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // 获取发货记录详情
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await prisma.account.findUnique({
-      where: { id: tokenPayload.id },
-    });
-
-    if (!user || user.status !== 'ACTIVE') {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
@@ -24,16 +16,38 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       where: { id: params.id },
       include: {
         shop: {
-          select: { id: true, nickname: true, responsiblePerson: true },
-        },
-        product: {
-          select: { id: true, code: true, specification: true, sku: true },
+          select: {
+            id: true,
+            nickname: true,
+          },
         },
         forwarder: {
-          select: { id: true, nickname: true, contactPerson: true, contactPhone: true },
+          select: {
+            id: true,
+            nickname: true,
+            contactPerson: true,
+            contactPhone: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            code: true,
+            specification: true,
+            sku: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
         },
         operator: {
-          select: { id: true, name: true, operator: true },
+          select: {
+            id: true,
+            name: true,
+          },
         },
       },
     });
@@ -55,16 +69,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // 更新发货记录
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await prisma.account.findUnique({
-      where: { id: tokenPayload.id },
-    });
-
-    if (!user || user.status !== 'ACTIVE') {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
@@ -95,24 +101,56 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ message: 'Delivery record not found' }, { status: 404 });
     }
 
-    // 如果更新了关联数据，验证是否存在
-    if (shopId && shopId !== existingRecord.shopId) {
-      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
-      if (!shop) {
+    // 构建更新数据
+    const updateData: any = {};
+    if (shopId !== undefined) updateData.shopId = shopId;
+    if (productId !== undefined) updateData.productId = productId;
+    if (totalBoxes !== undefined) {
+      if (totalBoxes <= 0) {
+        return NextResponse.json(
+          { message: 'Total boxes must be greater than 0' },
+          { status: 400 }
+        );
+      }
+      updateData.totalBoxes = parseInt(totalBoxes);
+    }
+    if (fbaShipmentCode !== undefined) updateData.fbaShipmentCode = fbaShipmentCode || null;
+    if (fbaWarehouseCode !== undefined) updateData.fbaWarehouseCode = fbaWarehouseCode || null;
+    if (country !== undefined) updateData.country = country || null;
+    if (channel !== undefined) updateData.channel = channel || null;
+    if (forwarderId !== undefined) updateData.forwarderId = forwarderId;
+    if (shippingChannel !== undefined) updateData.shippingChannel = shippingChannel || null;
+    if (warehouseShippingDeadline !== undefined) {
+      updateData.warehouseShippingDeadline = warehouseShippingDeadline
+        ? new Date(warehouseShippingDeadline)
+        : null;
+    }
+    if (warehouseReceiptDeadline !== undefined) {
+      updateData.warehouseReceiptDeadline = warehouseReceiptDeadline
+        ? new Date(warehouseReceiptDeadline)
+        : null;
+    }
+    if (shippingDetails !== undefined) updateData.shippingDetails = shippingDetails || null;
+    if (date !== undefined) updateData.date = new Date(date);
+    if (status !== undefined) updateData.status = status;
+
+    // 验证关联数据是否存在
+    const checks = [];
+    if (shopId) checks.push(prisma.shop.findUnique({ where: { id: shopId } }));
+    if (productId) checks.push(prisma.productInfo.findUnique({ where: { id: productId } }));
+    if (forwarderId) checks.push(prisma.forwarder.findUnique({ where: { id: forwarderId } }));
+
+    if (checks.length > 0) {
+      const results = await Promise.all(checks);
+      let index = 0;
+
+      if (shopId && !results[index++]) {
         return NextResponse.json({ message: 'Shop not found' }, { status: 404 });
       }
-    }
-
-    if (productId && productId !== existingRecord.productId) {
-      const product = await prisma.productInfo.findUnique({ where: { id: productId } });
-      if (!product) {
+      if (productId && !results[index++]) {
         return NextResponse.json({ message: 'Product not found' }, { status: 404 });
       }
-    }
-
-    if (forwarderId && forwarderId !== existingRecord.forwarderId) {
-      const forwarder = await prisma.forwarder.findUnique({ where: { id: forwarderId } });
-      if (!forwarder) {
+      if (forwarderId && !results[index++]) {
         return NextResponse.json({ message: 'Forwarder not found' }, { status: 404 });
       }
     }
@@ -120,42 +158,34 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // 更新发货记录
     const updatedRecord = await prisma.deliveryRecord.update({
       where: { id: params.id },
-      data: {
-        ...(shopId && { shopId }),
-        ...(productId && { productId }),
-        ...(totalBoxes && { totalBoxes }),
-        ...(fbaShipmentCode !== undefined && { fbaShipmentCode }),
-        ...(fbaWarehouseCode !== undefined && { fbaWarehouseCode }),
-        ...(country !== undefined && { country }),
-        ...(channel !== undefined && { channel }),
-        ...(forwarderId && { forwarderId }),
-        ...(shippingChannel !== undefined && { shippingChannel }),
-        ...(warehouseShippingDeadline !== undefined && {
-          warehouseShippingDeadline: warehouseShippingDeadline
-            ? new Date(warehouseShippingDeadline)
-            : null,
-        }),
-        ...(warehouseReceiptDeadline !== undefined && {
-          warehouseReceiptDeadline: warehouseReceiptDeadline
-            ? new Date(warehouseReceiptDeadline)
-            : null,
-        }),
-        ...(shippingDetails !== undefined && { shippingDetails }),
-        ...(date && { date: new Date(date) }),
-        ...(status && { status }),
-      },
+      data: updateData,
       include: {
         shop: {
-          select: { id: true, nickname: true, responsiblePerson: true },
-        },
-        product: {
-          select: { id: true, code: true, specification: true, sku: true },
+          select: {
+            id: true,
+            nickname: true,
+          },
         },
         forwarder: {
-          select: { id: true, nickname: true, contactPerson: true },
+          select: {
+            id: true,
+            nickname: true,
+            contactPerson: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            code: true,
+            specification: true,
+            sku: true,
+          },
         },
         operator: {
-          select: { id: true, name: true, operator: true },
+          select: {
+            id: true,
+            name: true,
+          },
         },
       },
     });
@@ -173,16 +203,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 // 删除发货记录
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await prisma.account.findUnique({
-      where: { id: tokenPayload.id },
-    });
-
-    if (!user || user.status !== 'ACTIVE') {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
@@ -195,10 +217,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ message: 'Delivery record not found' }, { status: 404 });
     }
 
-    // 只允许删除准备中或已取消状态的记录
+    // 只有准备中和已取消的记录可以删除
     if (!['PREPARING', 'CANCELLED'].includes(existingRecord.status)) {
       return NextResponse.json(
-        { message: 'Cannot delete record in current status' },
+        { message: 'Only preparing and cancelled records can be deleted' },
         { status: 400 }
       );
     }

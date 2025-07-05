@@ -127,7 +127,7 @@ export interface DeliveryRecordListResponse {
 
 // 获取发货记录列表
 export const getDeliveryRecordsApi = (params: DeliveryRecordQueryParams) => {
-  return axios<DeliveryRecordListResponse>('/api/v1/delivery-records', {
+  return axios<DeliveryRecordListResponse>('/delivery-records', {
     method: 'get',
     params,
   });
@@ -135,7 +135,7 @@ export const getDeliveryRecordsApi = (params: DeliveryRecordQueryParams) => {
 
 // 创建发货记录
 export const createDeliveryRecordApi = (data: CreateDeliveryRecordData) => {
-  return axios<DeliveryRecordInfo>('/api/v1/delivery-records', {
+  return axios<DeliveryRecordInfo>('/delivery-records', {
     method: 'post',
     data,
   });
@@ -143,14 +143,14 @@ export const createDeliveryRecordApi = (data: CreateDeliveryRecordData) => {
 
 // 获取发货记录详情
 export const getDeliveryRecordApi = (id: string) => {
-  return axios<DeliveryRecordInfo>(`/api/v1/delivery-records/${id}`, {
+  return axios<DeliveryRecordInfo>(`/delivery-records/${id}`, {
     method: 'get',
   });
 };
 
 // 更新发货记录
 export const updateDeliveryRecordApi = (id: string, data: UpdateDeliveryRecordData) => {
-  return axios<DeliveryRecordInfo>(`/api/v1/delivery-records/${id}`, {
+  return axios<DeliveryRecordInfo>(`/delivery-records/${id}`, {
     method: 'put',
     data,
   });
@@ -158,7 +158,7 @@ export const updateDeliveryRecordApi = (id: string, data: UpdateDeliveryRecordDa
 
 // 删除发货记录
 export const deleteDeliveryRecordApi = (id: string) => {
-  return axios<{ message: string }>(`/api/v1/delivery-records/${id}`, {
+  return axios<{ message: string }>(`/delivery-records/${id}`, {
     method: 'delete',
   });
 };

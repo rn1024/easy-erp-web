@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { verifyRequestToken } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 // 标记为动态路由
 export const dynamic = 'force-dynamic';
@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 验证用户权限
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 

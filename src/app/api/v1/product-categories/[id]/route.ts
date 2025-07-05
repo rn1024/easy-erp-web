@@ -2,34 +2,28 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { verifyRequestToken } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 // GET /api/v1/product-categories/[id] - 获取产品分类详情
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证用户权限
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
     const { id } = params;
 
+    if (!id) {
+      return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
+    }
+
     const category = await prisma.productCategory.findUnique({
       where: { id },
-      include: {
-        _count: {
-          select: {
-            products: true,
-            finishedInventory: true,
-            spareInventory: true,
-          },
-        },
-      },
     });
 
     if (!category) {
-      return NextResponse.json({ code: 404, msg: '产品分类不存在', data: null }, { status: 404 });
+      return NextResponse.json({ code: 404, msg: '产品分类不存在' }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -53,9 +47,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // PUT /api/v1/product-categories/[id] - 更新产品分类
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证用户权限
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
@@ -63,9 +56,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json();
     const { name } = body;
 
-    // 验证必填字段
+    if (!id) {
+      return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
+    }
+
     if (!name) {
-      return NextResponse.json({ code: 400, msg: '分类名称不能为空', data: null }, { status: 400 });
+      return NextResponse.json({ code: 400, msg: '分类名称不能为空' }, { status: 400 });
     }
 
     // 检查分类是否存在
@@ -74,40 +70,35 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     });
 
     if (!existingCategory) {
-      return NextResponse.json({ code: 404, msg: '产品分类不存在', data: null }, { status: 404 });
+      return NextResponse.json({ code: 404, msg: '产品分类不存在' }, { status: 404 });
     }
 
-    // 检查新名称是否与其他分类重复
-    if (name !== existingCategory.name) {
-      const duplicateCategory = await prisma.productCategory.findUnique({
-        where: { name },
-      });
+    // 检查名称是否被其他分类使用
+    const nameConflict = await prisma.productCategory.findFirst({
+      where: {
+        id: { not: id },
+        name: {
+          equals: name.trim(),
+        },
+      },
+    });
 
-      if (duplicateCategory) {
-        return NextResponse.json({ code: 400, msg: '分类名称已存在', data: null }, { status: 400 });
-      }
+    if (nameConflict) {
+      return NextResponse.json({ code: 400, msg: '分类名称已存在' }, { status: 400 });
     }
 
     // 更新产品分类
-    const updatedCategory = await prisma.productCategory.update({
+    const category = await prisma.productCategory.update({
       where: { id },
       data: {
-        name,
-        updatedAt: new Date(),
-      },
-      include: {
-        _count: {
-          select: {
-            products: true,
-          },
-        },
+        name: name.trim(),
       },
     });
 
     return NextResponse.json({
       code: 200,
       msg: '更新成功',
-      data: updatedCategory,
+      data: category,
     });
   } catch (error) {
     console.error('更新产品分类失败:', error);
@@ -125,36 +116,33 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 // DELETE /api/v1/product-categories/[id] - 删除产品分类
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 验证用户权限
-    const tokenPayload = verifyRequestToken(request);
-    if (!tokenPayload) {
+    const user = await getCurrentUser(request);
+    if (!user) {
       return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
     }
 
     const { id } = params;
 
-    // 检查分类是否存在
-    const category = await prisma.productCategory.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            products: true,
-          },
-        },
-      },
-    });
-
-    if (!category) {
-      return NextResponse.json({ code: 404, msg: '产品分类不存在', data: null }, { status: 404 });
+    if (!id) {
+      return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
     }
 
-    // 检查是否有关联产品
-    if (category._count.products > 0) {
-      return NextResponse.json(
-        { code: 400, msg: '该分类下还有产品，无法删除', data: null },
-        { status: 400 }
-      );
+    // 检查分类是否存在
+    const existingCategory = await prisma.productCategory.findUnique({
+      where: { id },
+    });
+
+    if (!existingCategory) {
+      return NextResponse.json({ code: 404, msg: '产品分类不存在' }, { status: 404 });
+    }
+
+    // 检查是否有产品使用此分类
+    const productsCount = await prisma.productInfo.count({
+      where: { categoryId: id },
+    });
+
+    if (productsCount > 0) {
+      return NextResponse.json({ code: 400, msg: '该分类下存在产品，无法删除' }, { status: 400 });
     }
 
     // 删除产品分类

@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
+import { prisma } from './db';
 
 // JWT密钥配置
 const JWT_SECRET =
   process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production-12345678';
-const ACCESS_TOKEN_EXPIRES = '1h';
-const REFRESH_TOKEN_EXPIRES = '7d';
+const ACCESS_TOKEN_EXPIRES = '8h'; // 延长到8小时
+const REFRESH_TOKEN_EXPIRES = '30d'; // 延长到30天
 
 // Token负载接口
 export interface TokenPayload {
@@ -18,14 +19,36 @@ export interface TokenPayload {
   exp?: number;
 }
 
+// 用户信息接口
+export interface CurrentUser {
+  id: string;
+  name: string;
+  operator: string;
+  status: string;
+  roles: string[];
+  permissions: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // 生成访问令牌
 export const generateAccessToken = (payload: Omit<TokenPayload, 'iat' | 'exp'>): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRES });
+  // 添加随机nonce确保每次生成的token都不同
+  const tokenPayload = {
+    ...payload,
+    nonce: Math.random().toString(36).substring(2, 15),
+  };
+  return jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRES });
 };
 
 // 生成刷新令牌
 export const generateRefreshToken = (payload: { id: string }): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRES });
+  // 添加随机nonce确保每次生成的token都不同
+  const tokenPayload = {
+    ...payload,
+    nonce: Math.random().toString(36).substring(2, 15),
+  };
+  return jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRES });
 };
 
 // 验证令牌
@@ -54,6 +77,59 @@ export const verifyRequestToken = (request: NextRequest): TokenPayload | null =>
     return null;
   }
   return verifyToken(token);
+};
+
+// 获取当前用户信息
+export const getCurrentUser = async (request: NextRequest): Promise<CurrentUser | null> => {
+  try {
+    // 验证令牌
+    const tokenPayload = verifyRequestToken(request);
+    if (!tokenPayload) {
+      return null;
+    }
+
+    // 查询用户信息
+    const user = await prisma.account.findUnique({
+      where: { id: tokenPayload.id },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user || user.status !== 'ACTIVE') {
+      return null;
+    }
+
+    // 构建用户权限信息
+    const roles = user.roles.map((ar) => ar.role);
+    const permissions = roles.flatMap((role) => role.permissions.map((rp) => rp.permission.code));
+
+    return {
+      id: user.id,
+      name: user.name,
+      operator: user.operator,
+      status: user.status,
+      roles: roles.map((r) => r.name),
+      permissions,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  } catch (error) {
+    console.error('Get current user error:', error);
+    return null;
+  }
 };
 
 // 密码加密

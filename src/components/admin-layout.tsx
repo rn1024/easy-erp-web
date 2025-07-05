@@ -5,7 +5,7 @@ import { LockOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useBoolean, useLocalStorageState, useRequest } from 'ahooks';
 import { App, Dropdown, Space } from 'antd';
 import { get } from 'lodash';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -34,11 +34,51 @@ const DynamicProLayout = dynamic(
   () => import('@ant-design/pro-components').then((mod) => ({ default: mod.ProLayout })),
   {
     ssr: false,
-    loading: () => (
-      <div style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-        <div style={{ padding: 24 }}>Loading...</div>
-      </div>
-    ),
+    loading: () => {
+      // 使用新的Loading组件
+      const LoadingComponent = () => {
+        const [mounted, setMounted] = React.useState(false);
+
+        React.useEffect(() => {
+          setMounted(true);
+        }, []);
+
+        if (!mounted) {
+          return (
+            <div
+              style={{
+                minHeight: '100vh',
+                background: '#f0f2f5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ marginBottom: 16 }}>
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      border: '3px solid #f3f3f3',
+                      borderTop: '3px solid #1890ff',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      margin: '0 auto',
+                    }}
+                  />
+                </div>
+                <div style={{ color: '#666', fontSize: 14 }}>加载中...</div>
+              </div>
+            </div>
+          );
+        }
+
+        return null;
+      };
+
+      return <LoadingComponent />;
+    },
   }
 );
 
@@ -205,11 +245,45 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
    * Effects
    */
   useEffect(() => {
+    // Initialize token manager
+    const initTokenManager = async () => {
+      try {
+        const { tokenManager } = await import('@/services/token');
+        tokenManager.initialize();
+      } catch (error) {
+        console.error('Failed to initialize token manager:', error);
+      }
+    };
+
     // Check if user is authenticated
     if (!routesWithoutLayout.includes(pathname)) {
       const token = store2.get('token');
       if (!token) {
-        router.push('/login');
+        const currentPath = encodeURIComponent(pathname);
+        router.push(`/login?redirect=${currentPath}`);
+        return;
+      }
+
+      // Initialize token manager for auto-refresh
+      initTokenManager();
+
+      // Verify token is not expired (basic check, detailed check is in tokenManager)
+      try {
+        const [, payload] = token.split('.');
+        if (payload) {
+          const { exp } = JSON.parse(atob(payload));
+          if (exp && exp < Date.now() / 1000) {
+            store2.clear();
+            const currentPath = encodeURIComponent(pathname);
+            router.push(`/login?redirect=${currentPath}`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Token validation error:', error);
+        store2.clear();
+        const currentPath = encodeURIComponent(pathname);
+        router.push(`/login?redirect=${currentPath}`);
       }
     }
   }, [pathname, router]);

@@ -5,7 +5,7 @@ import axios from './index';
  */
 // 获取导出列表
 export function exports(params: ExportParams) {
-  return axios<PageResType<ExportResponse>>('/v1/export/records', {
+  return axios<PageResType<ExportResponse>>('/export/records', {
     method: 'get',
     params,
   });

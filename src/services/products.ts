@@ -105,34 +105,34 @@ export const getProductCategoriesApi = (params: ProductCategoriesParams = {}) =>
         totalPages: number;
       };
     }>
-  >('/api/v1/product-categories', {
+  >('/product-categories', {
     method: 'get',
     params,
   });
 };
 
 export const createProductCategoryApi = (data: ProductCategoryFormData) => {
-  return axios<ResType<ProductCategory>>('/api/v1/product-categories', {
+  return axios<ResType<ProductCategory>>('/product-categories', {
     method: 'post',
     data,
   });
 };
 
 export const getProductCategoryApi = (id: string) => {
-  return axios<ResType<ProductCategory>>(`/api/v1/product-categories/${id}`, {
+  return axios<ResType<ProductCategory>>(`/product-categories/${id}`, {
     method: 'get',
   });
 };
 
 export const updateProductCategoryApi = (id: string, data: ProductCategoryFormData) => {
-  return axios<ResType<ProductCategory>>(`/api/v1/product-categories/${id}`, {
+  return axios<ResType<ProductCategory>>(`/product-categories/${id}`, {
     method: 'put',
     data,
   });
 };
 
 export const deleteProductCategoryApi = (id: string) => {
-  return axios<ResType<null>>(`/api/v1/product-categories/${id}`, {
+  return axios<ResType<null>>(`/product-categories/${id}`, {
     method: 'delete',
   });
 };
@@ -149,34 +149,34 @@ export const getProductsApi = (params: ProductsParams = {}) => {
         totalPages: number;
       };
     }>
-  >('/api/v1/products', {
+  >('/products', {
     method: 'get',
     params,
   });
 };
 
 export const createProductApi = (data: ProductFormData) => {
-  return axios<ResType<ProductInfo>>('/api/v1/products', {
+  return axios<ResType<ProductInfo>>('/products', {
     method: 'post',
     data,
   });
 };
 
 export const getProductApi = (id: string) => {
-  return axios<ResType<ProductInfo>>(`/api/v1/products/${id}`, {
+  return axios<ResType<ProductInfo>>(`/products/${id}`, {
     method: 'get',
   });
 };
 
 export const updateProductApi = (id: string, data: ProductFormData) => {
-  return axios<ResType<ProductInfo>>(`/api/v1/products/${id}`, {
+  return axios<ResType<ProductInfo>>(`/products/${id}`, {
     method: 'put',
     data,
   });
 };
 
 export const deleteProductApi = (id: string) => {
-  return axios<ResType<null>>(`/api/v1/products/${id}`, {
+  return axios<ResType<null>>(`/products/${id}`, {
     method: 'delete',
   });
 };

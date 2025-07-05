@@ -53,7 +53,7 @@ const FilesPage: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      return axios.post('/v1/upload', formData, {
+      return axios.post('/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

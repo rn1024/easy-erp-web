@@ -55,14 +55,32 @@ const LoginForm: React.FC = () => {
 
   const { loading: loadingLogin, run: runLogin } = useRequest(login, {
     manual: true,
-    onSuccess({ data: { code, data, msg } }) {
+    async onSuccess({ data: { code, data, msg } }) {
       if (code !== 0) {
         return message.error(msg);
       }
 
-      store(data);
+      // 使用tokenManager保存token数据
+      const { tokenManager } = await import('@/services/token');
+      tokenManager.storeTokens({
+        token: data.token,
+        refreshToken: data.refreshToken,
+        user: data.user,
+        roles: data.roles,
+        permissions: data.permissions,
+      });
 
-      window.location.href = params.get('redirect') || '/';
+      // 等待一小段时间确保token保存完成
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 跳转到目标页面
+      const redirectParam = params.get('redirect');
+      const redirectUrl = redirectParam ? decodeURIComponent(redirectParam) : '/dashboard';
+
+      console.log('登录成功，准备跳转到:', redirectUrl);
+
+      // 使用 window.location.href 进行跳转
+      window.location.href = redirectUrl;
     },
   });
 

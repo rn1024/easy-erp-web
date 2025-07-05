@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { verifyRequestToken } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,16 +16,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       where: { id: params.id },
       include: {
         shop: {
-          select: { id: true, shopName: true, shopCode: true },
+          select: { id: true, nickname: true },
         },
         category: {
-          select: { id: true, categoryName: true },
+          select: { id: true, name: true },
         },
         product: {
           select: { id: true, code: true, specification: true, sku: true },
         },
         operator: {
-          select: { id: true, username: true, realName: true },
+          select: { id: true, name: true, operator: true },
         },
       },
     });
@@ -106,16 +106,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       data: updateData,
       include: {
         shop: {
-          select: { id: true, shopName: true, shopCode: true },
+          select: { id: true, nickname: true },
         },
         category: {
-          select: { id: true, categoryName: true },
+          select: { id: true, name: true },
         },
         product: {
           select: { id: true, code: true, specification: true, sku: true },
         },
         operator: {
-          select: { id: true, username: true, realName: true },
+          select: { id: true, name: true, operator: true },
         },
       },
     });
