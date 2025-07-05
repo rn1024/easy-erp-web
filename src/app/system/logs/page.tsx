@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
-  Table,
   Button,
   Form,
   Input,
@@ -18,7 +17,9 @@ import {
   Modal,
   message,
   Typography,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -30,7 +31,8 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 import dayjs from 'dayjs';
 import {
   useDebounceSearch,
@@ -153,51 +155,48 @@ const LogsManagement: React.FC = () => {
   const statsData = statsResponse?.data;
 
   // 表格列定义
-  const columns: ColumnsType<LogItem> = [
+  const columns: ProColumns<LogItem>[] = [
     {
       title: '时间',
       dataIndex: 'createdAt',
-      key: 'createdAt',
       width: 160,
-      render: (text: string) => <Text>{dayjs(text).format('YYYY-MM-DD HH:mm:ss')}</Text>,
+      render: (_, record) => <Text>{dayjs(record.createdAt).format('YYYY-MM-DD HH:mm:ss')}</Text>,
       sorter: true,
     },
     {
       title: '分类',
       dataIndex: 'category',
-      key: 'category',
       width: 100,
-      render: (category: string) => {
+      render: (_, record) => {
         const colorMap: Record<string, string> = {
           SYSTEM: 'blue',
           SECURITY: 'red',
           BUSINESS: 'green',
           ERROR: 'volcano',
         };
-        return <Tag color={colorMap[category] || 'default'}>{category}</Tag>;
+        return <Tag color={colorMap[record.category] || 'default'}>{record.category}</Tag>;
       },
     },
     {
       title: '模块',
       dataIndex: 'module',
-      key: 'module',
       width: 120,
-      render: (module: string) => <Tag color="processing">{module}</Tag>,
+      render: (_, record) => <Tag color="processing">{record.module}</Tag>,
     },
     {
       title: '操作',
       dataIndex: 'operation',
-      key: 'operation',
       width: 150,
-      render: (operation: string) => <Text ellipsis={{ tooltip: operation }}>{operation}</Text>,
+      render: (_, record) => (
+        <Text ellipsis={{ tooltip: record.operation }}>{record.operation}</Text>
+      ),
     },
     {
       title: '状态',
       dataIndex: 'status',
-      key: 'status',
       width: 100,
-      render: (status: string) => {
-        const isSuccess = status === 'SUCCESS';
+      render: (_, record) => {
+        const isSuccess = record.status === 'SUCCESS';
         return (
           <Tag
             icon={isSuccess ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
@@ -211,13 +210,11 @@ const LogsManagement: React.FC = () => {
     {
       title: '操作人',
       dataIndex: 'operator',
-      key: 'operator',
       width: 120,
-      render: (operator: any) => <Text>{operator?.name || '系统'}</Text>,
+      render: (_, record) => <Text>{record.operator?.name || '系统'}</Text>,
     },
     {
       title: '操作',
-      key: 'action',
       width: 100,
       render: (_, record) => (
         <Space>
@@ -266,15 +263,6 @@ const LogsManagement: React.FC = () => {
     setDetailModalVisible(true);
   };
 
-  // 表格变化处理
-  const handleTableChange = (pagination: any) => {
-    setSearchParams((prev) => ({
-      ...prev,
-      page: pagination.current,
-      pageSize: pagination.pageSize,
-    }));
-  };
-
   // 刷新数据
   const handleRefresh = () => {
     refreshLogs();
@@ -282,15 +270,34 @@ const LogsManagement: React.FC = () => {
     message.success('数据已刷新');
   };
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<LogItem, any> = {
+    columns,
+    dataSource: logsData?.list || [],
+    loading: logsLoading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refreshLogs,
+    },
+    toolBarRender: () => [
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={handleRefresh}>
+        刷新
+      </Button>,
+    ],
+    scroll: { x: 1200 },
+  };
+
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5' }}>
+    <>
       {/* 统计面板 */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card>
             <Statistic
               title="总日志数"
-              value={statsData?.data?.summary.total || 0}
+              value={statsData?.summary.total || 0}
               prefix={<FileTextOutlined />}
               loading={statsLoading}
             />
@@ -300,7 +307,7 @@ const LogsManagement: React.FC = () => {
           <Card>
             <Statistic
               title="成功操作"
-              value={statsData?.data?.summary.success || 0}
+              value={statsData?.summary.success || 0}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#52c41a' }}
               loading={statsLoading}
@@ -311,7 +318,7 @@ const LogsManagement: React.FC = () => {
           <Card>
             <Statistic
               title="失败操作"
-              value={statsData?.data?.summary.failure || 0}
+              value={statsData?.summary.failure || 0}
               prefix={<CloseCircleOutlined />}
               valueStyle={{ color: '#ff4d4f' }}
               loading={statsLoading}
@@ -322,7 +329,7 @@ const LogsManagement: React.FC = () => {
           <Card>
             <Statistic
               title="成功率"
-              value={statsData?.data?.summary.successRate || 0}
+              value={statsData?.summary.successRate || 0}
               suffix="%"
               prefix={<BarChartOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -332,70 +339,65 @@ const LogsManagement: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 搜索表单 */}
-      <Card style={{ marginBottom: 24 }}>
-        <Form form={form} layout="inline" onFinish={handleSearch} style={{ marginBottom: 16 }}>
-          <Form.Item name="category" label="分类">
-            <Select placeholder="选择分类" style={{ width: 120 }} allowClear>
-              <Option value="SYSTEM">系统</Option>
-              <Option value="SECURITY">安全</Option>
-              <Option value="BUSINESS">业务</Option>
-              <Option value="ERROR">错误</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="module" label="模块">
-            <Input placeholder="模块名称" style={{ width: 120 }} />
-          </Form.Item>
-
-          <Form.Item name="operation" label="操作">
-            <Input placeholder="操作类型" style={{ width: 120 }} />
-          </Form.Item>
-
-          <Form.Item name="status" label="状态">
-            <Select placeholder="选择状态" style={{ width: 100 }} allowClear>
-              <Option value="SUCCESS">成功</Option>
-              <Option value="FAILURE">失败</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="dateRange" label="时间范围">
-            <RangePicker style={{ width: 240 }} />
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                刷新
-              </Button>
-            </Space>
-          </Form.Item>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={form} layout="inline" onFinish={handleSearch}>
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="category" style={{ marginRight: 0 }}>
+              <Select placeholder="选择分类" style={{ width: 120 }} allowClear>
+                <Option value="SYSTEM">系统</Option>
+                <Option value="SECURITY">安全</Option>
+                <Option value="BUSINESS">业务</Option>
+                <Option value="ERROR">错误</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="module" style={{ marginRight: 0 }}>
+              <Input placeholder="模块名称" style={{ width: 120 }} />
+            </Form.Item>
+            <Form.Item name="operation" style={{ marginRight: 0 }}>
+              <Input placeholder="操作类型" style={{ width: 120 }} />
+            </Form.Item>
+            <Form.Item name="status" style={{ marginRight: 0 }}>
+              <Select placeholder="选择状态" style={{ width: 100 }} allowClear>
+                <Option value="SUCCESS">成功</Option>
+                <Option value="FAILURE">失败</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="dateRange" style={{ marginRight: 0 }}>
+              <RangePicker style={{ width: 240 }} />
+            </Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={logsLoading}
+              icon={<SearchOutlined />}
+            >
+              搜索
+            </Button>
+            <Button onClick={handleReset}>重置</Button>
+          </Flex>
         </Form>
-      </Card>
+      </ProCard>
 
-      {/* 日志表格 */}
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={logsData?.data?.list || []}
-          rowKey="id"
-          loading={logsLoading}
-          pagination={{
-            current: logsData?.data?.meta.page || 1,
-            pageSize: logsData?.data?.meta.pageSize || 20,
-            total: logsData?.data?.meta.total || 0,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-          }}
-          onChange={handleTableChange}
-          scroll={{ x: 1200 }}
-        />
-      </Card>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 20}
+        total={logsData?.meta.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams((prev) => ({
+            ...prev,
+            page: page,
+            pageSize: size || 20,
+          }));
+        }}
+        isLoading={logsLoading}
+      />
 
       {/* 详情弹窗 */}
       <Modal
@@ -465,7 +467,7 @@ const LogsManagement: React.FC = () => {
           </div>
         )}
       </Modal>
-    </div>
+    </>
   );
 };
 

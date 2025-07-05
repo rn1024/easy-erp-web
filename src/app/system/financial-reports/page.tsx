@@ -2,13 +2,11 @@
 
 import React, { useState } from 'react';
 import {
-  Table,
   Button,
   Modal,
   Form,
   Select,
   Space,
-  Card,
   Row,
   Col,
   InputNumber,
@@ -16,7 +14,9 @@ import {
   message,
   Tag,
   Tabs,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -27,7 +27,8 @@ import {
   DollarOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 import dayjs from 'dayjs';
 import {
   getFinancialReportsApi,
@@ -55,33 +56,45 @@ export default function FinancialReportsPage() {
   const [searchForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingReport, setEditingReport] = useState<FinancialReport | null>(null);
-  const [searchParams, setSearchParams] = useState<FinancialReportQueryParams>({});
+  const [searchParams, setSearchParams] = useState<FinancialReportQueryParams>({
+    page: 1,
+    pageSize: 10,
+  });
 
   // 获取财务报表列表
   const {
-    data: reportsData,
+    data: reportsResponse,
     loading,
     refresh,
-  } = useRequest(() => getFinancialReportsApi({ ...searchParams, page: 1, pageSize: 10 }), {
+  } = useRequest(() => getFinancialReportsApi(searchParams), {
     refreshDeps: [searchParams],
   });
 
   // 获取店铺列表
-  const { data: shopsData } = useRequest(() => getShops({}));
+  const { data: shopsResponse } = useRequest(() => getShops({}));
 
-  const shops = shopsData?.data?.data?.list || [];
-  const reports = reportsData?.data?.data?.list || [];
-  const total = reportsData?.data?.data?.total || 0;
+  // 处理数据
+  const shops = shopsResponse?.data?.data?.list || [];
+  const reports = reportsResponse?.data?.data?.list || [];
+  const total = reportsResponse?.data?.data?.total || 0;
 
   // 搜索处理
-  const handleSearch = (values: any) => {
-    setSearchParams(values);
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue();
+    setSearchParams({
+      ...values,
+      page: 1,
+      pageSize: searchParams.pageSize,
+    });
   };
 
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
-    setSearchParams({});
+    setSearchParams({
+      page: 1,
+      pageSize: 10,
+    });
   };
 
   // 显示新增/编辑弹窗
@@ -186,63 +199,57 @@ export default function FinancialReportsPage() {
     }
   };
 
-  const columns: ColumnsType<FinancialReport> = [
+  const columns: ProColumns<FinancialReport>[] = [
     {
       title: '报表ID',
       dataIndex: 'id',
-      key: 'id',
       width: 120,
-      render: (text) => text.slice(-8),
+      render: (_, record) => record.id.slice(-8),
     },
     {
       title: '店铺',
       dataIndex: ['shop'],
-      key: 'shop',
-      render: (shop: any) => (shop ? `${shop.nickname}` : '-'),
+      render: (_, record) => (record.shop ? `${record.shop.nickname}` : '-'),
     },
     {
       title: '报表月份',
       dataIndex: 'reportMonth',
-      key: 'reportMonth',
-      render: (month) => {
-        const [year, monthNum] = month.split('-');
+      render: (_, record) => {
+        const [year, monthNum] = record.reportMonth.split('-');
         return `${year}年${parseInt(monthNum)}月`;
       },
     },
     {
       title: '总收入',
       dataIndex: ['details', 'revenue', 'totalRevenue'],
-      key: 'totalRevenue',
-      render: (value) => formatCurrency(value || 0),
+      render: (_, record) => formatCurrency(record.details?.revenue?.totalRevenue || 0),
     },
     {
       title: '净利润',
       dataIndex: ['details', 'profit', 'netProfit'],
-      key: 'netProfit',
-      render: (value) => (
-        <span style={{ color: (value || 0) >= 0 ? '#52c41a' : '#ff4d4f' }}>
-          {formatCurrency(value || 0)}
-        </span>
-      ),
+      render: (_, record) => {
+        const value = record.details?.profit?.netProfit || 0;
+        return (
+          <span style={{ color: value >= 0 ? '#52c41a' : '#ff4d4f' }}>{formatCurrency(value)}</span>
+        );
+      },
     },
     {
       title: '利润率',
       dataIndex: ['details', 'profit', 'profitMargin'],
-      key: 'profitMargin',
-      render: (value) => (
-        <Tag color={(value || 0) >= 0 ? 'green' : 'red'}>{formatPercentage(value || 0)}</Tag>
-      ),
+      render: (_, record) => {
+        const value = record.details?.profit?.profitMargin || 0;
+        return <Tag color={value >= 0 ? 'green' : 'red'}>{formatPercentage(value)}</Tag>;
+      },
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
-      key: 'createdAt',
       width: 180,
-      render: (text) => dayjs(text).format('YYYY-MM-DD HH:mm'),
+      render: (_, record) => dayjs(record.createdAt).format('YYYY-MM-DD HH:mm'),
     },
     {
       title: '操作',
-      key: 'action',
       fixed: 'right',
       width: 200,
       render: (_, record) => (
@@ -278,12 +285,35 @@ export default function FinancialReportsPage() {
     },
   ];
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<FinancialReport, any> = {
+    columns,
+    dataSource: reports,
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+        新增财务报表
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+    scroll: { x: 1200 },
+  };
+
   return (
-    <div style={{ padding: '24px' }}>
-      <Card>
-        <div style={{ marginBottom: 16 }}>
-          <Form form={searchForm} layout="inline" onFinish={handleSearch}>
-            <Form.Item name="shopId" label="店铺">
+    <>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline">
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="shopId" style={{ marginRight: 0 }}>
               <Select placeholder="请选择店铺" allowClear style={{ width: 200 }}>
                 {shops.map((shop: any) => (
                   <Option key={shop.id} value={shop.id}>
@@ -292,7 +322,7 @@ export default function FinancialReportsPage() {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item name="reportMonth" label="报表月份">
+            <Form.Item name="reportMonth" style={{ marginRight: 0 }}>
               <Select placeholder="请选择月份" allowClear style={{ width: 200 }}>
                 {getMonthOptions().map((option) => (
                   <Option key={option.value} value={option.value}>
@@ -301,38 +331,40 @@ export default function FinancialReportsPage() {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                  搜索
-                </Button>
-                <Button onClick={handleReset}>重置</Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-                  新增财务报表
-                </Button>
-                <Button icon={<ReloadOutlined />} onClick={refresh}>
-                  刷新
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        </div>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={loading}
+            >
+              搜索
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              重置
+            </Button>
+          </Flex>
+        </Form>
+      </ProCard>
 
-        <Table
-          columns={columns}
-          dataSource={reports}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            total,
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-          }}
-          scroll={{ x: 1200 }}
-        />
-      </Card>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 10}
+        total={total}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({
+            ...searchParams,
+            page,
+            pageSize: size || 10,
+          });
+        }}
+        isLoading={loading}
+      />
 
       {/* 新增/编辑弹窗 */}
       <Modal
@@ -414,6 +446,6 @@ export default function FinancialReportsPage() {
           </div>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

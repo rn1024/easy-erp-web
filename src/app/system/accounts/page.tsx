@@ -4,7 +4,6 @@ import { useRequest, useSetState } from 'ahooks';
 import {
   App,
   Button,
-  Card,
   Col,
   Form,
   Input,
@@ -12,20 +11,23 @@ import {
   Row,
   Select,
   Space,
-  Table,
   Tag,
   Tooltip,
   Popconfirm,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   LockOutlined,
   ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 
 /**
  * APIs
@@ -43,6 +45,7 @@ const AccountsPage: React.FC = () => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const [searchForm] = Form.useForm();
 
   const [state, setState] = useSetState({
     modalVisible: false,
@@ -140,7 +143,26 @@ const AccountsPage: React.FC = () => {
     }
   );
 
-  const columns: ColumnsType<AccountsResponse> = [
+  // 搜索处理
+  const handleSearch = (values: any) => {
+    setSearchParams({
+      ...searchParams,
+      page: 1,
+      ...values,
+    });
+  };
+
+  // 重置搜索
+  const handleResetSearch = () => {
+    searchForm.resetFields();
+    setSearchParams({
+      page: 1,
+      limit: 20,
+      withRole: true,
+    });
+  };
+
+  const columns: ProColumns<AccountsResponse>[] = [
     {
       title: 'ID',
       dataIndex: 'id',
@@ -153,16 +175,18 @@ const AccountsPage: React.FC = () => {
     {
       title: '状态',
       dataIndex: 'status',
-      render: (status: number) => (
-        <Tag color={status === 1 ? 'green' : 'red'}>{status === 1 ? '启用' : '禁用'}</Tag>
+      render: (_, record) => (
+        <Tag color={record.status === 1 ? 'green' : 'red'}>
+          {record.status === 1 ? '启用' : '禁用'}
+        </Tag>
       ),
     },
     {
       title: '角色',
       dataIndex: 'roles',
-      render: (roles: any[]) => (
+      render: (_, record) => (
         <Space size={[0, 8]} wrap>
-          {roles?.map((role) => (
+          {record.roles?.map((role: any) => (
             <Tag key={role.id} color="blue">
               {role.name}
             </Tag>
@@ -173,7 +197,7 @@ const AccountsPage: React.FC = () => {
     {
       title: '创建时间',
       dataIndex: 'created_at',
-      render: (time: string) => new Date(time).toLocaleString(),
+      render: (_, record) => new Date(record.created_at).toLocaleString(),
     },
     {
       title: '操作',
@@ -243,127 +267,118 @@ const AccountsPage: React.FC = () => {
     });
   };
 
+  // 批量操作
+  const handleBatchDelete = () => {
+    if (state.selectedRowKeys.length === 0) {
+      message.warning('请选择要删除的账户');
+      return;
+    }
+    message.info('批量删除功能开发中');
+  };
+
+  const handleBatchEnable = () => {
+    if (state.selectedRowKeys.length === 0) {
+      message.warning('请选择要操作的账户');
+      return;
+    }
+    message.info('批量启用功能开发中');
+  };
+
+  const handleBatchDisable = () => {
+    if (state.selectedRowKeys.length === 0) {
+      message.warning('请选择要操作的账户');
+      return;
+    }
+    message.info('批量禁用功能开发中');
+  };
+
   const roleOptions =
     rolesData?.data?.data?.list?.map((role: RoleDataResult) => ({
       label: role.name,
       value: role.id,
     })) || [];
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<AccountsResponse, any> = {
+    columns,
+    dataSource: accountsData?.data?.data?.list || [],
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+        新建账户
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+    rowSelection: {
+      selectedRowKeys: state.selectedRowKeys,
+      onChange: (keys) => setState({ selectedRowKeys: keys as string[] }),
+    },
+    tableAlertRender: ({ selectedRowKeys }) => (
+      <Space>
+        <span>已选择 {selectedRowKeys.length} 项</span>
+        <Button type="link" size="small" danger onClick={handleBatchDelete}>
+          批量删除
+        </Button>
+        <Button type="link" size="small" onClick={handleBatchEnable}>
+          批量启用
+        </Button>
+        <Button type="link" size="small" onClick={handleBatchDisable}>
+          批量禁用
+        </Button>
+      </Space>
+    ),
+  };
+
   return (
     <>
-      <Card>
-        {/* 搜索栏 */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col span={8}>
-            <Input.Search
-              placeholder="搜索账户名"
-              allowClear
-              onSearch={(value) => {
-                setSearchParams({
-                  ...searchParams,
-                  page: 1,
-                  name: value || undefined,
-                });
-              }}
-              style={{ width: '100%' }}
-            />
-          </Col>
-          <Col>
-            <Select
-              placeholder="选择状态"
-              allowClear
-              style={{ width: 120 }}
-              onChange={(value) => {
-                setSearchParams({
-                  ...searchParams,
-                  page: 1,
-                  status: value,
-                });
-              }}
-            >
-              <Select.Option value={1}>启用</Select.Option>
-              <Select.Option value={0}>禁用</Select.Option>
-            </Select>
-          </Col>
-        </Row>
-
-        {/* 操作按钮 */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              新建账户
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="name" style={{ marginRight: 0 }}>
+              <Input allowClear placeholder="搜索账户名" style={{ width: 200 }} />
+            </Form.Item>
+            <Form.Item name="status" style={{ marginRight: 0 }}>
+              <Select placeholder="选择状态" allowClear style={{ width: 120 }}>
+                <Select.Option value={1}>启用</Select.Option>
+                <Select.Option value={0}>禁用</Select.Option>
+              </Select>
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
+              搜索
             </Button>
-          </Col>
-          <Col>
-            <Button icon={<ReloadOutlined />} onClick={refresh}>
-              刷新
-            </Button>
-          </Col>
-          {state.selectedRowKeys.length > 0 && (
-            <>
-              <Col>
-                <Popconfirm
-                  title={`确定删除选中的 ${state.selectedRowKeys.length} 个账户吗？`}
-                  onConfirm={() => {
-                    // TODO: 实现批量删除功能
-                    message.info('批量删除功能开发中');
-                  }}
-                  okText="确定"
-                  cancelText="取消"
-                >
-                  <Button danger>批量删除 ({state.selectedRowKeys.length})</Button>
-                </Popconfirm>
-              </Col>
-              <Col>
-                <Button
-                  onClick={() => {
-                    // TODO: 实现批量启用功能
-                    message.info('批量操作功能开发中');
-                  }}
-                >
-                  批量启用
-                </Button>
-              </Col>
-              <Col>
-                <Button
-                  onClick={() => {
-                    // TODO: 实现批量禁用功能
-                    message.info('批量操作功能开发中');
-                  }}
-                >
-                  批量禁用
-                </Button>
-              </Col>
-            </>
-          )}
-        </Row>
+            <Button onClick={handleResetSearch}>重置</Button>
+          </Flex>
+        </Form>
+      </ProCard>
 
-        <Table
-          columns={columns}
-          dataSource={accountsData?.data?.data?.list || []}
-          loading={loading}
-          rowKey="id"
-          rowSelection={{
-            selectedRowKeys: state.selectedRowKeys,
-            onChange: (keys) => setState({ selectedRowKeys: keys as string[] }),
-          }}
-          pagination={{
-            current: Number(searchParams.page),
-            pageSize: Number(searchParams.limit),
-            total: accountsData?.data?.data?.meta?.total || 0,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, pageSize) => {
-              setSearchParams({
-                ...searchParams,
-                page: page,
-                limit: pageSize || 20,
-              });
-            },
-          }}
-        />
-      </Card>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.limit) || 20}
+        total={accountsData?.data?.data?.meta?.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({
+            ...searchParams,
+            page: page,
+            limit: size || 20,
+          });
+        }}
+        isLoading={loading}
+      />
 
       {/* 创建/编辑账户模态框 */}
       <Modal

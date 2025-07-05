@@ -4,7 +4,6 @@ import { useRequest } from 'ahooks';
 import {
   App,
   Button,
-  Card,
   Col,
   Row,
   Upload,
@@ -14,7 +13,9 @@ import {
   Typography,
   Tag,
   Divider,
+  Flex,
 } from 'antd';
+import { ProCard } from '@ant-design/pro-components';
 import {
   UploadOutlined,
   FileImageOutlined,
@@ -157,141 +158,134 @@ const FilesPage: React.FC = () => {
   };
 
   const refresh = () => {
-    // Implementation of refresh function
+    // 刷新文件列表
+    setUploadedFiles([]);
+    setFileList([]);
+    message.success('页面已刷新');
   };
 
   return (
-    <Card>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col>
-          <Button type="primary" icon={<UploadOutlined />} onClick={handleUpload}>
-            上传文件
-          </Button>
-        </Col>
-        <Col>
-          <Button icon={<ReloadOutlined />} onClick={refresh}>
-            刷新
-          </Button>
-        </Col>
-      </Row>
+    <>
+      {/* 文件上传区域 */}
+      <ProCard
+        title="文件上传"
+        extra={
+          <Flex gap={8}>
+            <Button icon={<ReloadOutlined />} onClick={refresh}>
+              刷新
+            </Button>
+          </Flex>
+        }
+        className="mb-16"
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Upload.Dragger {...uploadProps} style={{ marginBottom: 16 }} disabled={uploadLoading}>
+            <p className="ant-upload-drag-icon">
+              <UploadOutlined />
+            </p>
+            <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
+            <p className="ant-upload-hint">
+              支持单个文件上传。图片支持 JPG、PNG、GIF 格式，大小不超过 5MB； 视频支持 MP4、MOV
+              格式，大小不超过 100MB。
+            </p>
+          </Upload.Dragger>
 
-      <Row gutter={[16, 16]}>
-        <Col span={24}>
-          <Card title="文件上传" extra={<UploadOutlined />}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Upload.Dragger
-                {...uploadProps}
-                style={{ marginBottom: 16 }}
-                disabled={uploadLoading}
-              >
-                <p className="ant-upload-drag-icon">
-                  <UploadOutlined />
-                </p>
-                <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-                <p className="ant-upload-hint">
-                  支持单个文件上传。图片支持 JPG、PNG、GIF 格式，大小不超过 5MB； 视频支持 MP4、MOV
-                  格式，大小不超过 100MB。
-                </p>
-              </Upload.Dragger>
+          {fileList.length > 0 && (
+            <Button
+              type="primary"
+              onClick={handleUpload}
+              loading={uploadLoading}
+              style={{ width: '100%' }}
+              icon={<UploadOutlined />}
+            >
+              开始上传
+            </Button>
+          )}
+        </Space>
+      </ProCard>
 
-              {fileList.length > 0 && (
-                <Button
-                  type="primary"
-                  onClick={handleUpload}
-                  loading={uploadLoading}
-                  style={{ width: '100%' }}
-                >
-                  开始上传
-                </Button>
-              )}
-            </Space>
-          </Card>
-        </Col>
-
-        <Col span={24}>
-          <Card
-            title={`已上传文件 (${uploadedFiles.length})`}
-            extra={<Text type="secondary">最近上传的文件</Text>}
-          >
-            {uploadedFiles.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <Text type="secondary">暂无上传文件</Text>
-              </div>
-            ) : (
-              <List
-                itemLayout="horizontal"
-                dataSource={uploadedFiles}
-                renderItem={(file) => (
-                  <List.Item
-                    actions={[
-                      <Button
-                        key="copy"
-                        type="text"
-                        icon={<CopyOutlined />}
-                        onClick={() => handleCopyUrl(file.url)}
-                      >
-                        复制链接
-                      </Button>,
-                      <Button
-                        key="delete"
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleDeleteFile(file.id)}
-                      >
-                        删除
-                      </Button>,
-                    ]}
+      {/* 已上传文件列表 */}
+      <ProCard
+        title={`已上传文件 (${uploadedFiles.length})`}
+        extra={<Text type="secondary">最近上传的文件</Text>}
+      >
+        {uploadedFiles.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <Text type="secondary">暂无上传文件</Text>
+          </div>
+        ) : (
+          <List
+            itemLayout="horizontal"
+            dataSource={uploadedFiles}
+            renderItem={(file) => (
+              <List.Item
+                actions={[
+                  <Button
+                    key="copy"
+                    type="text"
+                    icon={<CopyOutlined />}
+                    onClick={() => handleCopyUrl(file.url)}
                   >
-                    <List.Item.Meta
-                      avatar={
-                        file.type === 'image' ? (
-                          <Image
-                            width={48}
-                            height={48}
-                            src={file.url}
-                            style={{ objectFit: 'cover', borderRadius: 4 }}
-                            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: 48,
-                              height: 48,
-                              backgroundColor: '#f0f0f0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              borderRadius: 4,
-                            }}
-                          >
-                            <VideoCameraOutlined style={{ fontSize: 20, color: '#999' }} />
-                          </div>
-                        )
-                      }
-                      title={
-                        <Space>
-                          <Text strong>{file.name}</Text>
-                          <Tag color={file.type === 'image' ? 'blue' : 'green'}>
-                            {file.type === 'image' ? '图片' : '视频'}
-                          </Tag>
-                        </Space>
-                      }
-                      description={
-                        <Space split={<Divider type="vertical" />}>
-                          <Text type="secondary">大小: {formatFileSize(file.size)}</Text>
-                          <Text type="secondary">上传时间: {file.uploadTime}</Text>
-                        </Space>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
+                    复制链接
+                  </Button>,
+                  <Button
+                    key="delete"
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleDeleteFile(file.id)}
+                  >
+                    删除
+                  </Button>,
+                ]}
+              >
+                <List.Item.Meta
+                  avatar={
+                    file.type === 'image' ? (
+                      <Image
+                        width={48}
+                        height={48}
+                        src={file.url}
+                        style={{ objectFit: 'cover', borderRadius: 4 }}
+                        fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 48,
+                          height: 48,
+                          backgroundColor: '#f0f0f0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                        }}
+                      >
+                        <VideoCameraOutlined style={{ fontSize: 20, color: '#999' }} />
+                      </div>
+                    )
+                  }
+                  title={
+                    <Space>
+                      <Text strong>{file.name}</Text>
+                      <Tag color={file.type === 'image' ? 'blue' : 'green'}>
+                        {file.type === 'image' ? '图片' : '视频'}
+                      </Tag>
+                    </Space>
+                  }
+                  description={
+                    <Space split={<Divider type="vertical" />}>
+                      <Text type="secondary">大小: {formatFileSize(file.size)}</Text>
+                      <Text type="secondary">上传时间: {file.uploadTime}</Text>
+                    </Space>
+                  }
+                />
+              </List.Item>
             )}
-          </Card>
-        </Col>
-      </Row>
-    </Card>
+          />
+        )}
+      </ProCard>
+    </>
   );
 };
 

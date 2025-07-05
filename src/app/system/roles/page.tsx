@@ -4,7 +4,6 @@ import { useRequest, useSetState } from 'ahooks';
 import {
   App,
   Button,
-  Card,
   Col,
   Form,
   Input,
@@ -12,16 +11,16 @@ import {
   Row,
   Select,
   Space,
-  Table,
   Tag,
   Tooltip,
   Popconfirm,
   Tree,
-  Tabs,
   Checkbox,
   Divider,
   Alert,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -32,8 +31,9 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 
 /**
  * APIs
@@ -194,7 +194,7 @@ const RolesPage: React.FC = () => {
     return moduleNames[module] || module;
   };
 
-  const columns: ColumnsType<RoleDataResult> = [
+  const columns: ProColumns<RoleDataResult>[] = [
     {
       title: 'ID',
       dataIndex: 'id',
@@ -203,10 +203,10 @@ const RolesPage: React.FC = () => {
     {
       title: '角色名称',
       dataIndex: 'name',
-      render: (name: string) => (
+      render: (_, record) => (
         <Space>
           <UserOutlined />
-          <span>{name}</span>
+          <span>{record.name}</span>
         </Space>
       ),
     },
@@ -214,30 +214,32 @@ const RolesPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       width: 100,
-      render: (status: number) => (
-        <Tag color={status === 1 ? 'green' : 'red'}>{status === 1 ? '启用' : '禁用'}</Tag>
+      render: (_, record) => (
+        <Tag color={record.status === 1 ? 'green' : 'red'}>
+          {record.status === 1 ? '启用' : '禁用'}
+        </Tag>
       ),
     },
     {
       title: '权限数量',
       dataIndex: 'permissions',
       width: 120,
-      render: (permissions: string[]) => <Tag color="blue">{permissions?.length || 0} 个权限</Tag>,
+      render: (_, record) => <Tag color="blue">{record.permissions?.length || 0} 个权限</Tag>,
     },
     {
       title: '权限详情',
       dataIndex: 'permissions',
       width: 300,
-      render: (permissions: string[]) => (
+      render: (_, record) => (
         <div>
-          {permissions?.slice(0, 3).map((permission) => (
+          {record.permissions?.slice(0, 3).map((permission) => (
             <Tag key={permission} style={{ marginBottom: 4, fontSize: '12px' }}>
               {permission}
             </Tag>
           ))}
-          {permissions?.length > 3 && (
+          {(record.permissions?.length || 0) > 3 && (
             <Tag color="default" style={{ fontSize: '12px' }}>
-              +{permissions.length - 3} 更多
+              +{(record.permissions?.length || 0) - 3} 更多
             </Tag>
           )}
         </div>
@@ -247,7 +249,7 @@ const RolesPage: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       width: 180,
-      render: (time: string) => new Date(time).toLocaleString(),
+      render: (_, record) => new Date(record.created_at).toLocaleString(),
     },
     {
       title: '操作',
@@ -338,83 +340,80 @@ const RolesPage: React.FC = () => {
     message.info('批量禁用功能开发中...');
   };
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<RoleDataResult, any> = {
+    columns,
+    dataSource: rolesData?.data?.data?.list || [],
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+        新建角色
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+    rowSelection: {
+      selectedRowKeys: state.selectedRowKeys,
+      onChange: (keys) => setState({ selectedRowKeys: keys as string[] }),
+    },
+    tableAlertRender: ({ selectedRowKeys }) => (
+      <Space>
+        <span>已选择 {selectedRowKeys.length} 项</span>
+        <Button type="link" size="small" onClick={handleBatchEnable}>
+          批量启用
+        </Button>
+        <Button type="link" size="small" onClick={handleBatchDisable}>
+          批量禁用
+        </Button>
+      </Space>
+    ),
+  };
+
   return (
     <>
-      <Card>
-        {/* 搜索区域 */}
-        <Card size="small" title="搜索筛选" style={{ marginBottom: 16 }}>
-          <Form form={searchForm} layout="inline" onFinish={handleSearch}>
-            <Form.Item name="name" label="角色名称">
-              <Input placeholder="请输入角色名称" allowClear />
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="name" style={{ marginRight: 0 }}>
+              <Input allowClear placeholder="请输入角色名称" style={{ width: 200 }} />
             </Form.Item>
-            <Form.Item name="status" label="状态">
+            <Form.Item name="status" style={{ marginRight: 0 }}>
               <Select placeholder="请选择状态" allowClear style={{ width: 120 }}>
                 <Select.Option value="1">启用</Select.Option>
                 <Select.Option value="0">禁用</Select.Option>
               </Select>
             </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                  搜索
-                </Button>
-                <Button onClick={handleResetSearch}>重置</Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        </Card>
-
-        {/* 操作按钮区域 */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              新建角色
+            <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
+              搜索
             </Button>
-          </Col>
-          <Col>
-            <Button icon={<ReloadOutlined />} onClick={refresh}>
-              刷新
-            </Button>
-          </Col>
-          {state.selectedRowKeys.length > 0 && (
-            <>
-              <Col>
-                <Button type="default" onClick={handleBatchEnable}>
-                  批量启用
-                </Button>
-              </Col>
-              <Col>
-                <Button onClick={handleBatchDisable}>批量禁用</Button>
-              </Col>
-              <Col>
-                <span style={{ color: '#666' }}>已选择 {state.selectedRowKeys.length} 项</span>
-              </Col>
-            </>
-          )}
-        </Row>
+            <Button onClick={handleResetSearch}>重置</Button>
+          </Flex>
+        </Form>
+      </ProCard>
 
-        <Table
-          columns={columns}
-          dataSource={rolesData?.data?.data?.list || []}
-          loading={loading}
-          rowKey="id"
-          rowSelection={{
-            selectedRowKeys: state.selectedRowKeys,
-            onChange: (keys) => setState({ selectedRowKeys: keys as string[] }),
-          }}
-          pagination={{
-            current: searchParams.page,
-            pageSize: searchParams.limit,
-            total: rolesData?.data?.data?.meta?.total || 0,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (page, pageSize) => {
-              setSearchParams({ ...searchParams, page, limit: pageSize || 20 });
-            },
-          }}
-        />
-      </Card>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={searchParams.page}
+        size={searchParams.limit}
+        total={rolesData?.data?.data?.meta?.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({ ...searchParams, page, limit: size || 20 });
+        }}
+        isLoading={loading}
+      />
 
       {/* 创建/编辑角色模态框 */}
       <Modal

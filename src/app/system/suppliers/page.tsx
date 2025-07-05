@@ -5,8 +5,6 @@ import { useRequest } from 'ahooks';
 import {
   App,
   Button,
-  Card,
-  Table,
   Space,
   Modal,
   Form,
@@ -18,7 +16,9 @@ import {
   Tooltip,
   Popconfirm,
   InputNumber,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -27,7 +27,8 @@ import {
   SearchOutlined,
   GlobalOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 
 // 服务
 import {
@@ -147,15 +148,6 @@ const SuppliersPage: React.FC = () => {
     });
   }, [searchForm]);
 
-  // 分页处理
-  const handleTableChange = useCallback((page: number, pageSize: number) => {
-    setSearchParams((prev: SuppliersParams) => ({
-      ...prev,
-      page,
-      pageSize,
-    }));
-  }, []);
-
   // 打开创建/编辑模态框
   const handleOpenModal = useCallback(
     (supplier?: Supplier) => {
@@ -227,10 +219,9 @@ const SuppliersPage: React.FC = () => {
   );
 
   // 表格列定义
-  const columns: ColumnsType<Supplier> = [
+  const columns: ProColumns<Supplier>[] = [
     {
       title: '供应商信息',
-      key: 'info',
       width: 200,
       render: (_, record) => (
         <Space>
@@ -244,7 +235,6 @@ const SuppliersPage: React.FC = () => {
     },
     {
       title: '联系信息',
-      key: 'contact',
       width: 160,
       render: (_, record) => (
         <div>
@@ -257,15 +247,14 @@ const SuppliersPage: React.FC = () => {
       title: '统一社会信用代码',
       dataIndex: 'creditCode',
       width: 180,
-      render: (code) => (
-        <Tooltip title={code}>
-          <Tag color="blue">{code}</Tag>
+      render: (_, record) => (
+        <Tooltip title={record.creditCode}>
+          <Tag color="blue">{record.creditCode}</Tag>
         </Tooltip>
       ),
     },
     {
       title: '银行信息',
-      key: 'bank',
       width: 200,
       render: (_, record) => (
         <div>
@@ -278,29 +267,28 @@ const SuppliersPage: React.FC = () => {
       title: '生产周期',
       dataIndex: 'productionDays',
       width: 80,
-      render: (days) => `${days}天`,
+      render: (_, record) => `${record.productionDays}天`,
     },
     {
       title: '交货周期',
       dataIndex: 'deliveryDays',
       width: 80,
-      render: (days) => `${days}天`,
+      render: (_, record) => `${record.deliveryDays}天`,
     },
     {
       title: '操作员',
       dataIndex: 'operator',
       width: 100,
-      render: (operator) => operator?.name || '-',
+      render: (_, record) => record.operator?.name || '-',
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       width: 120,
-      render: (date) => new Date(date).toLocaleDateString(),
+      render: (_, record) => new Date(record.createdAt).toLocaleDateString(),
     },
     {
       title: '操作',
-      key: 'actions',
       width: 120,
       fixed: 'right',
       render: (_, record) => (
@@ -338,57 +326,63 @@ const SuppliersPage: React.FC = () => {
   const suppliers = suppliersData?.data?.data?.list || [];
   const meta = suppliersData?.data?.data?.meta || { total: 0, page: 1, pageSize: 10 };
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<Supplier, any> = {
+    columns,
+    dataSource: suppliers,
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+        新建供应商
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
+        刷新
+      </Button>,
+    ],
+    scroll: { x: 1200 },
+  };
+
   return (
-    <Card>
+    <>
       {/* 搜索区域 */}
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <ProCard className="mb-16">
         <Form form={searchForm} layout="inline" onFinish={handleSearch}>
-          <Form.Item name="nickname" label="供应商昵称">
-            <Input placeholder="请输入供应商昵称" style={{ width: 200 }} allowClear />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                搜索
-              </Button>
-              <Button onClick={handleResetSearch}>重置</Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
-
-      {/* 操作按钮 */}
-      <Row justify="space-between" style={{ marginBottom: 16 }}>
-        <Col>
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-              新建供应商
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="nickname" style={{ marginRight: 0 }}>
+              <Input placeholder="请输入供应商昵称" style={{ width: 200 }} allowClear />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
+              搜索
             </Button>
-          </Space>
-        </Col>
-        <Col>
-          <Button icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
-            刷新
-          </Button>
-        </Col>
-      </Row>
+            <Button onClick={handleResetSearch}>重置</Button>
+          </Flex>
+        </Form>
+      </ProCard>
 
-      {/* 供应商列表 */}
-      <Table
-        columns={columns}
-        dataSource={suppliers}
-        rowKey="id"
-        loading={loading}
-        scroll={{ x: 1200 }}
-        pagination={{
-          current: meta.page,
-          pageSize: meta.pageSize,
-          total: meta.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-          onChange: handleTableChange,
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 10}
+        total={meta.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams((prev: SuppliersParams) => ({
+            ...prev,
+            page,
+            pageSize: size || 10,
+          }));
         }}
+        isLoading={loading}
       />
 
       {/* 创建/编辑模态框 */}
@@ -500,10 +494,10 @@ const SuppliersPage: React.FC = () => {
                 rules={[{ required: true, message: '请输入生产周期' }]}
               >
                 <InputNumber
+                  placeholder="请输入生产周期"
                   min={1}
                   max={365}
                   style={{ width: '100%' }}
-                  placeholder="请输入生产周期"
                 />
               </Form.Item>
             </Col>
@@ -514,21 +508,25 @@ const SuppliersPage: React.FC = () => {
                 rules={[{ required: true, message: '请输入交货周期' }]}
               >
                 <InputNumber
+                  placeholder="请输入交货周期"
                   min={1}
                   max={365}
                   style={{ width: '100%' }}
-                  placeholder="请输入交货周期"
                 />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={3} placeholder="请输入备注信息" maxLength={500} showCount />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="remark" label="备注">
+                <Input.TextArea placeholder="请输入备注" rows={4} maxLength={500} />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
-    </Card>
+    </>
   );
 };
 

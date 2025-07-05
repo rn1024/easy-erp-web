@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  Table,
   Button,
   Modal,
   Form,
@@ -10,7 +9,6 @@ import {
   Select,
   Space,
   Tag,
-  Card,
   Row,
   Col,
   Progress,
@@ -19,7 +17,9 @@ import {
   message,
   DatePicker,
   Descriptions,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -29,7 +29,8 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 import {
   getWarehouseTasksApi,
   createWarehouseTaskApi,
@@ -60,14 +61,17 @@ export default function WarehouseTasksPage() {
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<WarehouseTaskInfo | null>(null);
   const [selectedTask, setSelectedTask] = useState<WarehouseTaskInfo | null>(null);
-  const [searchParams, setSearchParams] = useState<WarehouseTaskQueryParams>({});
+  const [searchParams, setSearchParams] = useState<WarehouseTaskQueryParams>({
+    page: 1,
+    pageSize: 10,
+  });
 
   // 获取仓库任务列表
   const {
     data: tasksData,
     loading,
     refresh,
-  } = useRequest(() => getWarehouseTasksApi({ ...searchParams, page: 1, pageSize: 10 }), {
+  } = useRequest(() => getWarehouseTasksApi(searchParams), {
     refreshDeps: [searchParams],
   });
 
@@ -80,21 +84,29 @@ export default function WarehouseTasksPage() {
   // 获取产品列表
   const { data: productsData } = useRequest(() => getProductsApi());
 
-  const shops = shopsData?.data?.data || [];
-  const categories = categoriesData?.data?.data || [];
-  const products = productsData?.data?.data || [];
-  const tasks = tasksData?.data?.data?.list || [];
-  const total = tasksData?.data?.data?.total || 0;
+  const shops = shopsData?.data?.data?.list || [];
+  const categories = categoriesData?.data?.data?.list || [];
+  const products = productsData?.data?.data?.list || [];
+  const tasks = tasksData?.data?.list || [];
+  const total = tasksData?.data?.total || 0;
 
   // 搜索处理
-  const handleSearch = (values: any) => {
-    setSearchParams(values);
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue();
+    setSearchParams({
+      ...values,
+      page: 1,
+      pageSize: searchParams.pageSize,
+    });
   };
 
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
-    setSearchParams({});
+    setSearchParams({
+      page: 1,
+      pageSize: 10,
+    });
   };
 
   // 显示新增/编辑弹窗
@@ -121,8 +133,8 @@ export default function WarehouseTasksPage() {
   const showDetailModal = async (taskId: string) => {
     try {
       const response = await getWarehouseTaskApi(taskId);
-      if (response.data?.success) {
-        setSelectedTask(response.data.data);
+      if (response?.data) {
+        setSelectedTask(response.data);
         setIsDetailModalVisible(true);
       }
     } catch (error) {
@@ -175,84 +187,74 @@ export default function WarehouseTasksPage() {
     }
   };
 
-  const columns: ColumnsType<WarehouseTaskInfo> = [
+  const columns: ProColumns<WarehouseTaskInfo>[] = [
     {
       title: '任务ID',
       dataIndex: 'id',
-      key: 'id',
       width: 120,
-      render: (text) => text.slice(-8),
+      render: (_, record) => record.id.slice(-8),
     },
     {
       title: '店铺',
       dataIndex: ['shop'],
-      key: 'shop',
-      render: (shop) => (shop ? `${shop.name} (${shop.code})` : '-'),
+      render: (_, record) => (record.shop ? `${record.shop.name} (${record.shop.code})` : '-'),
     },
     {
       title: '产品分类',
       dataIndex: ['category'],
-      key: 'category',
-      render: (category) => category?.name || '-',
+      render: (_, record) => record.category?.name || '-',
     },
     {
       title: '产品信息',
       dataIndex: ['product'],
-      key: 'product',
-      render: (product) => (product ? `${product.code} - ${product.specification}` : '-'),
+      render: (_, record) =>
+        record.product ? `${record.product.code} - ${record.product.specification}` : '-',
     },
     {
       title: '任务类型',
       dataIndex: 'type',
-      key: 'type',
-      render: (type) => {
-        const config = getWarehouseTaskTypeLabel(type);
+      render: (_, record) => {
+        const config = getWarehouseTaskTypeLabel(record.type);
         return <Tag color={config.color}>{config.label}</Tag>;
       },
     },
     {
       title: '总数量',
       dataIndex: 'totalQuantity',
-      key: 'totalQuantity',
       align: 'right',
     },
     {
       title: '进度',
       dataIndex: 'progress',
-      key: 'progress',
       width: 120,
-      render: (progress) => (
+      render: (_, record) => (
         <Progress
-          percent={progress}
+          percent={record.progress}
           size="small"
-          status={progress === 100 ? 'success' : 'active'}
+          status={record.progress === 100 ? 'success' : 'active'}
         />
       ),
     },
     {
       title: '状态',
       dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        const config = getWarehouseTaskStatusLabel(status);
+      render: (_, record) => {
+        const config = getWarehouseTaskStatusLabel(record.status);
         return <Tag color={config.color}>{config.label}</Tag>;
       },
     },
     {
       title: '操作员',
       dataIndex: ['operator'],
-      key: 'operator',
-      render: (operator) => operator?.realName || operator?.username || '-',
+      render: (_, record) => record.operator?.realName || record.operator?.username || '-',
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date) => new Date(date).toLocaleString('zh-CN'),
+      render: (_, record) => new Date(record.createdAt).toLocaleString('zh-CN'),
     },
     {
       title: '操作',
-      key: 'action',
       width: 180,
       render: (_, record) => (
         <Space size="small">
@@ -292,12 +294,34 @@ export default function WarehouseTasksPage() {
     },
   ];
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<WarehouseTaskInfo, any> = {
+    columns,
+    dataSource: tasks,
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+        新增任务
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+  };
+
   return (
-    <div style={{ padding: 24 }}>
-      <Card>
-        <div style={{ marginBottom: 16 }}>
-          <Form form={searchForm} layout="inline" onFinish={handleSearch}>
-            <Form.Item name="shopId" label="店铺">
+    <>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline">
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="shopId" style={{ marginRight: 0 }}>
               <Select placeholder="选择店铺" style={{ width: 200 }} allowClear>
                 {shops.map((shop: any) => (
                   <Option key={shop.id} value={shop.id}>
@@ -306,7 +330,7 @@ export default function WarehouseTasksPage() {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item name="status" label="状态">
+            <Form.Item name="status" style={{ marginRight: 0 }}>
               <Select placeholder="选择状态" style={{ width: 120 }} allowClear>
                 {warehouseTaskStatusOptions.map((option) => (
                   <Option key={option.value} value={option.value}>
@@ -315,7 +339,7 @@ export default function WarehouseTasksPage() {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item name="type" label="类型">
+            <Form.Item name="type" style={{ marginRight: 0 }}>
               <Select placeholder="选择类型" style={{ width: 120 }} allowClear>
                 {warehouseTaskTypeOptions.map((option) => (
                   <Option key={option.value} value={option.value}>
@@ -324,40 +348,40 @@ export default function WarehouseTasksPage() {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                  搜索
-                </Button>
-                <Button onClick={handleReset} icon={<ReloadOutlined />}>
-                  重置
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        </div>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={loading}
+            >
+              搜索
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              重置
+            </Button>
+          </Flex>
+        </Form>
+      </ProCard>
 
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-          <h2>仓库任务管理</h2>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-            新增任务
-          </Button>
-        </div>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
 
-        <Table
-          columns={columns}
-          dataSource={tasks}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            total,
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-          }}
-        />
-      </Card>
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 10}
+        total={total}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({
+            ...searchParams,
+            page,
+            pageSize: size || 10,
+          });
+        }}
+        isLoading={loading}
+      />
 
       {/* 新增/编辑弹窗 */}
       <Modal
@@ -540,6 +564,6 @@ export default function WarehouseTasksPage() {
           </Descriptions>
         )}
       </Modal>
-    </div>
+    </>
   );
 }

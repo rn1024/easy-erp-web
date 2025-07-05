@@ -2,8 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  Card,
-  Table,
   Button,
   Modal,
   Form,
@@ -20,7 +18,9 @@ import {
   Avatar,
   Tooltip,
   Badge,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -33,7 +33,8 @@ import {
   ProductOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 import {
   getPurchaseOrdersApi,
   createPurchaseOrderApi,
@@ -186,22 +187,12 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  // 分页变化
-  const handleTableChange = (page: number, pageSize: number) => {
-    setSearchParams({
-      ...searchParams,
-      page,
-      pageSize,
-    });
-  };
-
   // 表格列定义
-  const columns: ColumnsType<PurchaseOrderInfo> = [
+  const columns: ProColumns<PurchaseOrderInfo>[] = [
     {
       title: '订单信息',
-      key: 'orderInfo',
       width: 200,
-      render: (record: PurchaseOrderInfo) => (
+      render: (_, record) => (
         <div>
           <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
             {record.urgent && <Badge dot color="red" style={{ marginRight: 4 }} />}
@@ -215,9 +206,8 @@ export default function PurchaseOrdersPage() {
     },
     {
       title: '店铺',
-      key: 'shop',
       width: 150,
-      render: (record: PurchaseOrderInfo) => (
+      render: (_, record) => (
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <Avatar
             src={record.shop.avatarUrl}
@@ -236,9 +226,8 @@ export default function PurchaseOrdersPage() {
     },
     {
       title: '供应商',
-      key: 'supplier',
       width: 150,
-      render: (record: PurchaseOrderInfo) => (
+      render: (_, record) => (
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <Avatar
             src={record.supplier.avatarUrl}
@@ -255,9 +244,8 @@ export default function PurchaseOrdersPage() {
     },
     {
       title: '产品',
-      key: 'product',
       width: 180,
-      render: (record: PurchaseOrderInfo) => (
+      render: (_, record) => (
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <Avatar
             src={record.product.imageUrl}
@@ -278,45 +266,46 @@ export default function PurchaseOrdersPage() {
     {
       title: '数量',
       dataIndex: 'quantity',
-      key: 'quantity',
       width: 80,
       align: 'center',
-      render: (quantity: number) => (
-        <span style={{ fontWeight: 'bold', color: '#1890ff' }}>{quantity.toLocaleString()}</span>
+      render: (_, record) => (
+        <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
+          {record.quantity.toLocaleString()}
+        </span>
       ),
     },
     {
       title: '金额',
       dataIndex: 'totalAmount',
-      key: 'totalAmount',
       width: 100,
       align: 'right',
-      render: (amount: number) => (
-        <span style={{ fontWeight: 'bold', color: '#f50' }}>¥{amount.toLocaleString()}</span>
+      render: (_, record) => (
+        <span style={{ fontWeight: 'bold', color: '#f50' }}>
+          ¥{record.totalAmount.toLocaleString()}
+        </span>
       ),
     },
     {
       title: '状态',
       dataIndex: 'status',
-      key: 'status',
       width: 100,
       align: 'center',
-      render: (status: PurchaseOrderStatus) => (
-        <Tag color={getPurchaseOrderStatusColor(status)}>{getPurchaseOrderStatusLabel(status)}</Tag>
+      render: (_, record) => (
+        <Tag color={getPurchaseOrderStatusColor(record.status)}>
+          {getPurchaseOrderStatusLabel(record.status)}
+        </Tag>
       ),
     },
     {
       title: '操作员',
-      key: 'operator',
       width: 100,
-      render: (record: PurchaseOrderInfo) => record.operator.name,
+      render: (_, record) => record.operator.name,
     },
     {
       title: '操作',
-      key: 'actions',
       width: 120,
       fixed: 'right',
-      render: (record: PurchaseOrderInfo) => (
+      render: (_, record) => (
         <Space size="small">
           <Tooltip title="编辑">
             <Button
@@ -347,76 +336,98 @@ export default function PurchaseOrdersPage() {
     },
   ];
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<PurchaseOrderInfo, any> = {
+    columns,
+    dataSource: purchaseOrdersData?.list || [],
+    loading: purchaseOrdersLoading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refreshPurchaseOrders,
+    },
+    toolBarRender: () => [
+      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+        新增采购订单
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refreshPurchaseOrders}>
+        刷新
+      </Button>,
+    ],
+    scroll: { x: 1200 },
+  };
+
   return (
-    <div style={{ padding: '24px' }}>
-      <Card title="采购订单管理" style={{ marginBottom: '16px' }}>
-        <Form form={searchForm} layout="inline" style={{ marginBottom: '16px' }}>
-          <Form.Item name="shopId" label="店铺">
-            <Select placeholder="请选择店铺" style={{ width: 150 }} allowClear>
-              {shopsData?.map((shop: any) => (
-                <Option key={shop.id} value={shop.id}>
-                  {shop.nickname}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="supplierId" label="供应商">
-            <Select placeholder="请选择供应商" style={{ width: 150 }} allowClear>
-              {suppliersData?.map((supplier: any) => (
-                <Option key={supplier.id} value={supplier.id}>
-                  {supplier.nickname}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
-              {purchaseOrderStatusOptions.map((option) => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="urgent" label="紧急" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                重置
-              </Button>
-            </Space>
-          </Form.Item>
+    <>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline">
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="shopId" style={{ marginRight: 0 }}>
+              <Select placeholder="请选择店铺" style={{ width: 150 }} allowClear>
+                {shopsData?.map((shop: any) => (
+                  <Option key={shop.id} value={shop.id}>
+                    {shop.nickname}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="supplierId" style={{ marginRight: 0 }}>
+              <Select placeholder="请选择供应商" style={{ width: 150 }} allowClear>
+                {suppliersData?.map((supplier: any) => (
+                  <Option key={supplier.id} value={supplier.id}>
+                    {supplier.nickname}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="status" style={{ marginRight: 0 }}>
+              <Select placeholder="请选择状态" style={{ width: 120 }} allowClear>
+                {purchaseOrderStatusOptions.map((option) => (
+                  <Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="urgent" valuePropName="checked" style={{ marginRight: 0 }}>
+              <Switch checkedChildren="紧急" unCheckedChildren="常规" />
+            </Form.Item>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={purchaseOrdersLoading}
+            >
+              搜索
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              重置
+            </Button>
+          </Flex>
         </Form>
+      </ProCard>
 
-        <div style={{ marginBottom: '16px' }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            新增采购订单
-          </Button>
-        </div>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
 
-        <Table
-          columns={columns}
-          dataSource={purchaseOrdersData?.list || []}
-          rowKey="id"
-          loading={purchaseOrdersLoading}
-          scroll={{ x: 1200 }}
-          pagination={{
-            current: searchParams.page,
-            pageSize: searchParams.pageSize,
-            total: purchaseOrdersData?.meta?.total || 0,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-            onChange: handleTableChange,
-            onShowSizeChange: handleTableChange,
-          }}
-        />
-      </Card>
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 10}
+        total={purchaseOrdersData?.meta?.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({
+            ...searchParams,
+            page,
+            pageSize: size || 10,
+          });
+        }}
+        isLoading={purchaseOrdersLoading}
+      />
 
       {/* 编辑弹窗 */}
       <Modal
@@ -506,42 +517,44 @@ export default function PurchaseOrdersPage() {
                 label="总金额"
                 rules={[
                   { required: true, message: '请输入总金额' },
-                  { type: 'number', min: 0.01, message: '金额必须大于0' },
+                  { type: 'number', min: 0, message: '金额不能为负数' },
                 ]}
               >
                 <InputNumber
                   placeholder="请输入总金额"
                   style={{ width: '100%' }}
-                  min={0.01}
+                  min={0}
                   precision={2}
-                  formatter={(value) => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value) => parseFloat(value!.replace(/¥\s?|(,*)/g, '')) || 0}
+                  prefix="¥"
                 />
               </Form.Item>
             </Col>
           </Row>
 
-          {editingRecord && (
-            <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态">
-                {purchaseOrderStatusOptions.map((option) => (
-                  <Option key={option.value} value={option.value}>
-                    {option.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          )}
-
-          <Form.Item name="urgent" label="紧急订单" valuePropName="checked">
-            <Switch />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="status" label="状态">
+                <Select placeholder="请选择状态">
+                  {purchaseOrderStatusOptions.map((option) => (
+                    <Option key={option.value} value={option.value}>
+                      {option.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="urgent" label="紧急标记" valuePropName="checked">
+                <Switch checkedChildren="紧急" unCheckedChildren="常规" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item name="remark" label="备注">
-            <TextArea placeholder="请输入备注信息" rows={3} maxLength={500} showCount />
+            <TextArea rows={4} placeholder="请输入备注信息" maxLength={500} />
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

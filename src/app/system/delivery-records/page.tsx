@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  Table,
   Button,
   Modal,
   Form,
@@ -10,7 +9,6 @@ import {
   Select,
   Space,
   Tag,
-  Card,
   Row,
   Col,
   InputNumber,
@@ -18,7 +16,9 @@ import {
   message,
   DatePicker,
   Descriptions,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -28,7 +28,8 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 import dayjs from 'dayjs';
 import {
   getDeliveryRecordsApi,
@@ -75,28 +76,29 @@ const DeliveryRecordsPage: React.FC = () => {
 
   // 获取发货记录列表
   const {
-    data: recordsData,
+    data: recordsResponse,
     loading: recordsLoading,
     refresh: refreshRecords,
   } = useRequest(() => getDeliveryRecordsApi(searchParams), {
     refreshDeps: [searchParams],
-    formatResult: (response) => response?.data?.data,
   });
 
   // 获取店铺列表
-  const { data: shopsData } = useRequest(() => getShopsApi({ page: 1, pageSize: 1000 }), {
-    formatResult: (response) => response?.data?.data?.list || [],
-  });
+  const { data: shopsResponse } = useRequest(() => getShops({ page: 1, pageSize: 1000 }));
 
   // 获取产品列表
-  const { data: productsData } = useRequest(() => getProductsApi({ page: 1, pageSize: 1000 }), {
-    formatResult: (response) => response?.data?.data?.list || [],
-  });
+  const { data: productsResponse } = useRequest(() => getProductsApi({ page: 1, pageSize: 1000 }));
 
   // 获取货代列表
-  const { data: forwardersData } = useRequest(() => getForwardersApi({ page: 1, pageSize: 1000 }), {
-    formatResult: (response) => response?.data?.data?.list || [],
-  });
+  const { data: forwardersResponse } = useRequest(() =>
+    getForwardersApi({ page: 1, pageSize: 1000 })
+  );
+
+  // 处理数据
+  const recordsData = recordsResponse?.data;
+  const shopsData = shopsResponse?.data?.data?.list || [];
+  const productsData = productsResponse?.data?.data?.list || [];
+  const forwardersData = forwardersResponse?.data?.data?.list || [];
 
   // 创建/更新发货记录
   const { run: handleSubmit, loading: submitLoading } = useRequest(
@@ -147,7 +149,8 @@ const DeliveryRecordsPage: React.FC = () => {
   });
 
   // 搜索
-  const handleSearch = (values: any) => {
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue();
     setSearchParams({
       ...values,
       page: 1,
@@ -160,16 +163,7 @@ const DeliveryRecordsPage: React.FC = () => {
     searchForm.resetFields();
     setSearchParams({
       page: 1,
-      pageSize: searchParams.pageSize,
-    });
-  };
-
-  // 分页变化
-  const handleTableChange = (page: number, pageSize: number) => {
-    setSearchParams({
-      ...searchParams,
-      page,
-      pageSize,
+      pageSize: 10,
     });
   };
 
@@ -209,23 +203,20 @@ const DeliveryRecordsPage: React.FC = () => {
     handleSubmit(formData);
   };
 
-  const columns: ColumnsType<DeliveryRecordInfo> = [
+  const columns: ProColumns<DeliveryRecordInfo>[] = [
     {
       title: 'FBA编码',
       dataIndex: 'fbaShipmentCode',
-      key: 'fbaShipmentCode',
       width: 150,
-      render: (text) => text || '-',
+      render: (_, record) => record.fbaShipmentCode || '-',
     },
     {
       title: '店铺',
       dataIndex: ['shop', 'nickname'],
-      key: 'shopName',
       width: 120,
     },
     {
       title: '产品信息',
-      key: 'product',
       width: 200,
       render: (_, record) => (
         <div>
@@ -237,50 +228,43 @@ const DeliveryRecordsPage: React.FC = () => {
     {
       title: '货代',
       dataIndex: ['forwarder', 'nickname'],
-      key: 'forwarderName',
       width: 120,
     },
     {
       title: '箱数',
       dataIndex: 'totalBoxes',
-      key: 'totalBoxes',
       width: 80,
-      render: (text) => `${text}箱`,
+      render: (_, record) => `${record.totalBoxes}箱`,
     },
     {
       title: '国家',
       dataIndex: 'country',
-      key: 'country',
       width: 100,
-      render: (text) => text || '-',
+      render: (_, record) => record.country || '-',
     },
     {
       title: '渠道',
       dataIndex: 'channel',
-      key: 'channel',
       width: 100,
-      render: (text) => text || '-',
+      render: (_, record) => record.channel || '-',
     },
     {
       title: '状态',
       dataIndex: 'status',
-      key: 'status',
       width: 100,
-      render: (status: DeliveryRecordStatus) => {
-        const statusConfig = getDeliveryRecordStatusLabel(status);
+      render: (_, record) => {
+        const statusConfig = getDeliveryRecordStatusLabel(record.status);
         return <Tag color={statusConfig.color}>{statusConfig.label}</Tag>;
       },
     },
     {
       title: '发货日期',
       dataIndex: 'date',
-      key: 'date',
       width: 120,
-      render: (text) => dayjs(text).format('YYYY-MM-DD'),
+      render: (_, record) => dayjs(record.date).format('YYYY-MM-DD'),
     },
     {
       title: '操作',
-      key: 'action',
       width: 160,
       fixed: 'right',
       render: (_, record) => (
@@ -322,92 +306,98 @@ const DeliveryRecordsPage: React.FC = () => {
     },
   ];
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<DeliveryRecordInfo, any> = {
+    columns,
+    dataSource: recordsData?.list || [],
+    loading: recordsLoading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refreshRecords,
+    },
+    toolBarRender: () => [
+      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+        新增发货记录
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refreshRecords}>
+        刷新
+      </Button>,
+    ],
+    scroll: { x: 1500 },
+  };
+
   return (
-    <div style={{ padding: '20px' }}>
-      <Card>
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={24}>
-            <Form
-              form={searchForm}
-              layout="inline"
-              onFinish={handleSearch}
-              style={{ marginBottom: 16 }}
+    <>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline">
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="shopId" style={{ marginRight: 0 }}>
+              <Select style={{ width: 150 }} placeholder="选择店铺" allowClear>
+                {shopsData?.map((shop: any) => (
+                  <Option key={shop.id} value={shop.id}>
+                    {shop.nickname}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="forwarderId" style={{ marginRight: 0 }}>
+              <Select style={{ width: 150 }} placeholder="选择货代" allowClear>
+                {forwardersData?.map((forwarder: any) => (
+                  <Option key={forwarder.id} value={forwarder.id}>
+                    {forwarder.nickname}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="status" style={{ marginRight: 0 }}>
+              <Select style={{ width: 120 }} placeholder="选择状态" allowClear>
+                {deliveryRecordStatusOptions.map((option) => (
+                  <Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="fbaShipmentCode" style={{ marginRight: 0 }}>
+              <Input style={{ width: 150 }} placeholder="输入FBA编码" />
+            </Form.Item>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={recordsLoading}
             >
-              <Form.Item name="shopId" label="店铺">
-                <Select style={{ width: 150 }} placeholder="选择店铺" allowClear>
-                  {shopsData?.map((shop: any) => (
-                    <Option key={shop.id} value={shop.id}>
-                      {shop.nickname}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item name="forwarderId" label="货代">
-                <Select style={{ width: 150 }} placeholder="选择货代" allowClear>
-                  {forwardersData?.map((forwarder: any) => (
-                    <Option key={forwarder.id} value={forwarder.id}>
-                      {forwarder.nickname}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item name="status" label="状态">
-                <Select style={{ width: 120 }} placeholder="选择状态" allowClear>
-                  {deliveryRecordStatusOptions.map((option) => (
-                    <Option key={option.value} value={option.value}>
-                      {option.label}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item name="fbaShipmentCode" label="FBA编码">
-                <Input style={{ width: 150 }} placeholder="输入FBA编码" />
-              </Form.Item>
-              <Form.Item>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} htmlType="submit">
-                    搜索
-                  </Button>
-                  <Button icon={<ReloadOutlined />} onClick={handleResetSearch}>
-                    重置
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Form>
-          </Col>
-        </Row>
+              搜索
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleResetSearch}>
+              重置
+            </Button>
+          </Flex>
+        </Form>
+      </ProCard>
 
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col span={24}>
-            <Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-                新增发货记录
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={refreshRecords}>
-                刷新
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
 
-        <Table
-          columns={columns}
-          dataSource={recordsData?.list || []}
-          rowKey="id"
-          loading={recordsLoading}
-          scroll={{ x: 1500 }}
-          pagination={{
-            current: recordsData?.page || 1,
-            pageSize: recordsData?.pageSize || 10,
-            total: recordsData?.total || 0,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            onChange: handleTableChange,
-            onShowSizeChange: handleTableChange,
-          }}
-        />
-      </Card>
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 10}
+        total={recordsData?.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({
+            ...searchParams,
+            page,
+            pageSize: size || 10,
+          });
+        }}
+        isLoading={recordsLoading}
+      />
 
       {/* 新增/编辑模态框 */}
       <Modal
@@ -638,7 +628,7 @@ const DeliveryRecordsPage: React.FC = () => {
           </Descriptions>
         )}
       </Modal>
-    </div>
+    </>
   );
 };
 

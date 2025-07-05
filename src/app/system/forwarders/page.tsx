@@ -5,8 +5,6 @@ import { useRequest } from 'ahooks';
 import {
   App,
   Button,
-  Card,
-  Table,
   Space,
   Modal,
   Form,
@@ -17,7 +15,9 @@ import {
   Avatar,
   Tooltip,
   Popconfirm,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -26,7 +26,8 @@ import {
   SearchOutlined,
   TruckOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 
 // 使用货代API（复用forwarders路由）
 import axios from '@/services/index';
@@ -207,13 +208,14 @@ const ForwardersPage: React.FC = () => {
   });
 
   // 搜索处理
-  const handleSearch = useCallback((values: SearchFormData) => {
+  const handleSearch = useCallback(() => {
+    const values = searchForm.getFieldsValue();
     setSearchParams((prev: ForwardersParams) => ({
       ...prev,
       page: 1,
       nickname: values.nickname || undefined,
     }));
-  }, []);
+  }, [searchForm]);
 
   // 重置搜索
   const handleResetSearch = useCallback(() => {
@@ -223,15 +225,6 @@ const ForwardersPage: React.FC = () => {
       pageSize: 10,
     });
   }, [searchForm]);
-
-  // 分页处理
-  const handleTableChange = useCallback((page: number, pageSize: number) => {
-    setSearchParams((prev: ForwardersParams) => ({
-      ...prev,
-      page,
-      pageSize,
-    }));
-  }, []);
 
   // 打开创建/编辑模态框
   const handleOpenModal = useCallback(
@@ -300,10 +293,9 @@ const ForwardersPage: React.FC = () => {
   );
 
   // 表格列定义
-  const columns: ColumnsType<Forwarder> = [
+  const columns: ProColumns<Forwarder>[] = [
     {
       title: '货代信息',
-      key: 'info',
       width: 200,
       render: (_, record) => (
         <Space>
@@ -317,7 +309,6 @@ const ForwardersPage: React.FC = () => {
     },
     {
       title: '联系信息',
-      key: 'contact',
       width: 160,
       render: (_, record) => (
         <div>
@@ -330,15 +321,14 @@ const ForwardersPage: React.FC = () => {
       title: '统一社会信用代码',
       dataIndex: 'creditCode',
       width: 180,
-      render: (code) => (
-        <Tooltip title={code}>
-          <Tag color="green">{code}</Tag>
+      render: (_, record) => (
+        <Tooltip title={record.creditCode}>
+          <Tag color="green">{record.creditCode}</Tag>
         </Tooltip>
       ),
     },
     {
       title: '银行信息',
-      key: 'bank',
       width: 200,
       render: (_, record) => (
         <div>
@@ -351,17 +341,16 @@ const ForwardersPage: React.FC = () => {
       title: '操作员',
       dataIndex: 'operator',
       width: 100,
-      render: (operator) => operator?.name || '-',
+      render: (_, record) => record.operator?.name || '-',
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       width: 120,
-      render: (date) => new Date(date).toLocaleDateString(),
+      render: (_, record) => new Date(record.createdAt).toLocaleDateString(),
     },
     {
       title: '操作',
-      key: 'actions',
       width: 120,
       fixed: 'right',
       render: (_, record) => (
@@ -399,57 +388,70 @@ const ForwardersPage: React.FC = () => {
   const forwarders = forwardersData?.data?.data?.list || [];
   const meta = forwardersData?.data?.data?.meta || { total: 0, page: 1, pageSize: 10 };
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<Forwarder, any> = {
+    columns,
+    dataSource: forwarders,
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+        新建货代
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
+        刷新
+      </Button>,
+    ],
+    scroll: { x: 1000 },
+  };
+
   return (
-    <Card>
+    <>
       {/* 搜索区域 */}
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
-          <Form.Item name="nickname" label="货代昵称">
-            <Input placeholder="请输入货代昵称" style={{ width: 200 }} allowClear />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                搜索
-              </Button>
-              <Button onClick={handleResetSearch}>重置</Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
-
-      {/* 操作按钮 */}
-      <Row justify="space-between" style={{ marginBottom: 16 }}>
-        <Col>
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-              新建货代
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline">
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="nickname" style={{ marginRight: 0 }}>
+              <Input placeholder="请输入货代昵称" style={{ width: 200 }} allowClear />
+            </Form.Item>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={loading}
+            >
+              搜索
             </Button>
-          </Space>
-        </Col>
-        <Col>
-          <Button icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
-            刷新
-          </Button>
-        </Col>
-      </Row>
+            <Button icon={<ReloadOutlined />} onClick={handleResetSearch}>
+              重置
+            </Button>
+          </Flex>
+        </Form>
+      </ProCard>
 
-      {/* 货代列表 */}
-      <Table
-        columns={columns}
-        dataSource={forwarders}
-        rowKey="id"
-        loading={loading}
-        scroll={{ x: 1000 }}
-        pagination={{
-          current: meta.page,
-          pageSize: meta.pageSize,
-          total: meta.total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-          onChange: handleTableChange,
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 10}
+        total={meta.total}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({
+            ...searchParams,
+            page,
+            pageSize: size || 10,
+          });
         }}
+        isLoading={loading}
       />
 
       {/* 创建/编辑模态框 */}
@@ -555,7 +557,7 @@ const ForwardersPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </Card>
+    </>
   );
 };
 

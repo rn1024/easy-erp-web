@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import {
   Card,
-  Table,
   Button,
   Form,
   Input,
@@ -18,7 +17,9 @@ import {
   Tooltip,
   Descriptions,
   InputNumber,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   SearchOutlined,
@@ -28,9 +29,11 @@ import {
   TagOutlined,
   ShopOutlined,
   PictureOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 import dayjs from 'dayjs';
 
 // 导入相关服务
@@ -135,18 +138,17 @@ const ProductManagement: React.FC = () => {
   );
 
   // 表格列定义
-  const columns: ColumnsType<ProductInfo> = [
+  const columns: ProColumns<ProductInfo>[] = [
     {
       title: '产品图片',
       dataIndex: 'imageUrl',
-      key: 'imageUrl',
       width: 80,
-      render: (imageUrl: string) =>
-        imageUrl ? (
+      render: (_, record) =>
+        record.imageUrl ? (
           <Image
             width={50}
             height={50}
-            src={imageUrl}
+            src={record.imageUrl}
             style={{ objectFit: 'cover', borderRadius: '4px' }}
           />
         ) : (
@@ -158,73 +160,63 @@ const ProductManagement: React.FC = () => {
     {
       title: '产品编码',
       dataIndex: 'code',
-      key: 'code',
       width: 120,
     },
     {
       title: 'SKU',
       dataIndex: 'sku',
-      key: 'sku',
       width: 150,
     },
     {
       title: '所属店铺',
       dataIndex: ['shop', 'nickname'],
-      key: 'shop',
       width: 120,
-      render: (nickname: string) => (
+      render: (_, record) => (
         <Tag icon={<ShopOutlined />} color="blue">
-          {nickname || '未知店铺'}
+          {record.shop?.nickname || '未知店铺'}
         </Tag>
       ),
     },
     {
       title: '产品分类',
       dataIndex: ['category', 'name'],
-      key: 'category',
       width: 100,
-      render: (name: string) => (
+      render: (_, record) => (
         <Tag icon={<TagOutlined />} color="green">
-          {name || '未分类'}
+          {record.category?.name || '未分类'}
         </Tag>
       ),
     },
     {
       title: '规格',
       dataIndex: 'specification',
-      key: 'specification',
       width: 120,
       ellipsis: true,
     },
     {
       title: '颜色',
       dataIndex: 'color',
-      key: 'color',
       width: 80,
     },
     {
       title: '重量(g)',
       dataIndex: 'weight',
-      key: 'weight',
       width: 80,
-      render: (weight: number) => (weight ? `${weight}g` : '-'),
+      render: (_, record) => (record.weight ? `${record.weight}g` : '-'),
     },
     {
       title: '套装数量',
       dataIndex: 'setQuantity',
-      key: 'setQuantity',
       width: 80,
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
-      key: 'createdAt',
       width: 120,
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
+      render: (_, record) => dayjs(record.createdAt).format('YYYY-MM-DD'),
     },
     {
       title: '操作',
-      key: 'action',
       width: 200,
       fixed: 'right',
       render: (_, record) => (
@@ -300,54 +292,63 @@ const ProductManagement: React.FC = () => {
   const totalProducts = (productsData?.data as any)?.meta?.total || 0;
   const categoriesList = (categoriesData?.data as any)?.list || [];
 
-  return (
-    <div className="p-6">
-      <Card>
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold mb-4">产品管理</h2>
+  // ProTable 配置
+  const proTableProps: ProTableProps<ProductInfo, any> = {
+    columns,
+    dataSource: productsList,
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+        新增产品
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+    scroll: { x: 1500 },
+  };
 
-          {/* 搜索表单 */}
-          <Form form={searchForm} layout="inline" onFinish={handleSearch} className="mb-4">
-            <Form.Item name="code" label="产品编码">
+  return (
+    <>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="code" style={{ marginRight: 0 }}>
               <Input placeholder="产品编码" style={{ width: 120 }} />
             </Form.Item>
-            <Form.Item name="sku" label="SKU">
+            <Form.Item name="sku" style={{ marginRight: 0 }}>
               <Input placeholder="SKU" style={{ width: 120 }} />
             </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                  搜索
-                </Button>
-                <Button onClick={handleReset}>重置</Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                  新增产品
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        </div>
+            <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
+              搜索
+            </Button>
+            <Button onClick={handleReset}>重置</Button>
+          </Flex>
+        </Form>
+      </ProCard>
 
-        {/* 产品表格 */}
-        <Table
-          columns={columns}
-          dataSource={productsList}
-          rowKey="id"
-          loading={loading}
-          scroll={{ x: 1500 }}
-          pagination={{
-            current: searchParams.page,
-            pageSize: searchParams.pageSize,
-            total: totalProducts,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            onChange: (page, pageSize) => {
-              setSearchParams({ ...searchParams, page, pageSize });
-            },
-          }}
-        />
-      </Card>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 20}
+        total={totalProducts}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({ ...searchParams, page, pageSize: size || 20 });
+        }}
+        isLoading={loading}
+      />
 
       {/* 创建/编辑产品弹窗 */}
       <Modal
@@ -499,42 +500,65 @@ const ProductManagement: React.FC = () => {
         width={800}
       >
         {viewingProduct && (
-          <Descriptions column={2} bordered size="small">
-            <Descriptions.Item label="产品编码">{viewingProduct.code}</Descriptions.Item>
-            <Descriptions.Item label="SKU">{viewingProduct.sku}</Descriptions.Item>
-            <Descriptions.Item label="所属店铺">{viewingProduct.shop?.nickname}</Descriptions.Item>
-            <Descriptions.Item label="产品分类">{viewingProduct.category?.name}</Descriptions.Item>
-            <Descriptions.Item label="规格">
-              {viewingProduct.specification || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="颜色">{viewingProduct.color || '-'}</Descriptions.Item>
-            <Descriptions.Item label="套装数量">{viewingProduct.setQuantity}</Descriptions.Item>
-            <Descriptions.Item label="重量">
-              {viewingProduct.weight ? `${viewingProduct.weight}g` : '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="内部尺寸">
-              {viewingProduct.internalSize || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="外部尺寸">
-              {viewingProduct.externalSize || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="标签">{viewingProduct.label || '-'}</Descriptions.Item>
-            <Descriptions.Item label="创建时间">
-              {dayjs(viewingProduct.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-            </Descriptions.Item>
-            <Descriptions.Item label="款式信息" span={2}>
-              {viewingProduct.styleInfo || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="配件信息" span={2}>
-              {viewingProduct.accessoryInfo || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="备注" span={2}>
-              {viewingProduct.remark || '-'}
-            </Descriptions.Item>
-          </Descriptions>
+          <div className="mt-4">
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="产品编码">{viewingProduct.code}</Descriptions.Item>
+              <Descriptions.Item label="SKU">{viewingProduct.sku}</Descriptions.Item>
+              <Descriptions.Item label="所属店铺">
+                <Tag icon={<ShopOutlined />} color="blue">
+                  {viewingProduct.shop?.nickname || '未知店铺'}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="产品分类">
+                <Tag icon={<TagOutlined />} color="green">
+                  {viewingProduct.category?.name || '未分类'}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="规格">
+                {viewingProduct.specification || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="颜色">{viewingProduct.color || '-'}</Descriptions.Item>
+              <Descriptions.Item label="重量">
+                {viewingProduct.weight ? `${viewingProduct.weight}g` : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="套装数量">
+                {viewingProduct.setQuantity || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="内部尺寸">
+                {viewingProduct.internalSize || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="外部尺寸">
+                {viewingProduct.externalSize || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="标签">{viewingProduct.label || '-'}</Descriptions.Item>
+              <Descriptions.Item label="创建时间">
+                {dayjs(viewingProduct.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+              </Descriptions.Item>
+              <Descriptions.Item label="款式信息" span={2}>
+                {viewingProduct.styleInfo || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="配件信息" span={2}>
+                {viewingProduct.accessoryInfo || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="备注" span={2}>
+                {viewingProduct.remark || '-'}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {viewingProduct.imageUrl && (
+              <div className="mt-4">
+                <h4 className="mb-2">产品图片</h4>
+                <Image
+                  width={200}
+                  src={viewingProduct.imageUrl}
+                  style={{ objectFit: 'cover', borderRadius: '4px' }}
+                />
+              </div>
+            )}
+          </div>
         )}
       </Modal>
-    </div>
+    </>
   );
 };
 

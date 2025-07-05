@@ -1,19 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Card,
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Space,
-  Popconfirm,
-  message,
-  Row,
-  Col,
-} from 'antd';
+import { Button, Modal, Form, Input, Space, Popconfirm, message, Flex } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -22,7 +11,8 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 
 interface ProductCategory {
   id: string;
@@ -90,7 +80,10 @@ export default function ProductCategoriesPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
   const [editingRecord, setEditingRecord] = useState<ProductCategory | null>(null);
-  const [searchParams, setSearchParams] = useState<SearchFormData>({});
+  const [searchParams, setSearchParams] = useState<SearchFormData>({
+    page: 1,
+    pageSize: 20,
+  });
 
   // 获取分类列表
   const {
@@ -146,12 +139,12 @@ export default function ProductCategoriesPage() {
   });
 
   const handleSearch = (values: SearchFormData) => {
-    setSearchParams({ ...values, page: 1 });
+    setSearchParams({ ...searchParams, ...values, page: 1 });
   };
 
   const handleReset = () => {
     searchForm.resetFields();
-    setSearchParams({});
+    setSearchParams({ page: 1, pageSize: 20 });
   };
 
   const handleCreate = () => {
@@ -184,43 +177,37 @@ export default function ProductCategoriesPage() {
     submitCategory(values);
   };
 
-  const columns: ColumnsType<ProductCategory> = [
+  const columns: ProColumns<ProductCategory>[] = [
     {
       title: 'ID',
       dataIndex: 'id',
-      key: 'id',
       width: 80,
-      render: (text: string) => text.slice(-8),
+      render: (_, record) => record.id.slice(-8),
     },
     {
       title: '分类名称',
       dataIndex: 'name',
-      key: 'name',
     },
     {
       title: '产品数量',
       dataIndex: '_count',
-      key: 'productCount',
       width: 100,
-      render: (count: any) => count?.products || 0,
+      render: (_, record) => record._count?.products || 0,
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
-      key: 'createdAt',
       width: 180,
-      render: (text: string) => new Date(text).toLocaleString(),
+      render: (_, record) => new Date(record.createdAt).toLocaleString(),
     },
     {
       title: '更新时间',
       dataIndex: 'updatedAt',
-      key: 'updatedAt',
       width: 180,
-      render: (text: string) => new Date(text).toLocaleString(),
+      render: (_, record) => new Date(record.updatedAt).toLocaleString(),
     },
     {
       title: '操作',
-      key: 'action',
       width: 150,
       render: (_, record) => (
         <Space size="small">
@@ -234,17 +221,16 @@ export default function ProductCategoriesPage() {
           </Button>
           <Popconfirm
             title="确定要删除这个分类吗？"
-            description={record._count?.products > 0 ? "该分类下还有产品，删除后相关产品将无法分类" : "删除后无法恢复"}
+            description={
+              record._count?.products > 0
+                ? '该分类下还有产品，删除后相关产品将无法分类'
+                : '删除后无法恢复'
+            }
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
           >
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-              style={{ padding: 0 }}
-            >
+            <Button type="link" danger icon={<DeleteOutlined />} style={{ padding: 0 }}>
               删除
             </Button>
           </Popconfirm>
@@ -256,60 +242,59 @@ export default function ProductCategoriesPage() {
   const categories = categoryData?.data?.list || [];
   const meta = categoryData?.data?.meta || {};
 
-  return (
-    <div style={{ padding: '24px' }}>
-      <Card>
-        <div style={{ marginBottom: 16 }}>
-          <Row gutter={16}>
-            <Col span={18}>
-              <Form
-                form={searchForm}
-                layout="inline"
-                onFinish={handleSearch}
-                style={{ marginBottom: 0 }}
-              >
-                <Form.Item name="name" label="分类名称">
-                  <Input placeholder="请输入分类名称" allowClear />
-                </Form.Item>
-                <Form.Item>
-                  <Space>
-                    <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                      搜索
-                    </Button>
-                    <Button onClick={handleReset} icon={<ReloadOutlined />}>
-                      重置
-                    </Button>
-                  </Space>
-                </Form.Item>
-              </Form>
-            </Col>
-            <Col span={6} style={{ textAlign: 'right' }}>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                新增分类
-              </Button>
-            </Col>
-          </Row>
-        </div>
+  // ProTable 配置
+  const proTableProps: ProTableProps<ProductCategory, any> = {
+    columns,
+    dataSource: categories,
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+        新增分类
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+  };
 
-        <Table
-          columns={columns}
-          dataSource={categories}
-          loading={loading}
-          rowKey="id"
-          pagination={{
-            current: meta.page || 1,
-            pageSize: meta.pageSize || 20,
-            total: meta.total || 0,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-            onChange: (page, pageSize) => {
-              setSearchParams({ ...searchParams, page, pageSize });
-            },
-          }}
-        />
-      </Card>
+  return (
+    <>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="name" style={{ marginRight: 0 }}>
+              <Input placeholder="请输入分类名称" allowClear style={{ width: 200 }} />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
+              搜索
+            </Button>
+            <Button onClick={handleReset}>重置</Button>
+          </Flex>
+        </Form>
+      </ProCard>
+
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 20}
+        total={meta.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({ ...searchParams, page, pageSize: size || 20 });
+        }}
+        isLoading={loading}
+      />
 
       <Modal
         title={modalType === 'create' ? '新增产品分类' : '编辑产品分类'}
@@ -319,12 +304,7 @@ export default function ProductCategoriesPage() {
         confirmLoading={submitting}
         destroyOnClose
       >
-        <Form
-          form={modalForm}
-          layout="vertical"
-          onFinish={handleFormSubmit}
-          preserve={false}
-        >
+        <Form form={modalForm} layout="vertical" onFinish={handleFormSubmit} preserve={false}>
           <Form.Item
             name="name"
             label="分类名称"
@@ -337,6 +317,6 @@ export default function ProductCategoriesPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

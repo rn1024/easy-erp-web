@@ -2,8 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  Card,
-  Table,
   Button,
   Modal,
   Form,
@@ -16,7 +14,9 @@ import {
   Row,
   Col,
   Tag,
+  Flex,
 } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -25,7 +25,8 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 
 const { Option } = Select;
 
@@ -147,7 +148,10 @@ export default function FinishedInventoryPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
   const [editingRecord, setEditingRecord] = useState<FinishedInventoryItem | null>(null);
-  const [searchParams, setSearchParams] = useState<SearchFormData>({});
+  const [searchParams, setSearchParams] = useState<SearchFormData>({
+    page: 1,
+    pageSize: 10,
+  });
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
 
   // 获取成品库存列表
@@ -218,14 +222,22 @@ export default function FinishedInventoryPage() {
   });
 
   // 搜索处理
-  const handleSearch = (values: SearchFormData) => {
-    setSearchParams(values);
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue();
+    setSearchParams({
+      ...values,
+      page: 1,
+      pageSize: searchParams.pageSize,
+    });
   };
 
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
-    setSearchParams({});
+    setSearchParams({
+      page: 1,
+      pageSize: 10,
+    });
   };
 
   // 打开新建弹窗
@@ -256,22 +268,19 @@ export default function FinishedInventoryPage() {
   };
 
   // 表格列配置
-  const columns: ColumnsType<FinishedInventoryItem> = [
+  const columns: ProColumns<FinishedInventoryItem>[] = [
     {
       title: '店铺',
       dataIndex: ['shop', 'nickname'],
-      key: 'shopName',
       width: 120,
     },
     {
       title: '产品分类',
       dataIndex: ['category', 'name'],
-      key: 'categoryName',
       width: 120,
     },
     {
       title: '产品信息',
-      key: 'productInfo',
       width: 200,
       render: (_, record) => (
         <div>
@@ -284,7 +293,6 @@ export default function FinishedInventoryPage() {
     },
     {
       title: '包装信息',
-      key: 'packageInfo',
       width: 150,
       render: (_, record) => (
         <div>
@@ -297,27 +305,25 @@ export default function FinishedInventoryPage() {
     {
       title: '存储位置',
       dataIndex: 'location',
-      key: 'location',
       width: 120,
-      render: (location) => location || '-',
+      render: (_, record) => record.location || '-',
     },
     {
       title: '库存数量',
       dataIndex: 'stockQuantity',
-      key: 'stockQuantity',
       width: 100,
-      render: (quantity) => <Tag color={quantity > 0 ? 'green' : 'red'}>{quantity}</Tag>,
+      render: (_, record) => (
+        <Tag color={record.stockQuantity > 0 ? 'green' : 'red'}>{record.stockQuantity}</Tag>
+      ),
     },
     {
       title: '更新时间',
       dataIndex: 'updatedAt',
-      key: 'updatedAt',
       width: 160,
-      render: (time) => new Date(time).toLocaleString(),
+      render: (_, record) => new Date(record.updatedAt).toLocaleString(),
     },
     {
       title: '操作',
-      key: 'actions',
       width: 120,
       fixed: 'right',
       render: (_, record) => (
@@ -346,85 +352,103 @@ export default function FinishedInventoryPage() {
   ];
 
   const list = inventoryData?.data?.list || [];
-  const meta = inventoryData?.data?.meta || { page: 1, pageSize: 20, total: 0, totalPages: 0 };
+  const meta = inventoryData?.data?.meta || { page: 1, pageSize: 10, total: 0, totalPages: 0 };
+
+  // ProTable 配置
+  const proTableProps: ProTableProps<FinishedInventoryItem, any> = {
+    columns,
+    dataSource: list,
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+        新建库存记录
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+    scroll: { x: 1200 },
+  };
 
   return (
-    <div className="p-6">
-      <Card title="成品库存管理" className="mb-4">
-        {/* 搜索表单 */}
-        <Form form={searchForm} layout="inline" onFinish={handleSearch} className="mb-4">
-          <Form.Item name="shopId" label="店铺">
-            <Select
-              placeholder="选择店铺"
-              allowClear
-              style={{ width: 150 }}
-              showSearch
-              optionFilterProp="children"
+    <>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline">
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="shopId" style={{ marginRight: 0 }}>
+              <Select
+                placeholder="选择店铺"
+                allowClear
+                style={{ width: 150 }}
+                showSearch
+                optionFilterProp="children"
+              >
+                {shopData.map((shop: any) => (
+                  <Option key={shop.id} value={shop.id}>
+                    {shop.nickname}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="categoryId" style={{ marginRight: 0 }}>
+              <Select
+                placeholder="选择分类"
+                allowClear
+                style={{ width: 150 }}
+                showSearch
+                optionFilterProp="children"
+              >
+                {categoryData.map((category: any) => (
+                  <Option key={category.id} value={category.id}>
+                    {category.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="location" style={{ marginRight: 0 }}>
+              <Input placeholder="输入位置" style={{ width: 150 }} />
+            </Form.Item>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={loading}
             >
-              {shopData.map((shop: any) => (
-                <Option key={shop.id} value={shop.id}>
-                  {shop.nickname}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="categoryId" label="产品分类">
-            <Select
-              placeholder="选择分类"
-              allowClear
-              style={{ width: 150 }}
-              showSearch
-              optionFilterProp="children"
-            >
-              {categoryData.map((category: any) => (
-                <Option key={category.id} value={category.id}>
-                  {category.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="location" label="存储位置">
-            <Input placeholder="输入位置" style={{ width: 150 }} />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                搜索
-              </Button>
-              <Button onClick={handleReset} icon={<ReloadOutlined />}>
-                重置
-              </Button>
-            </Space>
-          </Form.Item>
+              搜索
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              重置
+            </Button>
+          </Flex>
         </Form>
+      </ProCard>
 
-        {/* 操作按钮 */}
-        <div className="mb-4">
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            新建库存记录
-          </Button>
-        </div>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
 
-        {/* 数据表格 */}
-        <Table
-          columns={columns}
-          dataSource={list}
-          loading={loading}
-          rowKey="id"
-          scroll={{ x: 1200 }}
-          pagination={{
-            current: meta.page,
-            pageSize: meta.pageSize,
-            total: meta.total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            onChange: (page, pageSize) => {
-              setSearchParams({ ...searchParams, page, pageSize });
-            },
-          }}
-        />
-      </Card>
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 10}
+        total={meta.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({
+            ...searchParams,
+            page,
+            pageSize: size || 10,
+          });
+        }}
+        isLoading={loading}
+      />
 
       {/* 新建/编辑弹窗 */}
       <Modal
@@ -547,6 +571,6 @@ export default function FinishedInventoryPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

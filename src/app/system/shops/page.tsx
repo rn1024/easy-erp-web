@@ -1,20 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Button,
-  Table,
-  Form,
-  Input,
-  Modal,
-  message,
-  Space,
-  Avatar,
-  Popconfirm,
-  Card,
-  Row,
-  Col,
-} from 'antd';
+import { Button, Form, Input, Modal, message, Space, Avatar, Popconfirm, Flex } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
   EditOutlined,
@@ -24,7 +12,8 @@ import {
   ShopOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import type { ColumnsType } from 'antd/es/table';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import { Pagination } from '@/components/ui/pagination';
 import {
   getShops,
   createShop,
@@ -34,8 +23,6 @@ import {
   type ShopsParams,
   type ShopFormData,
 } from '@/services/shops';
-
-const { Search } = Input;
 
 const ShopsPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -119,15 +106,6 @@ const ShopsPage: React.FC = () => {
     });
   };
 
-  // 分页变化
-  const handleTableChange = (pagination: any) => {
-    setSearchParams({
-      ...searchParams,
-      page: pagination.current,
-      pageSize: pagination.pageSize,
-    });
-  };
-
   // 表单提交
   const handleSubmit = async () => {
     try {
@@ -163,53 +141,46 @@ const ShopsPage: React.FC = () => {
   };
 
   // 表格列定义
-  const columns: ColumnsType<Shop> = [
+  const columns: ProColumns<Shop>[] = [
     {
       title: '店铺头像',
       dataIndex: 'avatarUrl',
-      key: 'avatarUrl',
       width: 80,
-      render: (avatarUrl: string, record: Shop) => (
-        <Avatar src={avatarUrl} icon={<ShopOutlined />} size={40}>
-          {!avatarUrl && record.nickname.charAt(0)}
+      render: (_, record) => (
+        <Avatar src={record.avatarUrl} icon={<ShopOutlined />} size={40}>
+          {!record.avatarUrl && record.nickname.charAt(0)}
         </Avatar>
       ),
     },
     {
       title: '店铺昵称',
       dataIndex: 'nickname',
-      key: 'nickname',
-      render: (text: string) => <strong>{text}</strong>,
+      render: (_, record) => <strong>{record.nickname}</strong>,
     },
     {
       title: '负责人',
       dataIndex: 'responsiblePerson',
-      key: 'responsiblePerson',
     },
     {
       title: '备注',
       dataIndex: 'remark',
-      key: 'remark',
       ellipsis: true,
-      render: (text: string) => text || '-',
+      render: (_, record) => record.remark || '-',
     },
     {
       title: '操作员',
       dataIndex: 'operator',
-      key: 'operator',
-      render: (operator: { name: string }) => operator.name,
+      render: (_, record) => record.operator?.name || '-',
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (text: string) => new Date(text).toLocaleString(),
+      render: (_, record) => new Date(record.createdAt).toLocaleString(),
     },
     {
       title: '操作',
-      key: 'action',
       width: 150,
-      render: (_, record: Shop) => (
+      render: (_, record) => (
         <Space>
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEditClick(record)}>
             编辑
@@ -230,61 +201,63 @@ const ShopsPage: React.FC = () => {
     },
   ];
 
+  // ProTable 配置
+  const proTableProps: ProTableProps<Shop, any> = {
+    columns,
+    dataSource: shopsData?.data?.data?.list || [],
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: false,
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
+        新建店铺
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+  };
+
   return (
-    <div className="p-6">
-      <Card>
-        {/* 页面标题和搜索 */}
-        <Row gutter={[16, 16]} className="mb-4">
-          <Col span={12}>
-            <h2 className="text-xl font-semibold flex items-center">
-              <ShopOutlined className="mr-2" />
-              店铺管理
-            </h2>
-          </Col>
-          <Col span={12} className="text-right">
-            <Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateClick}>
-                新建店铺
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={refresh}>
-                刷新
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
-        {/* 搜索表单 */}
-        <Form form={searchForm} layout="inline" onFinish={handleSearch} className="mb-4">
-          <Form.Item name="nickname" label="店铺昵称">
-            <Input placeholder="请输入店铺昵称" allowClear style={{ width: 200 }} />
-          </Form.Item>
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-            </Space>
-          </Form.Item>
+    <>
+      {/* 搜索区域 */}
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="nickname" style={{ marginRight: 0 }}>
+              <Input allowClear placeholder="请输入店铺昵称" style={{ width: 200 }} />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
+              搜索
+            </Button>
+            <Button onClick={handleReset}>重置</Button>
+          </Flex>
         </Form>
+      </ProCard>
 
-        {/* 店铺列表表格 */}
-        <Table
-          columns={columns}
-          dataSource={shopsData?.data?.data?.list || []}
-          loading={loading}
-          rowKey="id"
-          pagination={{
-            current: searchParams.page,
-            pageSize: searchParams.pageSize,
-            total: shopsData?.data?.data?.meta?.total || 0,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `共 ${total} 条记录，显示 ${range[0]}-${range[1]} 条`,
-          }}
-          onChange={handleTableChange}
-        />
-      </Card>
+      {/* 表格区域 */}
+      <ProTable {...proTableProps} />
+
+      {/* 分页区域 */}
+      <Pagination
+        current={Number(searchParams.page) || 1}
+        size={Number(searchParams.pageSize) || 10}
+        total={shopsData?.data?.data?.meta?.total || 0}
+        hasMore={false}
+        searchAfter=""
+        onChange={({ page, size }) => {
+          setSearchParams({
+            ...searchParams,
+            page: page,
+            pageSize: size || 10,
+          });
+        }}
+        isLoading={loading}
+      />
 
       {/* 创建/编辑模态框 */}
       <Modal
@@ -339,7 +312,7 @@ const ShopsPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 };
 
