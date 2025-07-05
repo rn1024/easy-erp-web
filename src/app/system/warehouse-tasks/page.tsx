@@ -30,7 +30,6 @@ import {
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 import {
   getWarehouseTasksApi,
   createWarehouseTaskApi,

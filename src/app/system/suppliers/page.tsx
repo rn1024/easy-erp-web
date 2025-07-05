@@ -16,7 +16,6 @@ import {
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 
 // Utils工具类
-import { Pagination } from '@/components/ui/pagination';
 import SupplierFormDrawer from './components/supplier-form-drawer';
 
 // APIs接口

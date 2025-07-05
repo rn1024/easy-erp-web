@@ -59,7 +59,6 @@ const getForwarder = (id: string) => {
  * Types
  */
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 import type { Forwarder, ForwardersParams } from './components/forwarder-form-drawer';
 import type { ResType } from '@/types/api';
 

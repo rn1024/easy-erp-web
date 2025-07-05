@@ -39,7 +39,6 @@ import {
  * Types
  */
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import { Pagination } from '@/components/ui/pagination';
 
 const ProductManagement: React.FC = () => {
   /**
