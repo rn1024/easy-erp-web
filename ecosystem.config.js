@@ -53,8 +53,8 @@ module.exports = {
 
       // 启动脚本
       post_update: [
-        'pnpm install --frozen-lockfile',
-        'pnpm build',
+        'npm install --production',
+        'npm run build',
         'npx prisma generate',
         'npx prisma db push',
       ],

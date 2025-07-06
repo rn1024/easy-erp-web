@@ -361,8 +361,8 @@ git clone https://github.com/your-username/easy-erp-web.git
 cd easy-erp-web
 
 # 2. 安装Node.js依赖
-npm install -g pnpm
-pnpm install --frozen-lockfile
+# 安装依赖（生产环境）
+npm install --production
 
 # 3. 配置环境变量
 cp .env.example .env
@@ -374,7 +374,7 @@ npx prisma db push
 npx prisma db seed
 
 # 5. 构建应用
-pnpm build
+npm run build
 
 # 6. 启动应用
 pm2 start ecosystem.config.js --env production
@@ -613,9 +613,9 @@ npx prisma db push
 npx prisma studio
 
 # 依赖管理
-pnpm install
-pnpm build
-pnpm start
+npm install
+npm run build
+npm start
 ```
 
 ### 重要文件路径

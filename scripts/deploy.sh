@@ -56,10 +56,10 @@ check_dependencies() {
         exit 1
     fi
 
-    # 检查 pnpm
-    if ! command -v pnpm &> /dev/null; then
-        log "安装 pnpm..."
-        npm install -g pnpm@8
+    # 检查 npm（Node.js 自带，无需额外安装）
+    if ! command -v npm &> /dev/null; then
+        error "npm 未安装，请确保 Node.js 已正确安装"
+        exit 1
     fi
 
     # 检查 PM2
@@ -126,7 +126,7 @@ install_dependencies() {
     log "安装项目依赖..."
 
     cd "$PROJECT_DIR"
-    pnpm install --frozen-lockfile
+    npm install --production
 
     log "依赖安装完成"
 }
@@ -136,7 +136,7 @@ build_project() {
     log "构建项目..."
 
     cd "$PROJECT_DIR"
-    pnpm build
+    npm run build
 
     log "项目构建完成"
 }
@@ -181,9 +181,9 @@ init_database() {
     npx prisma generate
     npx prisma db push
 
-    # 或者使用 pnpm scripts（更推荐）
-    # pnpm db:generate
-    # pnpm db:push
+    # 或者使用 npm scripts（更推荐）
+    # npm run db:generate
+    # npm run db:push
 
     log "数据库初始化完成"
 }

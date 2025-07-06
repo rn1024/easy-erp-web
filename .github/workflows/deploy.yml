@@ -18,21 +18,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'pnpm'
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Type check
-        run: pnpm type-check
+        run: npm run type-check
 
       - name: Build application
-        run: pnpm build
+        run: npm run build
 
       - name: Generate environment file
         run: |
@@ -74,18 +69,15 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            # 安装/升级 pnpm
-            npm install -g pnpm@8
-
             # 安装依赖
-            pnpm install --frozen-lockfile
+            npm install --production
 
             # 构建应用
-            pnpm build
+            npm run build
 
             # 数据库迁移
-            pnpm db:generate
-            pnpm db:push
+            npm run db:generate
+            npm run db:push
 
             # 启动应用
             pm2 start ecosystem.config.js --env production || pm2 reload easy-erp-web

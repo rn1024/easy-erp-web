@@ -199,8 +199,8 @@ pm2 logs easy-erp-web
 # 更新代码
 cd /www/wwwroot/easy-erp-web
 git pull origin main
-pnpm install
-pnpm build
+npm install --production
+npm run build
 pm2 reload easy-erp-web
 
 # 数据库操作

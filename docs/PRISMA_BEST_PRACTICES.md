@@ -45,12 +45,12 @@ npx prisma generate
 npx prisma db push
 ```
 
-**方式二：使用 pnpm scripts（最推荐）**
+**方式二：使用 npm scripts（最推荐）**
 
 ```bash
 # 使用预定义的脚本
-pnpm db:generate
-pnpm db:push
+npm run db:generate
+npm run db:push
 ```
 
 ## 🚀 在我们的部署方案中
@@ -103,12 +103,12 @@ module.exports = {
 
 ## 🔧 Prisma 命令对比
 
-| 场景           | 全局安装                | 项目本地（推荐）                            |
-| -------------- | ----------------------- | ------------------------------------------- |
-| **开发环境**   | `prisma generate`       | `npx prisma generate` 或 `pnpm db:generate` |
-| **生产部署**   | `prisma db push`        | `npx prisma db push` 或 `pnpm db:push`      |
-| **数据库迁移** | `prisma migrate deploy` | `npx prisma migrate deploy`                 |
-| **数据库重置** | `prisma db reset`       | `npx prisma db reset` 或 `pnpm db:reset`    |
+| 场景           | 全局安装                | 项目本地（推荐）                               |
+| -------------- | ----------------------- | ---------------------------------------------- |
+| **开发环境**   | `prisma generate`       | `npx prisma generate` 或 `npm run db:generate` |
+| **生产部署**   | `prisma db push`        | `npx prisma db push` 或 `npm run db:push`      |
+| **数据库迁移** | `prisma migrate deploy` | `npx prisma migrate deploy`                    |
+| **数据库重置** | `prisma db reset`       | `npx prisma db reset` 或 `npm run db:reset`    |
 
 ## 🛡️ 生产环境注意事项
 
@@ -169,16 +169,16 @@ node --version  # 应该是 18+
 cd /www/wwwroot/easy-erp-web
 
 # 2. 安装依赖（包含 Prisma）
-pnpm install --frozen-lockfile
+npm install --production
 
 # 3. 生成 Prisma Client
-pnpm db:generate
+npm run db:generate
 
 # 4. 同步数据库结构
-pnpm db:push
+npm run db:push
 
 # 5. 构建应用
-pnpm build
+npm run build
 
 # 6. 启动应用
 pm2 start ecosystem.config.js --env production
