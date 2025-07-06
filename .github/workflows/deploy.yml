@@ -50,12 +50,26 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          echo "Checking build output..."
+          ls -la .next/
+          ls -la .next/BUILD_ID
+          echo "Build verification complete"
+
+      - name: Compress .next directory
+        run: |
+          echo "Compressing .next directory..."
+          tar -czf next-build.tar.gz .next/
+          ls -la next-build.tar.gz
+          echo "Compression complete"
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-files
           path: |
-            .next
+            next-build.tar.gz
             package.json
             package-lock.json
             ecosystem.config.js
@@ -77,6 +91,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-files
+
+      - name: Extract .next directory
+        run: |
+          echo "Extracting .next directory from compressed file..."
+          if [ -f "next-build.tar.gz" ]; then
+            tar -xzf next-build.tar.gz
+            echo "✅ .next directory extracted successfully"
+            ls -la .next/
+            ls -la .next/BUILD_ID
+          else
+            echo "❌ next-build.tar.gz not found"
+            exit 1
+          fi
 
       - name: Debug - Check downloaded files
         run: |
@@ -256,6 +283,21 @@ jobs:
             tar -xzf /tmp/deploy.tar.gz
             rm -f /tmp/deploy.tar.gz
 
+            # 验证解压结果
+            echo "验证解压结果..."
+            ls -la
+            if [ -d ".next" ]; then
+              echo "✅ .next目录存在"
+              ls -la .next/
+              if [ -f ".next/BUILD_ID" ]; then
+                echo "✅ BUILD_ID文件存在"
+              else
+                echo "❌ BUILD_ID文件缺失"
+              fi
+            else
+              echo "❌ .next目录不存在"
+            fi
+
             # 设置环境变量文件
             cp .env.production .env
 
@@ -273,6 +315,16 @@ jobs:
 
             # 安装生产依赖（服务器使用npm）
             npm install --production --omit=dev
+
+            # 检查.next目录是否完整，如果不完整则重新构建
+            if [ ! -f ".next/BUILD_ID" ] || [ ! -d ".next/server" ]; then
+              echo "⚠️  .next目录不完整，开始重新构建..."
+              npm install
+              npm run build
+              echo "✅ 重新构建完成"
+            else
+              echo "✅ .next目录完整，跳过构建"
+            fi
 
             # 数据库迁移
             npx prisma generate
