@@ -21,28 +21,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          run_install: false
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: npm install
 
       - name: Setup environment variables
         run: |
@@ -59,22 +41,13 @@ jobs:
           echo "PORT=3008" >> .env
 
       - name: Type check
-        run: pnpm type-check
+        run: npm run type-check
 
       - name: Run tests
-        run: pnpm test -- --passWithNoTests
+        run: npm test -- --passWithNoTests
 
       - name: Build application
-        run: pnpm build
-
-      - name: Generate package-lock.json for production
-        run: |
-          # 删除可能存在的package-lock.json
-          rm -f package-lock.json
-          # 基于当前node_modules生成package-lock.json，供生产环境使用
-          npm install --package-lock-only
-          # 验证生成的package-lock.json
-          ls -la package-lock.json
+        run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
