@@ -127,8 +127,10 @@ export default function FinancialReportsPageOptimized() {
 
   // 防抖搜索
   const { searchQuery: searchParams, setSearchQuery: setSearchParams } = useDebounceSearch(
-    (params: FinancialReportQueryParams) => {
+    (query: string) => {
       setPagination((prev) => ({ ...prev, page: 1 }));
+      // 这里将字符串转换为搜索参数对象
+      const params = query ? { search: query } : {};
       return params;
     },
     300
@@ -167,7 +169,7 @@ export default function FinancialReportsPageOptimized() {
   // 搜索处理（优化）
   const handleSearch = useCallback(
     (values: any) => {
-      setSearchParams(values);
+      setSearchParams(JSON.stringify(values));
     },
     [setSearchParams]
   );
@@ -175,7 +177,7 @@ export default function FinancialReportsPageOptimized() {
   // 重置搜索（优化）
   const handleReset = useCallback(() => {
     searchForm.resetFields();
-    setSearchParams({});
+    setSearchParams('');
   }, [searchForm, setSearchParams]);
 
   // 显示新增/编辑弹窗（优化）
@@ -546,7 +548,7 @@ export default function FinancialReportsPageOptimized() {
                   step={0.01}
                   precision={2}
                   formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value) => value!.replace(/\$\s?|(,*)/g, '')}
+                  parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, ''))}
                 />
               </Form.Item>
             </Col>
@@ -564,7 +566,7 @@ export default function FinancialReportsPageOptimized() {
                   step={0.01}
                   precision={2}
                   formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value) => value!.replace(/\$\s?|(,*)/g, '')}
+                  parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, ''))}
                 />
               </Form.Item>
             </Col>

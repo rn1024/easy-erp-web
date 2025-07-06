@@ -191,7 +191,7 @@ describe('/api/v1/shops', () => {
         },
       });
 
-      const response = await getShop(req, { params: { id: '1' } });
+      const response = await getShop(req);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -213,7 +213,7 @@ describe('/api/v1/shops', () => {
         },
       });
 
-      const response = await getShop(req, { params: { id: '999' } });
+      const response = await getShop(req);
       const data = await response.json();
 
       expect(response.status).toBe(404);
@@ -251,7 +251,7 @@ describe('/api/v1/shops', () => {
         body: JSON.stringify(updateData),
       });
 
-      const response = await updateShop(req, { params: { id: '1' } });
+      const response = await updateShop(req);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -277,7 +277,7 @@ describe('/api/v1/shops', () => {
         },
       });
 
-      const response = await deleteShop(req, { params: { id: '1' } });
+      const response = await deleteShop(req);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -298,7 +298,7 @@ describe('/api/v1/shops', () => {
         },
       });
 
-      const response = await deleteShop(req, { params: { id: '999' } });
+      const response = await deleteShop(req);
       const data = await response.json();
 
       expect(response.status).toBe(404);
@@ -318,7 +318,7 @@ describe('/api/v1/shops', () => {
         },
       });
 
-      const response = await deleteShop(req, { params: { id: '1' } });
+      const response = await deleteShop(req);
       const data = await response.json();
 
       expect(response.status).toBe(400);
