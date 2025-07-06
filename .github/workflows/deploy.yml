@@ -1,0 +1,111 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Generate environment file
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env.production
+          echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env.production
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.production
+          echo "OSS_ACCESS_KEY_ID=${{ secrets.OSS_ACCESS_KEY_ID }}" >> .env.production
+          echo "OSS_ACCESS_KEY_SECRET=${{ secrets.OSS_ACCESS_KEY_SECRET }}" >> .env.production
+          echo "OSS_BUCKET=${{ secrets.OSS_BUCKET }}" >> .env.production
+          echo "OSS_REGION=${{ secrets.OSS_REGION }}" >> .env.production
+          echo "OSS_ENDPOINT=${{ secrets.OSS_ENDPOINT }}" >> .env.production
+          echo "NODE_ENV=production" >> .env.production
+          echo "PORT=3000" >> .env.production
+
+      - name: Deploy to ECS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            # 创建项目目录（如果不存在）
+            mkdir -p /www/wwwroot/easy-erp-web
+
+            # 进入项目目录
+            cd /www/wwwroot/easy-erp-web
+
+            # 首次部署时初始化 Git 仓库
+            if [ ! -d ".git" ]; then
+              git init
+              git remote add origin https://github.com/${{ github.repository }}.git
+            fi
+
+            # 停止应用
+            pm2 stop easy-erp-web || true
+
+            # 拉取最新代码
+            git fetch origin main
+            git reset --hard origin/main
+
+            # 安装/升级 pnpm
+            npm install -g pnpm@8
+
+            # 安装依赖
+            pnpm install --frozen-lockfile
+
+            # 构建应用
+            pnpm build
+
+            # 数据库迁移
+            pnpm db:generate
+            pnpm db:push
+
+            # 启动应用
+            pm2 start ecosystem.config.js --env production || pm2 reload easy-erp-web
+
+            # 保存 PM2 配置
+            pm2 save
+
+            # 重载 nginx（如果需要）
+            nginx -t && nginx -s reload || true
+
+            # 显示应用状态
+            pm2 status
+
+      - name: Upload environment file
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.PORT }}
+          source: '.env.production'
+          target: '/www/wwwroot/easy-erp-web/.env'
+          overwrite: true

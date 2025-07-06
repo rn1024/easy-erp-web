@@ -295,50 +295,136 @@ export_records    -- 导出记录表
 - [API 接口文档](docs/API_INTERFACES.md)
 - [安全加固指南](docs/SECURITY_HARDENING.md)
 - [部署安全检查清单](docs/DEPLOYMENT_SECURITY_CHECKLIST.md)
+- **📋 部署文档**
+  - [🚀 快速部署指南](docs/QUICK_DEPLOY_GUIDE.md) - 快速上手部署
+  - [📖 完整部署方案](docs/DEPLOYMENT_GUIDE.md) - 详细部署文档
+  - [🔧 自动化脚本](scripts/) - 部署和环境配置脚本
+  - [🗄️ Prisma 最佳实践](docs/PRISMA_BEST_PRACTICES.md) - 数据库操作指南
 
 ## 🚀 部署
 
-### 生产环境部署
+本项目支持多种部署方式，推荐使用宝塔面板 + GitHub Actions 的自动化部署方案。
 
-1. **环境准备**
+### 🎯 推荐部署方案：宝塔 + GitHub + ECS
 
+**优势：**
+
+- ✅ 全自动化部署流程
+- ✅ 可视化服务器管理
+- ✅ 一键 SSL 证书配置
+- ✅ 完整的日志监控
+- ✅ 零停机部署
+
+**快速开始：**
+
+1. 📋 [快速部署指南](docs/QUICK_DEPLOY_GUIDE.md) - 30分钟快速上手
+2. 📖 [完整部署文档](docs/DEPLOYMENT_GUIDE.md) - 详细部署步骤
+3. 🔧 使用一键部署脚本：
    ```bash
-   # 安装 Node.js 18+
-   # 安装 MySQL 8.0+
-   # 安装 Redis 6.0+
-   # 配置反向代理 (Nginx)
+   # 服务器上运行
+   wget -O deploy.sh https://raw.githubusercontent.com/your-username/easy-erp-web/main/scripts/deploy.sh
+   chmod +x deploy.sh
+   ./deploy.sh
    ```
 
-2. **应用部署**
+**部署架构：**
 
-   ```bash
-   # 克隆代码
-   git clone <repository-url>
-   cd nextjs-cms-template
+```
+GitHub Repository → GitHub Actions → ECS (宝塔面板)
+    ↓                    ↓               ↓
+  代码推送          自动化CI/CD        Nginx + Node.js
+                                      MySQL + Redis
+```
 
-   # 安装依赖
-   pnpm install
+### 🛠️ 其他部署方式
 
-   # 配置环境变量
-   cp .env.example .env.production
+#### 1. 手动部署
 
-   # 数据库初始化
-   npx prisma generate
-   npx prisma db push
-   npx prisma db seed
+```bash
+# 1. 环境准备
+# 安装 Node.js 18+, MySQL 8.0+, Redis 6.0+
 
-   # 构建应用
-   pnpm build
+# 2. 克隆代码
+git clone <repository-url>
+cd easy-erp-web
 
-   # 启动应用
-   pnpm start
-   ```
+# 3. 配置环境变量
+./scripts/generate-env.sh  # 交互式生成环境变量
 
-3. **安全配置**
-   - 参考 [部署安全检查清单](docs/DEPLOYMENT_SECURITY_CHECKLIST.md)
-   - 配置 HTTPS 证书
-   - 设置防火墙规则
-   - 配置监控告警
+# 4. 初始化应用
+pnpm install
+npx prisma generate
+npx prisma db push
+npx prisma db seed
+
+# 5. 构建和启动
+pnpm build
+pm2 start ecosystem.config.js --env production
+```
+
+#### 2. Docker 部署
+
+```bash
+# 使用 Docker Compose
+docker-compose up -d
+
+# 或者单独构建
+docker build -t easy-erp-web .
+docker run -d -p 3000:3000 easy-erp-web
+```
+
+### 🔧 部署工具
+
+| 工具                           | 用途           | 文档                                 |
+| ------------------------------ | -------------- | ------------------------------------ |
+| `scripts/deploy.sh`            | 一键部署脚本   | [部署文档](docs/DEPLOYMENT_GUIDE.md) |
+| `scripts/generate-env.sh`      | 环境变量生成   | 交互式配置                           |
+| `.github/workflows/deploy.yml` | GitHub Actions | 自动化部署                           |
+| `ecosystem.config.js`          | PM2 配置       | 进程管理                             |
+
+### 📊 日志查看
+
+```bash
+# 应用日志
+pm2 logs easy-erp-web
+
+# GitHub Actions 日志
+# 访问 GitHub → Actions → 查看工作流
+
+# 宝塔面板日志
+# 登录宝塔面板 → 日志 → 网站日志
+```
+
+### 🚨 部署检查清单
+
+- [ ] 服务器配置满足要求 (2核4GB+)
+- [ ] 宝塔面板安装并配置
+- [ ] GitHub Secrets 配置完成
+- [ ] 数据库和 Redis 服务正常
+- [ ] 环境变量配置正确
+- [ ] SSL 证书配置
+- [ ] 防火墙和安全组配置
+- [ ] 备份策略制定
+
+### 🔍 故障排查
+
+如遇部署问题，请按以下步骤排查：
+
+1. **检查 GitHub Actions 日志**
+2. **查看服务器 PM2 日志**: `pm2 logs easy-erp-web`
+3. **检查宝塔面板系统日志**
+4. **验证环境变量配置**
+5. **查看 [故障排查指南](docs/DEPLOYMENT_GUIDE.md#故障排查)**
+
+### 🔒 安全配置
+
+部署完成后，请务必：
+
+- 参考 [部署安全检查清单](docs/DEPLOYMENT_SECURITY_CHECKLIST.md)
+- 配置 HTTPS 证书
+- 设置防火墙规则
+- 配置监控告警
+- 修改默认密码
 
 ## 🤝 贡献
 
