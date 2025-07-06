@@ -37,9 +37,17 @@ export function middleware(request: NextRequest) {
     response.headers.set(key, value);
   });
 
-  // 生产环境强制HTTPS
+  // 生产环境强制HTTPS (在反向代理环境中由nginx处理)
   if (process.env.NODE_ENV === 'production' && !request.url.startsWith('https://')) {
-    return NextResponse.redirect(request.url.replace('http://', 'https://'), 301);
+    // 检查是否通过反向代理访问
+    const xForwardedProto = request.headers.get('x-forwarded-proto');
+    const xForwardedHost = request.headers.get('x-forwarded-host');
+
+    // 如果没有反向代理头，则进行重定向
+    if (!xForwardedProto && !xForwardedHost) {
+      const host = request.headers.get('host') || 'localhost';
+      return NextResponse.redirect(`https://${host}${pathname}`, 301);
+    }
   }
 
   // 记录访问日志（仅在开发环境）
