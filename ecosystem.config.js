@@ -55,8 +55,8 @@ module.exports = {
       post_update: [
         'npm install --production',
         'npm run build',
-        'npx prisma generate',
-        'npx prisma db push',
+        'npm run db:generate',
+        'npm run db:push',
       ],
     },
   ],
