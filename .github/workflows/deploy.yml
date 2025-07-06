@@ -23,6 +23,9 @@ jobs:
           node-version: '18'
           # 不使用缓存，避免锁文件冲突
 
+      - name: Remove pnpm lock file
+        run: rm -f pnpm-lock.yaml
+
       - name: Install dependencies
         run: npm install
 
@@ -124,8 +127,10 @@ jobs:
 
           if [ -f "package-lock.json" ]; then
             cp package-lock.json deploy-temp/
+            echo "✅ package-lock.json included"
           else
-            echo "Warning: package-lock.json not found"
+            echo "❌ ERROR: package-lock.json not found - this is required for consistent npm installs"
+            exit 1
           fi
 
           if [ -f "ecosystem.config.js" ]; then

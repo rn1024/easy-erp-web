@@ -226,8 +226,8 @@ check_deployment() {
     pm2 status
 
     # 检查端口
-    if netstat -tlnp | grep -q ":3000"; then
-        log "应用正在监听 3000 端口"
+    if netstat -tlnp | grep -q ":3008"; then
+        log "应用正在监听 3008 端口"
     else
         error "应用未正确启动"
         exit 1
