@@ -46,7 +46,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取店铺列表成功',
       data: {
         list: shops,
@@ -104,7 +104,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '店铺创建成功',
       data: shop,
     });

@@ -28,11 +28,11 @@ export async function GET(request: NextRequest) {
 
     // 按模块分组
     const groupedPermissions = permissions.reduce((acc: any, permission) => {
-      const module = permission.code.split('.')[0];
-      if (!acc[module]) {
-        acc[module] = [];
+      const moduleName = permission.code.split('.')[0];
+      if (!acc[moduleName]) {
+        acc[moduleName] = [];
       }
-      acc[module].push({
+      acc[moduleName].push({
         code: permission.code,
         name: permission.name,
       });
@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('获取权限列表失败:', error);
     return NextResponse.json(
       {

@@ -11,14 +11,14 @@ export async function GET(request: NextRequest) {
     // 验证用户权限
     const user = await getCurrentUser(request);
     if (!user) {
-      return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
+      return NextResponse.json({ code: 1, msg: '未授权访问', data: null }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
     const category = searchParams.get('category');
-    const module = searchParams.get('module');
+    const moduleParam = searchParams.get('module');
     const operation = searchParams.get('operation');
     const status = searchParams.get('status');
     const operatorAccountId = searchParams.get('operatorAccountId');
@@ -34,9 +34,9 @@ export async function GET(request: NextRequest) {
       where.category = category;
     }
 
-    if (module) {
+    if (moduleParam) {
       where.module = {
-        contains: module,
+        contains: moduleParam,
       };
     }
 
@@ -97,15 +97,15 @@ export async function GET(request: NextRequest) {
       status: log.status,
       details: log.details,
       createdAt: log.createdAt.toISOString(),
-      operator: {
+      operator: log.operator ? {
         id: log.operator.id,
         name: log.operator.name,
-      },
+      } : null,
       operatorAccountId: log.operatorAccountId,
     }));
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取日志列表成功',
       data: {
         list: formattedLogs,
@@ -118,10 +118,11 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('获取日志列表失败:', error);
     return NextResponse.json(
       {
-        code: 500,
+        code: 1,
         msg: '服务器内部错误',
         data: null,
       },

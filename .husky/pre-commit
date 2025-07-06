@@ -1,0 +1,15 @@
+echo "🔍 Running pre-commit checks..."
+
+# 运行 lint-staged 检查暂存的文件
+echo "📝 Running lint-staged..."
+npx lint-staged
+
+# 运行类型检查
+echo "🔍 Running type check..."
+npm run type-check
+
+# 运行测试
+echo "🧪 Running tests..."
+npm run test:ci
+
+echo "✅ Pre-commit checks completed!"

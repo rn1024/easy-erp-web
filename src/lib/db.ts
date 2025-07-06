@@ -2,6 +2,7 @@ import { PrismaClient } from '../../generated/prisma';
 
 // 扩展全局类型定义以支持Prisma实例
 declare global {
+  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 

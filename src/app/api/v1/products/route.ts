@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data: {
         list: products,
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '创建成功',
       data: product,
     });

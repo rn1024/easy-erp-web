@@ -1,13 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 构建时暂时忽略ESLint错误
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  // 暂时忽略TypeScript错误
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   // Webpack配置
   webpack: (config, { isServer }) => {
     // 只在客户端构建时排除这些Node.js专用模块

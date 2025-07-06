@@ -2,10 +2,24 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { verifyRequestToken } from '@/lib/auth';
 
 // GET /api/v1/roles - 获取角色列表
 export async function GET(request: NextRequest) {
   try {
+    // 认证检查
+    const tokenPayload = verifyRequestToken(request);
+    if (!tokenPayload) {
+      return NextResponse.json(
+        {
+          code: 1,
+          msg: '未授权访问',
+          data: null,
+        },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -88,6 +102,19 @@ export async function GET(request: NextRequest) {
 // POST /api/v1/roles - 创建角色
 export async function POST(request: NextRequest) {
   try {
+    // 认证检查
+    const tokenPayload = verifyRequestToken(request);
+    if (!tokenPayload) {
+      return NextResponse.json(
+        {
+          code: 1,
+          msg: '未授权访问',
+          data: null,
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { name, status = 1, operator, permissions = [] } = body;
 

@@ -82,7 +82,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      success: true,
+      code: 0,
+      msg: '获取发货记录列表成功',
       data: {
         list: records,
         total,
@@ -205,7 +206,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      success: true,
+      code: 0,
+      msg: '创建发货记录成功',
       data: deliveryRecord,
     });
   } catch (error) {

@@ -2,24 +2,113 @@
  * @jest-environment node
  */
 import { NextRequest } from 'next/server';
-import { GET as getRoles, POST as createRole } from '@/app/api/v1/roles/route';
+import { GET as getRoles, POST as createRole } from '../../src/app/api/v1/roles/route';
 import {
   GET as getRole,
   PUT as updateRole,
   DELETE as deleteRole,
-} from '@/app/api/v1/roles/[id]/route';
-import { getAuthToken, TestDataFactory, mockPrisma, resetMocks } from '../utils/test-helpers';
+} from '../../src/app/api/v1/roles/[id]/route';
+import { getAuthToken, TestDataFactory } from '../utils/test-helpers';
 
 // Mock Prisma
-jest.mock('@/lib/db', () => ({
+jest.mock('../../src/lib/db', () => ({
   __esModule: true,
-  default: mockPrisma,
+  prisma: {
+    account: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    role: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    user: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    permission: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    rolePermission: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+    },
+    accountRole: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+    },
+    $transaction: jest.fn(),
+    $connect: jest.fn(),
+    $disconnect: jest.fn(),
+  },
 }));
+
+// 获取mock对象用于测试
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { prisma: mockPrisma } = require('../../src/lib/db');
 
 describe('/api/v1/roles', () => {
   beforeEach(() => {
-    resetMocks();
+    // 重置所有mock
     jest.clearAllMocks();
+
+    // 设置认证中间件需要的用户mock
+    mockPrisma.account.findUnique.mockResolvedValue({
+      id: 1,
+      username: 'admin',
+      name: 'Admin User',
+      status: 'ACTIVE',
+      roles: [
+        {
+          role: {
+            name: 'admin',
+            permissions: [
+              { permission: { code: 'roles.read' } },
+              { permission: { code: 'roles.write' } },
+              { permission: { code: 'roles.delete' } },
+            ],
+          },
+        },
+      ],
+    });
+
+    // 设置roles相关的默认mock
+    mockPrisma.role.count.mockResolvedValue(0);
+    mockPrisma.role.findFirst.mockResolvedValue(null);
+
+    // 设置accountRole mock用于删除检查
+    mockPrisma.accountRole.findMany.mockResolvedValue([]);
+
+    // 设置permission相关mock
+    mockPrisma.permission.findMany.mockResolvedValue([
+      { id: '1', code: 'READ_USER' },
+      { id: '2', code: 'WRITE_USER' },
+    ]);
   });
 
   describe('GET /api/v1/roles', () => {
@@ -29,7 +118,12 @@ describe('/api/v1/roles', () => {
           id: 1,
           name: '管理员',
           description: '系统管理员',
-          permissions: [{ name: 'READ_USER' }, { name: 'WRITE_USER' }],
+          status: 'ACTIVE',
+          operator: 'admin',
+          permissions: [
+            { permission: { code: 'READ_USER' } },
+            { permission: { code: 'WRITE_USER' } },
+          ],
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -37,7 +131,9 @@ describe('/api/v1/roles', () => {
           id: 2,
           name: '普通用户',
           description: '普通用户',
-          permissions: [{ name: 'READ_USER' }],
+          status: 'ACTIVE',
+          operator: 'admin',
+          permissions: [{ permission: { code: 'READ_USER' } }],
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -58,14 +154,22 @@ describe('/api/v1/roles', () => {
 
       expect(response.status).toBe(200);
       expect(data.code).toBe(0);
-      expect(data.data).toHaveLength(2);
-      expect(data.data[0].name).toBe('管理员');
+      expect(data.data.list).toHaveLength(2);
+      expect(data.data.list[0].name).toBe('管理员');
       expect(mockPrisma.role.findMany).toHaveBeenCalledWith({
+        where: {},
         include: {
-          permissions: true,
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
         skip: 0,
-        take: 10,
+        take: 20,
       });
     });
 
@@ -73,7 +177,7 @@ describe('/api/v1/roles', () => {
       mockPrisma.role.findMany.mockResolvedValue([]);
 
       const token = getAuthToken('admin');
-      const req = new NextRequest('http://localhost:3000/api/v1/roles?page=2&pageSize=5', {
+      const req = new NextRequest('http://localhost:3000/api/v1/roles?page=2&limit=5', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -83,8 +187,16 @@ describe('/api/v1/roles', () => {
       await getRoles(req);
 
       expect(mockPrisma.role.findMany).toHaveBeenCalledWith({
+        where: {},
         include: {
-          permissions: true,
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
         skip: 5,
         take: 5,
@@ -129,19 +241,14 @@ describe('/api/v1/roles', () => {
       const response = await createRole(req);
       const data = await response.json();
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
       expect(data.code).toBe(0);
       expect(data.data.name).toBe(roleData.name);
       expect(mockPrisma.role.create).toHaveBeenCalledWith({
         data: {
           name: roleData.name,
-          description: roleData.description,
-          permissions: {
-            connect: roleData.permissions.map((permission) => ({ name: permission })),
-          },
-        },
-        include: {
-          permissions: true,
+          status: 'ACTIVE',
+          operator: roleData.operator,
         },
       });
     });
@@ -156,7 +263,7 @@ describe('/api/v1/roles', () => {
         },
         body: JSON.stringify({
           name: '',
-          permissions: [],
+          operator: '',
         }),
       });
 
@@ -170,9 +277,11 @@ describe('/api/v1/roles', () => {
     it('应该处理重复的角色名称', async () => {
       const roleData = TestDataFactory.role();
 
-      mockPrisma.role.create.mockRejectedValue(
-        new Error('Unique constraint failed on the fields: (`name`)')
-      );
+      // Mock检查重复时返回已存在的角色
+      mockPrisma.role.findUnique.mockResolvedValue({
+        id: 1,
+        name: roleData.name,
+      });
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/roles', {
@@ -189,7 +298,7 @@ describe('/api/v1/roles', () => {
 
       expect(response.status).toBe(400);
       expect(data.code).toBe(1);
-      expect(data.msg).toContain('角色名称已存在');
+      expect(data.msg).toContain('角色名已存在');
     });
   });
 
@@ -199,7 +308,12 @@ describe('/api/v1/roles', () => {
         id: 1,
         name: '管理员',
         description: '系统管理员',
-        permissions: [{ name: 'READ_USER' }, { name: 'WRITE_USER' }],
+        status: 'ACTIVE',
+        operator: 'admin',
+        permissions: [
+          { permission: { code: 'READ_USER' } },
+          { permission: { code: 'WRITE_USER' } },
+        ],
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -221,9 +335,13 @@ describe('/api/v1/roles', () => {
       expect(data.code).toBe(0);
       expect(data.data.name).toBe('管理员');
       expect(mockPrisma.role.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: '1' },
         include: {
-          permissions: true,
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
         },
       });
     });
@@ -253,6 +371,8 @@ describe('/api/v1/roles', () => {
       const updateData = {
         name: '更新后的角色',
         description: '更新后的描述',
+        operator: 'admin',
+        status: 1,
         permissions: ['READ_USER', 'WRITE_USER', 'DELETE_USER'],
       };
 
@@ -263,7 +383,10 @@ describe('/api/v1/roles', () => {
         updatedAt: new Date(),
       };
 
-      mockPrisma.role.findUnique.mockResolvedValue({ id: 1, name: '原角色' });
+      // 第一次调用返回现有角色，第二次调用(检查重复)返回null
+      mockPrisma.role.findUnique
+        .mockResolvedValueOnce({ id: 1, name: '原角色' })
+        .mockResolvedValueOnce(null);
       mockPrisma.role.update.mockResolvedValue(mockUpdatedRole);
 
       const token = getAuthToken('admin');
@@ -304,7 +427,7 @@ describe('/api/v1/roles', () => {
       expect(response.status).toBe(200);
       expect(data.code).toBe(0);
       expect(mockPrisma.role.delete).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: '1' },
       });
     });
 

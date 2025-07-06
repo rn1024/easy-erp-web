@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      success: true,
+      code: 0,
+      msg: '获取仓库任务列表成功',
       data: {
         list: tasks,
         total,
@@ -156,7 +157,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      success: true,
+      code: 0,
+      msg: '创建仓库任务成功',
       data: task,
     });
   } catch (error) {

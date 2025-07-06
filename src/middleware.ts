@@ -30,7 +30,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 创建响应
-  let response = NextResponse.next();
+  const response = NextResponse.next();
 
   // 添加安全响应头
   Object.entries(securityHeaders).forEach(([key, value]) => {
@@ -46,6 +46,7 @@ export function middleware(request: NextRequest) {
   if (process.env.NODE_ENV === 'development') {
     const ip = getClientIP(request);
     const userAgent = request.headers.get('user-agent') || 'unknown';
+    // eslint-disable-next-line no-console
     console.log(
       `[${new Date().toISOString()}] ${request.method} ${pathname} - IP: ${ip} - UA: ${userAgent.substring(0, 100)}`
     );

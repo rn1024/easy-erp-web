@@ -2,24 +2,138 @@
  * @jest-environment node
  */
 import { NextRequest } from 'next/server';
-import { GET as getProducts, POST as createProduct } from '@/app/api/v1/products/route';
+import { GET as getProducts, POST as createProduct } from '../../src/app/api/v1/products/route';
 import {
   GET as getProduct,
   PUT as updateProduct,
   DELETE as deleteProduct,
-} from '@/app/api/v1/products/[id]/route';
-import { getAuthToken, TestDataFactory, mockPrisma, resetMocks } from '../utils/test-helpers';
+} from '../../src/app/api/v1/products/[id]/route';
+import { getAuthToken } from '../utils/test-helpers';
 
 // Mock Prisma
-jest.mock('@/lib/db', () => ({
+jest.mock('../../src/lib/db', () => ({
   __esModule: true,
-  default: mockPrisma,
+  prisma: {
+    account: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    product: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    productInfo: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    productCategory: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    shop: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    supplier: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    finishedInventory: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    spareInventory: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    purchaseOrder: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    role: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    $transaction: jest.fn(),
+    $connect: jest.fn(),
+    $disconnect: jest.fn(),
+  },
 }));
+
+// 获取mock对象用于测试
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { prisma: mockPrisma } = require('../../src/lib/db');
 
 describe('/api/v1/products', () => {
   beforeEach(() => {
-    resetMocks();
+    // 重置所有mock
     jest.clearAllMocks();
+
+    // 设置认证中间件需要的用户mock
+    mockPrisma.account.findUnique.mockResolvedValue({
+      id: 1,
+      username: 'admin',
+      name: 'Admin User',
+      status: 'ACTIVE',
+      roles: [
+        {
+          role: {
+            name: 'admin',
+            permissions: [
+              { permission: { code: 'products.read' } },
+              { permission: { code: 'products.write' } },
+              { permission: { code: 'products.delete' } },
+            ],
+          },
+        },
+      ],
+    });
+
+    // 设置products相关的默认mock
+    mockPrisma.productInfo.count.mockResolvedValue(0);
+    mockPrisma.productInfo.findFirst.mockResolvedValue(null);
+
+    // 设置删除产品时需要检查的关联表
+    mockPrisma.finishedInventory.count.mockResolvedValue(0);
+    mockPrisma.spareInventory.count.mockResolvedValue(0);
+    mockPrisma.purchaseOrder.count.mockResolvedValue(0);
   });
 
   describe('GET /api/v1/products', () => {
@@ -40,7 +154,7 @@ describe('/api/v1/products', () => {
         },
       ];
 
-      mockPrisma.product.findMany.mockResolvedValue(mockProducts);
+      mockPrisma.productInfo.findMany.mockResolvedValue(mockProducts);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products', {
@@ -55,23 +169,43 @@ describe('/api/v1/products', () => {
 
       expect(response.status).toBe(200);
       expect(data.code).toBe(0);
-      expect(data.data).toHaveLength(1);
-      expect(data.data[0].name).toBe('测试产品1');
-      expect(mockPrisma.product.findMany).toHaveBeenCalledWith({
+      expect(data.data.list).toHaveLength(1);
+      expect(data.data.list[0].name).toBe('测试产品1');
+      expect(mockPrisma.productInfo.findMany).toHaveBeenCalledWith({
+        where: {},
         include: {
-          category: true,
-          supplier: true,
+          shop: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          operator: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         skip: 0,
         take: 10,
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
     });
 
     it('应该支持产品搜索', async () => {
-      mockPrisma.product.findMany.mockResolvedValue([]);
+      mockPrisma.productInfo.findMany.mockResolvedValue([]);
 
       const token = getAuthToken('admin');
-      const req = new NextRequest('http://localhost:3000/api/v1/products?search=手机', {
+      const req = new NextRequest('http://localhost:3000/api/v1/products?code=PROD001', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -80,25 +214,42 @@ describe('/api/v1/products', () => {
 
       await getProducts(req);
 
-      expect(mockPrisma.product.findMany).toHaveBeenCalledWith({
+      expect(mockPrisma.productInfo.findMany).toHaveBeenCalledWith({
         where: {
-          OR: [
-            { name: { contains: '手机' } },
-            { code: { contains: '手机' } },
-            { specification: { contains: '手机' } },
-          ],
+          code: {
+            contains: 'PROD001',
+          },
         },
         include: {
-          category: true,
-          supplier: true,
+          shop: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          operator: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         skip: 0,
         take: 10,
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
     });
 
     it('应该支持按分类筛选', async () => {
-      mockPrisma.product.findMany.mockResolvedValue([]);
+      mockPrisma.productInfo.findMany.mockResolvedValue([]);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products?categoryId=1', {
@@ -110,13 +261,32 @@ describe('/api/v1/products', () => {
 
       await getProducts(req);
 
-      expect(mockPrisma.product.findMany).toHaveBeenCalledWith({
+      expect(mockPrisma.productInfo.findMany).toHaveBeenCalledWith({
         where: {
-          categoryId: 1,
+          categoryId: '1',
         },
         include: {
-          category: true,
-          supplier: true,
+          shop: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          operator: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
         skip: 0,
         take: 10,
@@ -126,17 +296,31 @@ describe('/api/v1/products', () => {
 
   describe('POST /api/v1/products', () => {
     it('应该成功创建产品', async () => {
-      const productData = TestDataFactory.product();
+      const productData = {
+        shopId: 'shop-1',
+        categoryId: 'cat-1',
+        code: 'PROD001',
+        sku: 'SKU001',
+        specification: '测试规格',
+        color: '红色',
+        setQuantity: 1,
+      };
+
       const mockProduct = {
-        id: 1,
+        id: 'prod-1',
         ...productData,
-        category: { id: 1, name: '测试分类' },
-        supplier: { id: 1, name: '测试供应商' },
+        shop: { id: 'shop-1', nickname: '测试店铺' },
+        category: { id: 'cat-1', name: '测试分类' },
+        operator: { id: 1, name: 'Admin User' },
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      mockPrisma.product.create.mockResolvedValue(mockProduct);
+      // Mock关联数据验证
+      mockPrisma.shop.findUnique.mockResolvedValue({ id: 'shop-1', nickname: '测试店铺' });
+      mockPrisma.productCategory.findUnique.mockResolvedValue({ id: 'cat-1', name: '测试分类' });
+      mockPrisma.productInfo.findUnique.mockResolvedValue(null); // SKU不存在
+      mockPrisma.productInfo.create.mockResolvedValue(mockProduct);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products', {
@@ -151,24 +335,69 @@ describe('/api/v1/products', () => {
       const response = await createProduct(req);
       const data = await response.json();
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
       expect(data.code).toBe(0);
-      expect(data.data.name).toBe(productData.name);
-      expect(mockPrisma.product.create).toHaveBeenCalledWith({
-        data: productData,
+      expect(data.data.code).toBe(productData.code);
+      expect(mockPrisma.productInfo.create).toHaveBeenCalledWith({
+        data: {
+          shopId: 'shop-1',
+          categoryId: 'cat-1',
+          code: 'PROD001',
+          specification: '测试规格',
+          color: '红色',
+          setQuantity: 1,
+          internalSize: null,
+          externalSize: null,
+          weight: null,
+          sku: 'SKU001',
+          label: null,
+          codeFileUrl: null,
+          imageUrl: null,
+          styleInfo: null,
+          accessoryInfo: null,
+          remark: null,
+          operatorId: 1,
+        },
         include: {
-          category: true,
-          supplier: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          operator: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          shop: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
         },
       });
     });
 
-    it('应该验证产品代码唯一性', async () => {
-      const productData = TestDataFactory.product();
+    it('应该验证SKU唯一性', async () => {
+      const productData = {
+        shopId: 'shop-1',
+        categoryId: 'cat-1',
+        code: 'PROD001',
+        sku: 'SKU001',
+      };
 
-      mockPrisma.product.create.mockRejectedValue(
-        new Error('Unique constraint failed on the fields: (`code`)')
-      );
+      // Mock关联数据存在
+      mockPrisma.shop.findUnique.mockResolvedValue({ id: 'shop-1', nickname: '测试店铺' });
+      mockPrisma.productCategory.findUnique.mockResolvedValue({ id: 'cat-1', name: '测试分类' });
+
+      // Mock SKU已存在
+      mockPrisma.productInfo.findUnique.mockResolvedValue({
+        id: 'existing-prod',
+        sku: 'SKU001',
+      });
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products', {
@@ -184,35 +413,16 @@ describe('/api/v1/products', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.code).toBe(1);
-      expect(data.msg).toContain('产品编码已存在');
-    });
-
-    it('应该验证价格字段', async () => {
-      const productData = TestDataFactory.product({
-        purchasePrice: -10,
-        salePrice: 0,
-      });
-
-      const token = getAuthToken('admin');
-      const req = new NextRequest('http://localhost:3000/api/v1/products', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(productData),
-      });
-
-      const response = await createProduct(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(data.code).toBe(1);
-      expect(data.msg).toContain('价格必须大于0');
+      expect(data.code).toBe(400);
+      expect(data.msg).toContain('SKU已存在');
     });
 
     it('应该验证必填字段', async () => {
+      const productData = {
+        shopId: 'shop-1',
+        // 缺少 categoryId, code, sku
+      };
+
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products', {
         method: 'POST',
@@ -220,19 +430,15 @@ describe('/api/v1/products', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: '',
-          code: '',
-          categoryId: null,
-          supplierId: null,
-        }),
+        body: JSON.stringify(productData),
       });
 
       const response = await createProduct(req);
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.code).toBe(1);
+      expect(data.code).toBe(400);
+      expect(data.msg).toContain('缺少必要参数');
     });
   });
 
@@ -252,7 +458,7 @@ describe('/api/v1/products', () => {
         updatedAt: new Date(),
       };
 
-      mockPrisma.product.findUnique.mockResolvedValue(mockProduct);
+      mockPrisma.productInfo.findUnique.mockResolvedValue(mockProduct);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products/1', {
@@ -266,19 +472,35 @@ describe('/api/v1/products', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.code).toBe(0);
+      expect(data.code).toBe(200);
       expect(data.data.name).toBe('测试产品');
-      expect(mockPrisma.product.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
+      expect(mockPrisma.productInfo.findUnique).toHaveBeenCalledWith({
+        where: { id: '1' },
         include: {
-          category: true,
-          supplier: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          operator: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          shop: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
         },
       });
     });
 
     it('应该处理产品不存在的情况', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue(null);
+      mockPrisma.productInfo.findUnique.mockResolvedValue(null);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products/999', {
@@ -292,35 +514,31 @@ describe('/api/v1/products', () => {
       const data = await response.json();
 
       expect(response.status).toBe(404);
-      expect(data.code).toBe(1);
-      expect(data.msg).toContain('产品不存在');
+      expect(data.code).toBe(404);
+      expect(data.msg).toContain('产品信息不存在');
     });
   });
 
   describe('PUT /api/v1/products/[id]', () => {
     it('应该成功更新产品', async () => {
       const updateData = {
-        name: '更新后的产品',
         code: 'PROD002',
         specification: '更新规格',
-        unit: '件',
-        purchasePrice: 120.0,
-        salePrice: 180.0,
         categoryId: 2,
-        supplierId: 2,
       };
 
       const mockUpdatedProduct = {
-        id: 1,
+        id: '1',
         ...updateData,
         category: { id: 2, name: '新分类' },
-        supplier: { id: 2, name: '新供应商' },
+        shop: { id: 'shop-1', nickname: '测试店铺' },
+        operator: { id: 1, name: 'Admin User' },
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      mockPrisma.product.findUnique.mockResolvedValue({ id: 1, name: '原产品' });
-      mockPrisma.product.update.mockResolvedValue(mockUpdatedProduct);
+      mockPrisma.productInfo.findUnique.mockResolvedValue({ id: '1', code: 'PROD001' });
+      mockPrisma.productInfo.update.mockResolvedValue(mockUpdatedProduct);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products/1', {
@@ -336,14 +554,34 @@ describe('/api/v1/products', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.code).toBe(0);
-      expect(data.data.name).toBe('更新后的产品');
-      expect(mockPrisma.product.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: updateData,
+      expect(data.code).toBe(200);
+      expect(data.data.code).toBe('PROD002');
+      expect(mockPrisma.productInfo.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: {
+          categoryId: 2,
+          code: 'PROD002',
+          specification: '更新规格',
+        },
         include: {
-          category: true,
-          supplier: true,
+          shop: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          operator: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       });
     });
@@ -351,8 +589,8 @@ describe('/api/v1/products', () => {
 
   describe('DELETE /api/v1/products/[id]', () => {
     it('应该成功删除产品', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue({ id: 1, name: '测试产品' });
-      mockPrisma.product.delete.mockResolvedValue({ id: 1, name: '测试产品' });
+      mockPrisma.productInfo.findUnique.mockResolvedValue({ id: 1, name: '测试产品' });
+      mockPrisma.productInfo.delete.mockResolvedValue({ id: 1, name: '测试产品' });
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products/1', {
@@ -366,14 +604,14 @@ describe('/api/v1/products', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.code).toBe(0);
-      expect(mockPrisma.product.delete).toHaveBeenCalledWith({
-        where: { id: 1 },
+      expect(data.code).toBe(200);
+      expect(mockPrisma.productInfo.delete).toHaveBeenCalledWith({
+        where: { id: '1' },
       });
     });
 
     it('应该处理删除不存在的产品', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue(null);
+      mockPrisma.productInfo.findUnique.mockResolvedValue(null);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products/999', {
@@ -387,13 +625,17 @@ describe('/api/v1/products', () => {
       const data = await response.json();
 
       expect(response.status).toBe(404);
-      expect(data.code).toBe(1);
-      expect(data.msg).toContain('产品不存在');
+      expect(data.code).toBe(404);
+      expect(data.msg).toContain('产品信息不存在');
     });
 
     it('应该检查产品是否被库存使用', async () => {
-      mockPrisma.product.findUnique.mockResolvedValue({ id: 1, name: '测试产品' });
-      mockPrisma.product.delete.mockRejectedValue(new Error('Foreign key constraint fails'));
+      mockPrisma.productInfo.findUnique.mockResolvedValue({ id: '1', name: '测试产品' });
+
+      // Mock存在相关业务数据
+      mockPrisma.finishedInventory.count.mockResolvedValue(1); // 有成品库存
+      mockPrisma.spareInventory.count.mockResolvedValue(0);
+      mockPrisma.purchaseOrder.count.mockResolvedValue(0);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products/1', {
@@ -407,8 +649,8 @@ describe('/api/v1/products', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.code).toBe(1);
-      expect(data.msg).toContain('该产品已被使用，无法删除');
+      expect(data.code).toBe(400);
+      expect(data.msg).toContain('该产品存在相关业务数据，无法删除');
     });
   });
 });

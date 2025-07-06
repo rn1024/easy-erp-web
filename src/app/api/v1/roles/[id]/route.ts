@@ -2,10 +2,24 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { verifyRequestToken } from '@/lib/auth';
 
 // GET /api/v1/roles/[id] - 获取角色详情
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // 认证检查
+    const tokenPayload = verifyRequestToken(request);
+    if (!tokenPayload) {
+      return NextResponse.json(
+        {
+          code: 1,
+          msg: '未授权访问',
+          data: null,
+        },
+        { status: 401 }
+      );
+    }
+
     const { id } = params;
 
     const role = await prisma.role.findUnique({
@@ -62,6 +76,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // PUT /api/v1/roles/[id] - 更新角色
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // 认证检查
+    const tokenPayload = verifyRequestToken(request);
+    if (!tokenPayload) {
+      return NextResponse.json(
+        {
+          code: 1,
+          msg: '未授权访问',
+          data: null,
+        },
+        { status: 401 }
+      );
+    }
+
     const { id } = params;
     const body = await request.json();
     const { name, status, operator, permissions = [] } = body;
@@ -179,6 +206,19 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 // DELETE /api/v1/roles/[id] - 删除角色
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // 认证检查
+    const tokenPayload = verifyRequestToken(request);
+    if (!tokenPayload) {
+      return NextResponse.json(
+        {
+          code: 1,
+          msg: '未授权访问',
+          data: null,
+        },
+        { status: 401 }
+      );
+    }
+
     const { id } = params;
 
     // 检查角色是否存在

@@ -13,6 +13,12 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
+// Mock bcrypt globally
+jest.mock('bcryptjs', () => ({
+  compare: jest.fn().mockResolvedValue(true),
+  hash: jest.fn().mockResolvedValue('hashedPassword'),
+}));
+
 // Mock environment variables
 process.env.DATABASE_URL = 'mysql://test:test@localhost:3306/test_db';
 process.env.JWT_SECRET = 'test-jwt-secret-for-testing-only';

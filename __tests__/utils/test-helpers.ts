@@ -2,9 +2,10 @@ import request from 'supertest';
 import { createServer } from 'http';
 import { NextApiHandler } from 'next';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
-// 测试用的JWT密钥
-const JWT_SECRET = 'test-jwt-secret-for-testing-only';
+// 测试用的JWT密钥 - 与实际应用保持一致
+const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-for-testing-only';
 
 // 生成测试用的JWT token
 export const generateTestToken = (payload: any) => {
@@ -33,7 +34,16 @@ export const testUsers = {
 
 // 生成测试用的认证token
 export const getAuthToken = (userType: 'admin' | 'user' = 'admin') => {
-  return generateTestToken(testUsers[userType]);
+  const user = testUsers[userType];
+  // 使用与实际应用一致的token格式
+  const payload = {
+    id: user.id.toString(),
+    name: user.username,
+    roles: [user.role],
+    permissions: user.permissions,
+    nonce: Math.random().toString(36).substring(2, 15),
+  };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
 };
 
 // 创建测试请求客户端
@@ -50,6 +60,7 @@ export class TestDataFactory {
     return {
       name: '测试角色',
       description: '测试角色描述',
+      operator: 'admin',
       permissions: ['READ_USER', 'WRITE_USER'],
       ...overrides,
     };
@@ -211,6 +222,13 @@ export const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
+  account: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
   role: {
     findUnique: jest.fn(),
     findMany: jest.fn(),
@@ -232,20 +250,6 @@ export const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
-  forwarding: {
-    findUnique: jest.fn(),
-    findMany: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  },
-  productCategory: {
-    findUnique: jest.fn(),
-    findMany: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  },
   product: {
     findUnique: jest.fn(),
     findMany: jest.fn(),
@@ -261,6 +265,13 @@ export const mockPrisma = {
     delete: jest.fn(),
   },
   spareInventory: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  productCategory: {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
@@ -295,7 +306,22 @@ export const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
-  systemLog: {
+  log: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
+  },
+  permission: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  forwardingAgent: {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
@@ -305,6 +331,90 @@ export const mockPrisma = {
   $transaction: jest.fn(),
   $connect: jest.fn(),
   $disconnect: jest.fn(),
+};
+
+// Mock 用户数据
+export const mockUser = {
+  id: 1,
+  username: 'testuser',
+  name: 'Test User',
+  email: 'test@example.com',
+  role: 'USER',
+  permissions: ['read', 'write'],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+// Mock 管理员用户
+export const mockAdminUser = {
+  id: 1,
+  username: 'admin',
+  name: 'Admin User',
+  email: 'admin@example.com',
+  role: 'ADMIN',
+  permissions: ['read', 'write', 'admin'],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+// Mock JWT Token
+export const mockJwtToken = 'mock-jwt-token-for-testing';
+
+// Mock NextRequest 工厂
+export const createMockRequest = (
+  options: {
+    method?: string;
+    url?: string;
+    headers?: Record<string, string>;
+    body?: unknown;
+  } = {}
+) => {
+  const { method = 'GET', url = 'http://localhost:3000/api/test', headers = {}, body } = options;
+
+  return {
+    method,
+    url,
+    headers: {
+      get: jest.fn((key: string) => headers[key] || null),
+      ...headers,
+    },
+    nextUrl: { pathname: new URL(url).pathname },
+    json: jest.fn().mockResolvedValue(body || {}),
+    body: body ? JSON.stringify(body) : undefined,
+  } as unknown;
+};
+
+// 清理所有 mock
+export const clearAllMocks = () => {
+  Object.values(mockPrisma).forEach((mockFn) => {
+    if (typeof mockFn === 'object' && mockFn !== null) {
+      Object.values(mockFn).forEach((fn) => {
+        if (jest.isMockFunction(fn)) {
+          fn.mockClear();
+        }
+      });
+    } else if (jest.isMockFunction(mockFn)) {
+      mockFn.mockClear();
+    }
+  });
+};
+
+// 设置认证mock
+export const setupAuthMocks = () => {
+  // Mock bcrypt - 默认验证成功
+  (bcrypt.compare as jest.Mock) = jest.fn().mockResolvedValue(true);
+  (bcrypt.hash as jest.Mock) = jest.fn().mockResolvedValue('hashedPassword');
+
+  // Mock JWT
+  (jwt.sign as jest.Mock) = jest.fn().mockReturnValue(mockJwtToken);
+  (jwt.verify as jest.Mock) = jest.fn().mockReturnValue({
+    id: mockUser.id.toString(),
+    name: mockUser.username,
+    roles: [mockUser.role],
+    permissions: mockUser.permissions,
+  });
+
+  return { bcrypt, jwt };
 };
 
 // 重置所有Mock
@@ -393,7 +503,10 @@ export class DatabaseValidator {
 
 // 权限测试工具
 export class PermissionTestHelper {
-  static async testUnauthorizedAccess(handler: Function, req: any) {
+  static async testUnauthorizedAccess(
+    handler: (...args: unknown[]) => Promise<Response>,
+    req: unknown
+  ) {
     const response = await handler(req);
     const data = await response.json();
 
@@ -402,7 +515,10 @@ export class PermissionTestHelper {
     expect(data.msg).toContain('令牌无效');
   }
 
-  static async testForbiddenAccess(handler: Function, req: any) {
+  static async testForbiddenAccess(
+    handler: (...args: unknown[]) => Promise<Response>,
+    req: unknown
+  ) {
     const response = await handler(req);
     const data = await response.json();
 
