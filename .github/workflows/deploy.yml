@@ -33,9 +33,10 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "OSS_ACCESS_KEY_ID=${{ secrets.OSS_ACCESS_KEY_ID }}" >> .env
           echo "OSS_ACCESS_KEY_SECRET=${{ secrets.OSS_ACCESS_KEY_SECRET }}" >> .env
-          echo "OSS_BUCKET=easy-erp-web" >> .env
-          echo "OSS_REGION=oss-cn-hangzhou" >> .env
+          echo "OSS_BUCKET=${{ secrets.OSS_BUCKET }}" >> .env
+          echo "OSS_REGION=${{ secrets.OSS_REGION }}" >> .env
           echo "OSS_ENDPOINT=easy-erp-web.oss-cn-hangzhou.aliyuncs.com" >> .env
+          echo "NEXT_PUBLIC_APP_URL=https://erp.samuelcn.com" >> .env
           echo "OSS_PATH_PREFIX=template" >> .env
           echo "NODE_ENV=production" >> .env
           echo "PORT=3008" >> .env
@@ -92,9 +93,10 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.production
           echo "OSS_ACCESS_KEY_ID=${{ secrets.OSS_ACCESS_KEY_ID }}" >> .env.production
           echo "OSS_ACCESS_KEY_SECRET=${{ secrets.OSS_ACCESS_KEY_SECRET }}" >> .env.production
-          echo "OSS_BUCKET=easy-erp-web" >> .env.production
-          echo "OSS_REGION=oss-cn-hangzhou" >> .env.production
+          echo "OSS_BUCKET=${{ secrets.OSS_BUCKET }}" >> .env.production
+          echo "OSS_REGION=${{ secrets.OSS_REGION }}" >> .env.production
           echo "OSS_ENDPOINT=easy-erp-web.oss-cn-hangzhou.aliyuncs.com" >> .env.production
+          echo "NEXT_PUBLIC_APP_URL=https://erp.samuelcn.com" >> .env.production
           echo "OSS_PATH_PREFIX=template" >> .env.production
           echo "NODE_ENV=production" >> .env.production
           echo "PORT=3008" >> .env.production

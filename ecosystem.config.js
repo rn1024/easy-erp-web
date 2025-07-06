@@ -11,11 +11,13 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3008,
         HOSTNAME: '0.0.0.0',
+        NEXT_PUBLIC_APP_URL: 'https://erp.samuelcn.com',
       },
       env_production: {
         NODE_ENV: 'production',
         PORT: 3008,
         HOSTNAME: '0.0.0.0',
+        NEXT_PUBLIC_APP_URL: 'https://erp.samuelcn.com',
       },
       // 日志配置
       error_file: './logs/err.log',

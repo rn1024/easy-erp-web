@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 环境变量配置
+  env: {
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'https://erp.samuelcn.com',
+  },
+
   // Webpack配置
   webpack: (config, { isServer }) => {
     // 只在客户端构建时排除这些Node.js专用模块
