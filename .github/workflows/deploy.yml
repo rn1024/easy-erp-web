@@ -6,22 +6,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch: # 允许手动触发
-    inputs:
-      action:
-        description: '选择操作'
-        required: true
-        default: 'deploy'
-        type: choice
-        options:
-          - deploy
-          - rollback
 
 jobs:
   # 1. 构建和测试 Job
   build:
     name: Build and Test
     runs-on: ubuntu-latest
-    if: github.event.inputs.action != 'rollback'
 
     steps:
       - name: Checkout code
@@ -96,7 +86,6 @@ jobs:
     name: Create Deployment Package
     runs-on: ubuntu-latest
     needs: build
-    if: github.event.inputs.action != 'rollback'
 
     steps:
       - name: Download build artifacts
@@ -252,8 +241,8 @@ jobs:
     name: Deploy to ECS
     runs-on: ubuntu-latest
     needs: package
-    # 只在主分支推送时部署或手动触发部署时
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+    # 只在主分支推送时部署或手动触发时
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Download deployment package
@@ -289,30 +278,12 @@ jobs:
             pm2 stop easy-erp-web || true
             pm2 delete easy-erp-web || true
 
-            # 创建备份目录
-            mkdir -p /www/wwwroot/easy-erp-web-backups
-
-            # 备份当前版本（如果存在）
+            # 简单备份当前版本（仅用于紧急情况）
             if [ -f "/www/wwwroot/easy-erp-web/package.json" ]; then
-              BACKUP_NAME="backup-$(date +%Y%m%d-%H%M%S)"
-              echo "📦 创建备份: $BACKUP_NAME"
-
-              # 创建备份
-              cp -r /www/wwwroot/easy-erp-web /www/wwwroot/easy-erp-web-backups/$BACKUP_NAME
-              echo "✅ 备份完成: /www/wwwroot/easy-erp-web-backups/$BACKUP_NAME"
-
-              # 清理旧备份，只保留最新的2个
-              cd /www/wwwroot/easy-erp-web-backups
-              BACKUP_COUNT=$(ls -1 | grep "backup-" | wc -l)
-              if [ $BACKUP_COUNT -gt 2 ]; then
-                echo "🧹 清理旧备份，当前有 $BACKUP_COUNT 个备份"
-                ls -1t | grep "backup-" | tail -n +3 | xargs rm -rf
-                echo "✅ 备份清理完成，保留最新2个备份"
-              fi
-
-              # 显示当前备份列表
-              echo "📋 当前备份列表:"
-              ls -la /www/wwwroot/easy-erp-web-backups/ | grep "backup-"
+              echo "📦 创建当前版本备份..."
+              rm -rf /www/wwwroot/easy-erp-web-last-backup 2>/dev/null || true
+              cp -r /www/wwwroot/easy-erp-web /www/wwwroot/easy-erp-web-last-backup
+              echo "✅ 备份完成: /www/wwwroot/easy-erp-web-last-backup"
             else
               echo "ℹ️  未发现现有版本，跳过备份"
             fi
@@ -426,7 +397,7 @@ jobs:
     name: Verify Deployment
     runs-on: ubuntu-latest
     needs: deploy
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+    if: github.ref == 'refs/heads/main'
     timeout-minutes: 5 # 缩短job超时时间为5分钟
 
     steps:
@@ -568,85 +539,3 @@ jobs:
           echo "✅ 应用已成功部署并通过健康检查"
           echo "🌐 应用地址: https://erp.samuelcn.com"
           echo "📊 验证时间: $(date)"
-
-  # 5. 回滚 Job
-  rollback:
-    name: Rollback to Previous Version
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
-
-    steps:
-      - name: Rollback to latest backup
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: ${{ secrets.PORT }}
-          script: |
-            echo "🔄 开始回滚操作..."
-
-            # 检查备份目录
-            if [ ! -d "/www/wwwroot/easy-erp-web-backups" ]; then
-              echo "❌ 备份目录不存在，无法回滚"
-              exit 1
-            fi
-
-            # 查找最新备份
-            LATEST_BACKUP=$(ls -1t /www/wwwroot/easy-erp-web-backups/ | grep "backup-" | head -1)
-            if [ -z "$LATEST_BACKUP" ]; then
-              echo "❌ 未找到可用备份，无法回滚"
-              exit 1
-            fi
-
-            echo "📦 找到最新备份: $LATEST_BACKUP"
-
-            # 停止当前应用
-            pm2 stop easy-erp-web || true
-            pm2 delete easy-erp-web || true
-
-            # 备份当前失败的版本（以防需要）
-            if [ -f "/www/wwwroot/easy-erp-web/package.json" ]; then
-              FAILED_BACKUP="failed-$(date +%Y%m%d-%H%M%S)"
-              echo "📦 备份当前失败版本: $FAILED_BACKUP"
-              cp -r /www/wwwroot/easy-erp-web /www/wwwroot/easy-erp-web-backups/$FAILED_BACKUP
-            fi
-
-            # 清空当前目录
-            rm -rf /www/wwwroot/easy-erp-web/*
-
-            # 恢复备份
-            echo "🔄 恢复备份: $LATEST_BACKUP"
-            cp -r /www/wwwroot/easy-erp-web-backups/$LATEST_BACKUP/* /www/wwwroot/easy-erp-web/
-
-            # 重新启动应用
-            cd /www/wwwroot/easy-erp-web
-            pm2 start ecosystem.config.js --env production
-
-            # 等待启动
-            sleep 20
-
-            # 检查应用状态
-            pm2 status
-
-            echo "✅ 回滚完成"
-
-      - name: Verify rollback
-        run: |
-          echo "🔍 验证回滚后的应用状态..."
-
-          # 等待应用启动
-          sleep 30
-
-          # 健康检查
-          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "https://erp.samuelcn.com/api/health" 2>/dev/null || echo "000")
-
-          echo "📡 健康检查响应码: $response"
-
-          if [ "$response" = "200" ]; then
-            echo "✅ 回滚成功，应用正常运行！"
-          else
-            echo "⚠️  回滚后应用可能仍有问题，响应码: $response"
-            exit 1
-          fi
