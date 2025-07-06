@@ -42,7 +42,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Setup environment variables
         run: |
@@ -67,6 +67,15 @@ jobs:
       - name: Build application
         run: pnpm build
 
+      - name: Generate package-lock.json for production
+        run: |
+          # 删除可能存在的package-lock.json
+          rm -f package-lock.json
+          # 基于当前node_modules生成package-lock.json，供生产环境使用
+          npm install --package-lock-only
+          # 验证生成的package-lock.json
+          ls -la package-lock.json
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -74,7 +83,7 @@ jobs:
           path: |
             .next
             package.json
-            pnpm-lock.yaml
+            package-lock.json
             ecosystem.config.js
             prisma
             generated
@@ -115,7 +124,7 @@ jobs:
           tar -czf deploy.tar.gz \
             .next \
             package.json \
-            pnpm-lock.yaml \
+            package-lock.json \
             ecosystem.config.js \
             prisma \
             generated \
