@@ -162,6 +162,14 @@ jobs:
             echo "Warning: public directory not found"
           fi
 
+          # 复制nginx配置文件
+          if [ -d "nginx" ]; then
+            cp -r nginx deploy-temp/
+            echo "✅ Nginx配置文件已包含"
+          else
+            echo "Warning: nginx directory not found"
+          fi
+
           # 复制环境变量文件
           cp .env.production deploy-temp/
 
@@ -244,6 +252,18 @@ jobs:
             # 设置环境变量文件
             cp .env.production .env
 
+            # 配置nginx
+            if [ -f "nginx/erp.samuelcn.com.conf" ]; then
+              echo "配置nginx..."
+              mkdir -p /etc/nginx/sites-available
+              mkdir -p /etc/nginx/sites-enabled
+              cp nginx/erp.samuelcn.com.conf /etc/nginx/sites-available/
+              ln -sf /etc/nginx/sites-available/erp.samuelcn.com.conf /etc/nginx/sites-enabled/
+
+              # 测试nginx配置
+              nginx -t && echo "✅ Nginx配置正确" || echo "❌ Nginx配置错误"
+            fi
+
             # 安装生产依赖（服务器使用npm）
             npm install --production --omit=dev
 
@@ -265,8 +285,10 @@ jobs:
             # 保存 PM2 配置
             pm2 save
 
-            # 重载 nginx（如果需要）
-            nginx -t && nginx -s reload || true
+            # 重载 nginx
+            if command -v nginx >/dev/null 2>&1; then
+              nginx -t && nginx -s reload && echo "✅ Nginx重载成功" || echo "❌ Nginx重载失败"
+            fi
 
             # 显示应用状态
             pm2 status
@@ -297,7 +319,7 @@ jobs:
             echo "🔍 尝试健康检查 $(($RETRY_COUNT + 1))/$MAX_RETRIES..."
 
             # 检查应用健康状态（增加超时时间）
-            response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "http://${{ secrets.HOST }}:3008/api/health" 2>/dev/null || echo "000")
+            response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "http://erp.samuelcn.com:3008/api/health" 2>/dev/null || echo "000")
 
             echo "📡 健康检查响应码: $response"
 

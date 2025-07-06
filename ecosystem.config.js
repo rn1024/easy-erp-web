@@ -3,17 +3,19 @@ module.exports = {
     {
       name: 'easy-erp-web',
       script: './node_modules/.bin/next',
-      args: 'start',
+      args: 'start -H 0.0.0.0 -p 3008',
       cwd: '/www/wwwroot/easy-erp-web',
       instances: 'max',
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
         PORT: 3008,
+        HOSTNAME: '0.0.0.0',
       },
       env_production: {
         NODE_ENV: 'production',
         PORT: 3008,
+        HOSTNAME: '0.0.0.0',
       },
       // 日志配置
       error_file: './logs/err.log',
