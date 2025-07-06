@@ -18,20 +18,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          # 使用pnpm缓存
-          cache: 'pnpm'
-
-      - name: Install pnpm
-        run: npm install -g pnpm
+          # 不使用缓存，避免锁文件冲突
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
       - name: Type check
-        run: pnpm run type-check
+        run: npm run type-check
 
       - name: Build application
-        run: pnpm run build
+        run: npm run build
 
       - name: Generate environment file
         run: |
