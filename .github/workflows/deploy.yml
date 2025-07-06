@@ -5,9 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
-  deploy:
+  # 1. 构建和测试 Job
+  build:
+    name: Build and Test
     runs-on: ubuntu-latest
 
     steps:
@@ -18,7 +21,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          # 不使用缓存，避免锁文件冲突
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
@@ -40,8 +43,39 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      - name: Run tests
+        run: npm test -- --passWithNoTests
+
       - name: Build application
         run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files
+          path: |
+            .next
+            package.json
+            package-lock.json
+            ecosystem.config.js
+            prisma
+            generated
+            next.config.js
+            tsconfig.json
+            public
+          retention-days: 1
+
+  # 2. 打包 Job
+  package:
+    name: Create Deployment Package
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-files
 
       - name: Generate production environment file
         run: |
@@ -73,6 +107,27 @@ jobs:
             public
 
       - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: deploy.tar.gz
+          retention-days: 1
+
+  # 3. 部署 Job
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: package
+    # 只在主分支推送时部署
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Download deployment package
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-package
+
+      - name: Upload to ECS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
@@ -84,7 +139,7 @@ jobs:
           target: /tmp/
           overwrite: true
 
-      - name: Deploy to ECS
+      - name: Deploy application
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
@@ -134,5 +189,45 @@ jobs:
 
             # 显示应用状态
             pm2 status
+
+  # 4. 部署后验证 Job
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Health check
+        run: |
+          echo "Waiting for application to start..."
+          sleep 30
+
+          # 检查应用健康状态
+          response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.HOST }}:3000/api/health" || echo "000")
+
+          if [ "$response" = "200" ]; then
+            echo "✅ Application is healthy"
+          else
+            echo "❌ Application health check failed (HTTP $response)"
+            exit 1
+          fi
+
+      - name: Notify deployment status
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.PORT }}
+          script: |
+            echo "🚀 部署完成！"
+            echo "📊 应用状态："
+            pm2 status
+            echo "💾 磁盘使用情况："
+            df -h /www/wwwroot/easy-erp-web
+            echo "🔄 最近的应用日志："
+            pm2 logs easy-erp-web --lines 10
 
 
