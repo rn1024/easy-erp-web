@@ -74,6 +74,17 @@ jobs:
         with:
           name: build-files
 
+      - name: Debug - Check downloaded files
+        run: |
+          echo "Current working directory:"
+          pwd
+          echo "List all files and directories:"
+          ls -la
+          echo "Check if .next directory exists:"
+          ls -la .next || echo ".next directory not found"
+          echo "Check if package.json exists:"
+          ls -la package.json || echo "package.json not found"
+
       - name: Generate production environment file
         run: |
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env.production
@@ -90,18 +101,82 @@ jobs:
 
       - name: Create deployment package
         run: |
-          # 创建部署包，包含所有必要文件
-          tar -czf deploy.tar.gz \
-            .next \
-            package.json \
-            package-lock.json \
-            ecosystem.config.js \
-            prisma \
-            generated \
-            .env.production \
-            next.config.js \
-            tsconfig.json \
-            public
+          # 检查必要文件是否存在，并创建部署包
+          echo "Creating deployment package..."
+
+          # 创建一个临时目录来组织文件
+          mkdir -p deploy-temp
+
+          # 复制存在的文件到临时目录
+          if [ -d ".next" ]; then
+            cp -r .next deploy-temp/
+          else
+            echo "Warning: .next directory not found"
+          fi
+
+          if [ -f "package.json" ]; then
+            cp package.json deploy-temp/
+          else
+            echo "Warning: package.json not found"
+          fi
+
+          if [ -f "package-lock.json" ]; then
+            cp package-lock.json deploy-temp/
+          else
+            echo "Warning: package-lock.json not found"
+          fi
+
+          if [ -f "ecosystem.config.js" ]; then
+            cp ecosystem.config.js deploy-temp/
+          else
+            echo "Warning: ecosystem.config.js not found"
+          fi
+
+          if [ -d "prisma" ]; then
+            cp -r prisma deploy-temp/
+          else
+            echo "Warning: prisma directory not found"
+          fi
+
+          if [ -d "generated" ]; then
+            cp -r generated deploy-temp/
+          else
+            echo "Warning: generated directory not found"
+          fi
+
+          if [ -f "next.config.js" ]; then
+            cp next.config.js deploy-temp/
+          else
+            echo "Warning: next.config.js not found"
+          fi
+
+          if [ -f "tsconfig.json" ]; then
+            cp tsconfig.json deploy-temp/
+          else
+            echo "Warning: tsconfig.json not found"
+          fi
+
+          if [ -d "public" ]; then
+            cp -r public deploy-temp/
+          else
+            echo "Warning: public directory not found"
+          fi
+
+          # 复制环境变量文件
+          cp .env.production deploy-temp/
+
+          # 列出临时目录内容
+          echo "Contents of deploy-temp:"
+          ls -la deploy-temp/
+
+          # 从临时目录创建tar包
+          cd deploy-temp
+          tar -czf ../deploy.tar.gz .
+          cd ..
+
+          # 验证tar包
+          echo "Verifying tar package:"
+          tar -tzf deploy.tar.gz | head -20
 
       - name: Upload deployment package
         uses: actions/upload-artifact@v4
