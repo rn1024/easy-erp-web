@@ -277,24 +277,48 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    timeout-minutes: 10 # 设置job超时时间
 
     steps:
       - name: Health check
         run: |
-          echo "Waiting for application to start..."
-          sleep 30
+          echo "🚀 开始应用健康检查..."
 
-          # 检查应用健康状态
-          response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.HOST }}:3008/api/health" || echo "000")
+          # 等待应用启动
+          echo "⏳ 等待应用启动（60秒）..."
+          sleep 60
 
-          if [ "$response" = "200" ]; then
-            echo "✅ Application is healthy"
-          else
-            echo "❌ Application health check failed (HTTP $response)"
+          # 健康检查重试机制
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          SUCCESS=false
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "🔍 尝试健康检查 $(($RETRY_COUNT + 1))/$MAX_RETRIES..."
+
+            # 检查应用健康状态（增加超时时间）
+            response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "http://${{ secrets.HOST }}:3008/api/health" 2>/dev/null || echo "000")
+
+            echo "📡 健康检查响应码: $response"
+
+            if [ "$response" = "200" ]; then
+              echo "✅ 应用健康检查成功！"
+              SUCCESS=true
+              break
+            else
+              echo "⚠️  健康检查失败 (HTTP $response)，等待10秒后重试..."
+              sleep 10
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            fi
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "❌ 应用健康检查最终失败，开始故障排查..."
             exit 1
           fi
 
-      - name: Notify deployment status
+      - name: Troubleshoot on failure
+        if: failure()
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
@@ -303,7 +327,41 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.PORT }}
           script: |
-            echo "🚀 部署完成！"
+            echo "🔍 开始故障排查..."
+
+            echo "📊 PM2状态："
+            pm2 status
+
+            echo "📝 应用日志（最近50行）："
+            pm2 logs easy-erp-web --lines 50 || echo "无法获取PM2日志"
+
+            echo "🌐 端口监听状态："
+            netstat -tlnp | grep :3008 || echo "端口3008未监听"
+
+            echo "🔥 系统进程："
+            ps aux | grep easy-erp-web || echo "未找到应用进程"
+
+            echo "💾 磁盘空间："
+            df -h /www/wwwroot/easy-erp-web
+
+            echo "🔄 尝试重启应用："
+            pm2 restart easy-erp-web || echo "重启失败"
+
+            echo "⏳ 等待重启后再次检查（30秒）："
+            sleep 30
+            pm2 status
+
+      - name: Notify deployment status
+        if: success()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.PORT }}
+          script: |
+            echo "🎉 部署成功完成！"
             echo "📊 应用状态："
             pm2 status
             echo "💾 磁盘使用情况："
