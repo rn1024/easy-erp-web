@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'easy-erp-web',
-      script: './node_modules/.bin/next',
-      args: 'start -H 0.0.0.0 -p 3008',
+      script: 'npm',
+      args: 'start',
       cwd: '/www/wwwroot/easy-erp-web',
       instances: 1,
       exec_mode: 'fork',

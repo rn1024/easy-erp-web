@@ -88,6 +88,7 @@ jobs:
             next.config.js
             tsconfig.json
             public
+            scripts
           retention-days: 1
 
   # 2. 打包 Job
@@ -205,6 +206,14 @@ jobs:
             cp -r public deploy-temp/
           else
             echo "Warning: public directory not found"
+          fi
+
+          # 复制scripts目录
+          if [ -d "scripts" ]; then
+            cp -r scripts deploy-temp/
+            echo "✅ scripts目录已包含"
+          else
+            echo "Warning: scripts directory not found"
           fi
 
           # 复制nginx配置文件
@@ -350,6 +359,12 @@ jobs:
             # 安装生产依赖（服务器使用npm）
             npm install --production --omit=dev
 
+            # 验证关键依赖是否安装成功
+            if [ ! -f "node_modules/.bin/next" ]; then
+              echo "⚠️  Next.js 未正确安装，尝试完整安装..."
+              npm install
+            fi
+
             # 检查.next目录是否完整，如果不完整则重新构建
             if [ ! -f ".next/BUILD_ID" ] || [ ! -d ".next/server" ]; then
               echo "⚠️  .next目录不完整，开始重新构建..."
@@ -360,7 +375,27 @@ jobs:
               echo "✅ .next目录完整，跳过构建"
             fi
 
+                        # 检查MySQL和Redis连接
+            echo "🔍 检查数据库和Redis连接..."
+            if [ -f "scripts/check-connections.js" ]; then
+              node scripts/check-connections.js
+              if [ $? -eq 0 ]; then
+                echo "✅ 所有服务连接正常"
+              else
+                echo "❌ 部分服务连接失败，但继续部署..."
+                echo "⚠️  请检查以下服务状态："
+                echo "  📦 Docker容器状态："
+                docker ps | grep -E "(mysql|redis)" || echo "    - 未找到MySQL/Redis容器"
+                echo "  🌐 端口监听状态："
+                netstat -tlnp | grep :3306 || echo "    - MySQL端口3306未监听"
+                netstat -tlnp | grep :6379 || echo "    - Redis端口6379未监听"
+              fi
+            else
+              echo "⚠️  连接检查脚本不存在，跳过连接测试"
+            fi
+
             # 数据库迁移
+            echo "🗄️  开始数据库迁移..."
             npx prisma generate
             npx prisma db push
 
@@ -458,6 +493,20 @@ jobs:
 
             echo "💾 磁盘空间："
             df -h /www/wwwroot/easy-erp-web
+
+                        echo "🔍 检查服务依赖："
+            echo "📊 Docker容器状态："
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(mysql|redis)" || echo "未找到MySQL/Redis容器"
+
+            echo "📊 MySQL容器详情："
+            docker ps | grep mysql || echo "MySQL容器未运行"
+
+            echo "📊 Redis容器详情："
+            docker ps | grep redis || echo "Redis容器未运行"
+
+            echo "🌐 网络端口检查："
+            echo "MySQL端口 3306:" && netstat -tlnp | grep :3306 || echo "MySQL端口未监听"
+            echo "Redis端口 6379:" && netstat -tlnp | grep :6379 || echo "Redis端口未监听"
 
             echo "🔄 尝试重启应用："
             pm2 restart easy-erp-web || echo "重启失败"
