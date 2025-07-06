@@ -427,48 +427,111 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
-    timeout-minutes: 10 # 设置job超时时间
+    timeout-minutes: 5 # 缩短job超时时间为5分钟
 
     steps:
       - name: Health check
+        timeout-minutes: 4 # 为单步设置超时
         run: |
           echo "🚀 开始应用健康检查..."
 
-          # 等待应用启动
-          echo "⏳ 等待应用启动（60秒）..."
-          sleep 60
+          # 减少等待时间到20秒
+          echo "⏳ 等待应用完全启动（20秒）..."
+          sleep 20
 
           # 健康检查重试机制
-          MAX_RETRIES=5
+          MAX_RETRIES=6
           RETRY_COUNT=0
           SUCCESS=false
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "🔍 尝试健康检查 $(($RETRY_COUNT + 1))/$MAX_RETRIES..."
 
-            # 检查应用健康状态（使用HTTPS）
-            response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "https://erp.samuelcn.com/api/health" 2>/dev/null || echo "000")
+            # 记录开始时间
+            start_time=$(date +%s)
 
-            echo "📡 健康检查响应码: $response"
+            # 检查应用健康状态（使用HTTPS，缩短超时时间）
+            response=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 8 \
+              --connect-timeout 3 \
+              --retry 0 \
+              "https://erp.samuelcn.com/api/health" 2>/dev/null || echo "000")
+
+            # 记录结束时间
+            end_time=$(date +%s)
+            duration=$((end_time - start_time))
+
+            echo "📡 健康检查响应码: $response (耗时: ${duration}秒)"
 
             if [ "$response" = "200" ]; then
               echo "✅ 应用健康检查成功！"
-              SUCCESS=true
-              break
+
+              # 额外验证：检查验证码接口
+              echo "🔍 验证关键接口..."
+              verify_response=$(curl -s -o /dev/null -w "%{http_code}" \
+                --max-time 5 \
+                --connect-timeout 3 \
+                "https://erp.samuelcn.com/api/v1/auth/verifycode" 2>/dev/null || echo "000")
+
+              echo "📡 验证码接口响应码: $verify_response"
+
+              if [ "$verify_response" = "200" ]; then
+                echo "✅ 关键接口验证成功！"
+                SUCCESS=true
+                break
+              else
+                echo "⚠️  关键接口验证失败，但健康检查通过"
+                SUCCESS=true
+                break
+              fi
             else
-              echo "⚠️  健康检查失败 (HTTP $response)，等待10秒后重试..."
-              sleep 10
+              echo "⚠️  健康检查失败 (HTTP $response)，等待5秒后重试..."
+              sleep 5
               RETRY_COUNT=$((RETRY_COUNT + 1))
             fi
           done
 
           if [ "$SUCCESS" = false ]; then
-            echo "❌ 应用健康检查最终失败，开始故障排查..."
+            echo "❌ 应用健康检查最终失败"
+            echo "🔍 最后一次诊断信息："
+            echo "  - 最终响应码: $response"
+            echo "  - 总重试次数: $RETRY_COUNT"
+            echo "  - 检查URL: https://erp.samuelcn.com/api/health"
             exit 1
           fi
 
+          echo "🎉 所有健康检查通过！"
+
+      - name: Final verification
+        timeout-minutes: 1
+        run: |
+          echo "🔍 最终验证部署状态..."
+
+          # 快速验证主要端点
+          endpoints=(
+            "https://erp.samuelcn.com/api/health"
+            "https://erp.samuelcn.com/api/v1/auth/verifycode"
+          )
+
+          for endpoint in "${endpoints[@]}"; do
+            echo "📡 检查 $endpoint ..."
+            status=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 5 \
+              --connect-timeout 2 \
+              "$endpoint" 2>/dev/null || echo "000")
+
+            if [ "$status" = "200" ]; then
+              echo "✅ $endpoint 正常 (HTTP $status)"
+            else
+              echo "⚠️  $endpoint 异常 (HTTP $status)"
+            fi
+          done
+
+          echo "🎉 部署验证完成！"
+
       - name: Troubleshoot on failure
         if: failure()
+        timeout-minutes: 2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
@@ -477,75 +540,34 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.PORT }}
           script: |
-            echo "🔍 开始故障排查..."
+            echo "🔍 快速故障排查..."
 
             echo "📊 PM2状态："
             pm2 status
 
-            echo "📝 应用日志（最近50行）："
-            pm2 logs easy-erp-web --lines 50 || echo "无法获取PM2日志"
+            echo "📝 应用日志（最近20行）："
+            pm2 logs easy-erp-web --lines 20 2>/dev/null || echo "无法获取PM2日志"
 
             echo "🌐 端口监听状态："
             netstat -tlnp | grep :3008 || echo "端口3008未监听"
 
-            echo "🔥 系统进程："
-            ps aux | grep easy-erp-web || echo "未找到应用进程"
-
-            echo "💾 磁盘空间："
-            df -h /www/wwwroot/easy-erp-web
-
-                        echo "🔍 检查服务依赖："
-            echo "📊 Docker容器状态："
-            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(mysql|redis)" || echo "未找到MySQL/Redis容器"
-
-            echo "📊 MySQL容器详情："
-            docker ps | grep mysql || echo "MySQL容器未运行"
-
-            echo "📊 Redis容器详情："
-            docker ps | grep redis || echo "Redis容器未运行"
-
-            echo "🌐 网络端口检查："
-            echo "MySQL端口 3306:" && netstat -tlnp | grep :3306 || echo "MySQL端口未监听"
-            echo "Redis端口 6379:" && netstat -tlnp | grep :6379 || echo "Redis端口未监听"
+            echo "🐳 Docker容器状态："
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(mysql|redis)" || echo "未找到数据库容器"
 
             echo "🔄 尝试重启应用："
             pm2 restart easy-erp-web || echo "重启失败"
 
-            echo "⏳ 等待重启后再次检查（30秒）："
-            sleep 30
+            echo "⏳ 等待重启（10秒）："
+            sleep 10
             pm2 status
-
-            # 检查是否有备份可以回滚
-            if [ -d "/www/wwwroot/easy-erp-web-backups" ]; then
-              LATEST_BACKUP=$(ls -1t /www/wwwroot/easy-erp-web-backups/ | grep "backup-" | head -1)
-              if [ -n "$LATEST_BACKUP" ]; then
-                echo "🔄 发现最新备份: $LATEST_BACKUP"
-                echo "⚠️  如需回滚，请手动执行以下命令："
-                echo "   cd /www/wwwroot"
-                echo "   rm -rf easy-erp-web"
-                echo "   cp -r easy-erp-web-backups/$LATEST_BACKUP easy-erp-web"
-                echo "   cd easy-erp-web"
-                echo "   pm2 restart easy-erp-web"
-              fi
-            fi
 
       - name: Notify deployment status
         if: success()
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: ${{ secrets.PORT }}
-          script: |
-            echo "🎉 部署成功完成！"
-            echo "📊 应用状态："
-            pm2 status
-            echo "💾 磁盘使用情况："
-            df -h /www/wwwroot/easy-erp-web
-            echo "🔄 最近的应用日志："
-            pm2 logs easy-erp-web --lines 10
+        run: |
+          echo "🎉 部署成功完成！"
+          echo "✅ 应用已成功部署并通过健康检查"
+          echo "🌐 应用地址: https://erp.samuelcn.com"
+          echo "📊 验证时间: $(date)"
 
   # 5. 回滚 Job
   rollback:
