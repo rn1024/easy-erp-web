@@ -377,8 +377,8 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "🔍 尝试健康检查 $(($RETRY_COUNT + 1))/$MAX_RETRIES..."
 
-            # 检查应用健康状态（增加超时时间）
-            response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "http://erp.samuelcn.com:3008/api/health" 2>/dev/null || echo "000")
+            # 检查应用健康状态（使用HTTPS）
+            response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "https://erp.samuelcn.com/api/health" 2>/dev/null || echo "000")
 
             echo "📡 健康检查响应码: $response"
 

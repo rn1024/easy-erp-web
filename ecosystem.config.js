@@ -5,8 +5,8 @@ module.exports = {
       script: './node_modules/.bin/next',
       args: 'start -H 0.0.0.0 -p 3008',
       cwd: '/www/wwwroot/easy-erp-web',
-      instances: 'max',
-      exec_mode: 'cluster',
+      instances: 1,
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3008,
@@ -40,8 +40,6 @@ module.exports = {
 
       // 集群配置
       kill_timeout: 5000,
-      wait_ready: true,
-      listen_timeout: 3000,
 
       // 环境变量
       env_file: '.env',
@@ -55,13 +53,8 @@ module.exports = {
       // 日志轮转
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
 
-      // 启动脚本
-      post_update: [
-        'npm install --production',
-        'npm run build',
-        'npm run db:generate',
-        'npm run db:push',
-      ],
+      // 启动脚本 - 移除构建步骤，因为已在CI中完成
+      post_update: ['npm install --production', 'npm run db:generate', 'npm run db:push'],
     },
   ],
 };
