@@ -21,10 +21,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Setup environment variables
         run: |
@@ -41,13 +46,13 @@ jobs:
           echo "PORT=3008" >> .env
 
       - name: Type check
-        run: npm run type-check
+        run: pnpm type-check
 
       - name: Run tests
-        run: npm test -- --passWithNoTests
+        run: pnpm test -- --passWithNoTests
 
       - name: Build application
-        run: npm run build
+        run: pnpm build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -56,7 +61,7 @@ jobs:
           path: |
             .next
             package.json
-            package-lock.json
+            pnpm-lock.yaml
             ecosystem.config.js
             prisma
             generated
@@ -97,7 +102,7 @@ jobs:
           tar -czf deploy.tar.gz \
             .next \
             package.json \
-            package-lock.json \
+            pnpm-lock.yaml \
             ecosystem.config.js \
             prisma \
             generated \
@@ -151,8 +156,9 @@ jobs:
             # 创建项目目录
             mkdir -p /www/wwwroot/easy-erp-web
 
-            # 停止应用
+            # 停止并删除旧的PM2进程（确保端口更改生效）
             pm2 stop easy-erp-web || true
+            pm2 delete easy-erp-web || true
 
             # 备份当前版本（如果存在）
             if [ -d "/www/wwwroot/easy-erp-web/backup" ]; then
@@ -171,15 +177,23 @@ jobs:
             # 设置环境变量文件
             cp .env.production .env
 
-            # 安装生产依赖
+            # 安装生产依赖（服务器使用npm）
             npm install --production --omit=dev
 
             # 数据库迁移
             npx prisma generate
             npx prisma db push
 
-            # 启动应用
-            pm2 start ecosystem.config.js --name easy-erp-web --env production || pm2 reload easy-erp-web
+            # 检查端口是否被占用，如果被占用则释放
+            PORT_IN_USE=$(netstat -tlnp 2>/dev/null | grep ":3008 " | wc -l)
+            if [ "$PORT_IN_USE" -gt 0 ]; then
+              echo "端口 3008 被占用，正在释放..."
+              lsof -ti:3008 | xargs kill -9 2>/dev/null || true
+              sleep 3
+            fi
+
+            # 启动应用（使用新配置）
+            pm2 start ecosystem.config.js --env production
 
             # 保存 PM2 配置
             pm2 save
