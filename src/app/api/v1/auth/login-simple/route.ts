@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     if (!username || !password) {
       return NextResponse.json(
         { code: 1, msg: '用户名和密码不能为空', data: null },
-        { status: 400 }
+        { status: 200 }
       );
     }
 
@@ -44,18 +44,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (!account) {
-      return NextResponse.json({ code: 1, msg: '用户名或密码错误', data: null }, { status: 401 });
+      return NextResponse.json({ code: 1, msg: '用户名或密码错误', data: null }, { status: 200 });
     }
 
     // 检查账户状态
     if (account.status !== 'ACTIVE') {
-      return NextResponse.json({ code: 1, msg: '账户已被禁用', data: null }, { status: 401 });
+      return NextResponse.json({ code: 1, msg: '账户已被禁用', data: null }, { status: 200 });
     }
 
     // 验证密码
     const isPasswordValid = await verifyPassword(password, account.password);
     if (!isPasswordValid) {
-      return NextResponse.json({ code: 1, msg: '用户名或密码错误', data: null }, { status: 401 });
+      return NextResponse.json({ code: 1, msg: '用户名或密码错误', data: null }, { status: 200 });
     }
 
     // 提取角色和权限

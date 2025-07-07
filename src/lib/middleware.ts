@@ -119,6 +119,47 @@ export class ValidationMiddleware {
   }
 }
 
+// 权限检查工具类
+export class PermissionHelper {
+  /**
+   * 检查用户是否为超级管理员
+   * 支持多种判断方式：
+   * 1. 权限中包含 admin.* 或 *
+   * 2. 角色中包含"超级管理员"
+   */
+  static isSuperAdmin(userPermissions: string[], userRoles?: string[]): boolean {
+    // 方式1：通过权限判断
+    if (userPermissions.includes('admin.*') || userPermissions.includes('*')) {
+      return true;
+    }
+
+    // 方式2：通过角色判断（兼容现有系统）
+    if (userRoles && userRoles.includes('超级管理员')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 检查用户是否拥有指定权限
+   * 超级管理员直接跳过权限检查，返回 true
+   */
+  static hasPermission(
+    userPermissions: string[],
+    requiredPermission: string,
+    userRoles?: string[]
+  ): boolean {
+    // 超级管理员直接跳过权限检查
+    if (this.isSuperAdmin(userPermissions, userRoles)) {
+      return true;
+    }
+
+    // 普通用户检查具体权限
+    return userPermissions.includes(requiredPermission);
+  }
+}
+
 // 认证中间件
 export const withAuth = (handler: (request: NextRequest, user: any) => Promise<NextResponse>) => {
   return async (request: NextRequest): Promise<NextResponse> => {
@@ -175,9 +216,9 @@ export const withAuth = (handler: (request: NextRequest, user: any) => Promise<N
 export const withPermission = (requiredPermissions: string[]) => {
   return (handler: (request: NextRequest, user: any) => Promise<NextResponse>) => {
     return withAuth(async (request: NextRequest, user: any) => {
-      // 检查权限
+      // 检查权限 - 超级管理员直接跳过，普通用户检查具体权限
       const hasPermission = requiredPermissions.every((permission) =>
-        user.permissions.includes(permission)
+        PermissionHelper.hasPermission(user.permissions, permission, user.roles)
       );
 
       if (!hasPermission) {

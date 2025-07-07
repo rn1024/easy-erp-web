@@ -203,7 +203,7 @@ describe('/api/v1/auth', () => {
       const response = await loginHandler(req);
       const data = await response.json();
 
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(200);
       expect(data.code).toBe(1);
       expect(data.msg).toContain('用户名或密码错误');
     });
@@ -238,7 +238,7 @@ describe('/api/v1/auth', () => {
       const response = await loginHandler(req);
       const data = await response.json();
 
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(200);
       expect(data.code).toBe(1);
       expect(data.msg).toContain('用户名或密码错误');
     });
@@ -258,7 +258,7 @@ describe('/api/v1/auth', () => {
       const response = await loginHandler(req);
       const data = await response.json();
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(200);
       expect(data.code).toBe(1);
       expect(data.msg).toContain('参数不完整');
     });
@@ -282,7 +282,7 @@ describe('/api/v1/auth', () => {
       const response = await loginHandler(req);
       const data = await response.json();
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(200);
       expect(data.code).toBe(1);
       expect(data.msg).toContain('验证码错误');
     });

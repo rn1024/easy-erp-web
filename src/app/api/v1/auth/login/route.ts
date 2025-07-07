@@ -19,13 +19,13 @@ export async function POST(request: NextRequest) {
 
     // 基本参数验证
     if (!username || !password || !captcha || !key) {
-      return NextResponse.json({ code: 1, msg: '参数不完整', data: null }, { status: 400 });
+      return NextResponse.json({ code: 1, msg: '参数不完整', data: null }, { status: 200 });
     }
 
     // 验证验证码
     const storedCaptcha = await redisService.get<{ code: string }>(`captcha:${key}`);
     if (!storedCaptcha || storedCaptcha.code !== captcha.toLowerCase()) {
-      return NextResponse.json({ code: 1, msg: '验证码错误', data: null }, { status: 400 });
+      return NextResponse.json({ code: 1, msg: '验证码错误', data: null }, { status: 200 });
     }
 
     // 查找用户
@@ -49,18 +49,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (!account) {
-      return NextResponse.json({ code: 1, msg: '用户名或密码错误', data: null }, { status: 401 });
+      return NextResponse.json({ code: 1, msg: '用户名或密码错误', data: null }, { status: 200 });
     }
 
     // 检查账户状态
     if (account.status !== 'ACTIVE') {
-      return NextResponse.json({ code: 1, msg: '账户已被禁用', data: null }, { status: 401 });
+      return NextResponse.json({ code: 1, msg: '账户已被禁用', data: null }, { status: 200 });
     }
 
     // 验证密码
     const isPasswordValid = await verifyPassword(password, account.password);
     if (!isPasswordValid) {
-      return NextResponse.json({ code: 1, msg: '用户名或密码错误', data: null }, { status: 401 });
+      return NextResponse.json({ code: 1, msg: '用户名或密码错误', data: null }, { status: 200 });
     }
 
     // 清除已使用的验证码
