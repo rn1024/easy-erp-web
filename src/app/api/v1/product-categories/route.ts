@@ -2,16 +2,11 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { withAuth } from '@/lib/middleware';
 
 // GET /api/v1/product-categories - 获取产品分类列表
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user: any) => {
   try {
-    const user = await getCurrentUser(request);
-    if (!user) {
-      return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '10');
@@ -64,16 +59,11 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/v1/product-categories - 创建产品分类
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, user: any) => {
   try {
-    const user = await getCurrentUser(request);
-    if (!user) {
-      return NextResponse.json({ code: 401, msg: '未授权访问', data: null }, { status: 401 });
-    }
-
     const body = await request.json();
     const { name } = body;
 
@@ -118,4 +108,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
