@@ -1,0 +1,876 @@
+# Easy ERP Web - 前端组件开发规范
+
+## 组件分类和职责
+
+### 1. 组件分层架构
+
+```
+src/components/
+├── ui/                     # 基础UI组件
+│   ├── button.tsx         # 按钮组件
+│   ├── table.tsx          # 表格组件
+│   └── loading.tsx        # 加载组件
+├── table-cell/            # 表格单元格组件
+│   ├── table-cell-media.tsx
+│   └── table-cell-debate.tsx
+├── admin-layout.tsx       # 布局组件
+├── permission.tsx         # 权限控制组件
+└── upload-drawer.tsx      # 业务组件
+```
+
+### 2. 组件职责定义
+
+- **基础UI组件**: 无业务逻辑的纯展示组件
+- **业务组件**: 包含特定业务逻辑的功能组件
+- **布局组件**: 页面结构和导航相关组件
+- **表单组件**: 数据输入和验证相关组件
+
+## Ant Design 使用规范
+
+### 1. 组件导入规范
+
+```typescript
+// 推荐：按需导入
+import { Button, Table, Form, Input, Select } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+
+// 避免：全量导入
+// import * from 'antd';
+```
+
+### 2. 表格组件规范
+
+```typescript
+// src/components/business-table.tsx
+import React from 'react';
+import { Table, Button, Space, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { FormattedMessage } from 'react-intl';
+import Permission from '@/components/permission';
+
+interface BusinessTableProps<T> {
+  dataSource: T[];
+  loading?: boolean;
+  pagination?: any;
+  onEdit?: (record: T) => void;
+  onDelete?: (record: T) => void;
+  columns?: any[];
+  rowKey?: string;
+}
+
+function BusinessTable<T extends { id: string }>({
+  dataSource,
+  loading = false,
+  pagination,
+  onEdit,
+  onDelete,
+  columns = [],
+  rowKey = 'id',
+}: BusinessTableProps<T>) {
+  // 操作列配置
+  const actionColumn = {
+    title: <FormattedMessage id="common.actions" />,
+    key: 'actions',
+    width: 120,
+    render: (_: any, record: T) => (
+      <Space size="small">
+        <Permission required={['edit']}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => onEdit?.(record)}
+          >
+            <FormattedMessage id="common.edit" />
+          </Button>
+        </Permission>
+
+        <Permission required={['delete']}>
+          <Popconfirm
+            title={<FormattedMessage id="common.deleteConfirm" />}
+            onConfirm={() => onDelete?.(record)}
+            okText={<FormattedMessage id="common.ok" />}
+            cancelText={<FormattedMessage id="common.cancel" />}
+          >
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+            >
+              <FormattedMessage id="common.delete" />
+            </Button>
+          </Popconfirm>
+        </Permission>
+      </Space>
+    ),
+  };
+
+  // 合并列配置
+  const finalColumns = [
+    ...columns,
+    ...(onEdit || onDelete ? [actionColumn] : []),
+  ];
+
+  return (
+    <Table
+      dataSource={dataSource}
+      columns={finalColumns}
+      loading={loading}
+      rowKey={rowKey}
+      pagination={{
+        ...pagination,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        showTotal: (total, range) =>
+          `${range[0]}-${range[1]} of ${total} items`,
+      }}
+      scroll={{ x: 'max-content' }}
+    />
+  );
+}
+
+export default BusinessTable;
+```
+
+### 3. 表单组件规范
+
+```typescript
+// src/components/business-form.tsx
+import React, { useEffect } from 'react';
+import { Form, Input, Select, Button, Space, Drawer } from 'antd';
+import { useRequest } from 'ahooks';
+import { FormattedMessage } from 'react-intl';
+
+interface BusinessFormProps {
+  visible: boolean;
+  initialValues?: any;
+  onClose: () => void;
+  onSubmit: (values: any) => Promise<void>;
+  title: string;
+  loading?: boolean;
+}
+
+const BusinessForm: React.FC<BusinessFormProps> = ({
+  visible,
+  initialValues,
+  onClose,
+  onSubmit,
+  title,
+  loading = false,
+}) => {
+  const [form] = Form.useForm();
+
+  // 提交处理
+  const { run: handleSubmit, loading: submitting } = useRequest(
+    onSubmit,
+    {
+      manual: true,
+      onSuccess: () => {
+        form.resetFields();
+        onClose();
+      },
+    }
+  );
+
+  // 表单提交
+  const onFinish = (values: any) => {
+    handleSubmit(values);
+  };
+
+  // 初始化表单值
+  useEffect(() => {
+    if (visible && initialValues) {
+      form.setFieldsValue(initialValues);
+    } else if (visible) {
+      form.resetFields();
+    }
+  }, [visible, initialValues, form]);
+
+  return (
+    <Drawer
+      title={title}
+      open={visible}
+      onClose={onClose}
+      width={480}
+      destroyOnClose
+      extra={
+        <Space>
+          <Button onClick={onClose}>
+            <FormattedMessage id="common.cancel" />
+          </Button>
+          <Button
+            type="primary"
+            loading={submitting}
+            onClick={() => form.submit()}
+          >
+            <FormattedMessage id="common.submit" />
+          </Button>
+        </Space>
+      }
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        preserve={false}
+      >
+        <Form.Item
+          name="name"
+          label={<FormattedMessage id="common.name" />}
+          rules={[
+            { required: true, message: '请输入名称' },
+            { max: 50, message: '名称不能超过50个字符' },
+          ]}
+        >
+          <Input placeholder="请输入名称" />
+        </Form.Item>
+
+        <Form.Item
+          name="description"
+          label={<FormattedMessage id="common.description" />}
+          rules={[
+            { max: 200, message: '描述不能超过200个字符' },
+          ]}
+        >
+          <Input.TextArea
+            placeholder="请输入描述"
+            rows={4}
+            maxLength={200}
+            showCount
+          />
+        </Form.Item>
+      </Form>
+    </Drawer>
+  );
+};
+
+export default BusinessForm;
+```
+
+## 权限控制组件
+
+### 1. 权限组件实现
+
+```typescript
+// src/components/permission.tsx - 参考 [permission.tsx](mdc:src/components/permission.tsx)
+import React from 'react';
+import { useLocalStorageState } from 'ahooks';
+
+interface PermissionProps {
+  required: string[];           // 必需的权限列表
+  children: React.ReactNode;    // 子组件
+  fallback?: React.ReactNode;   // 无权限时显示的内容
+  mode?: 'any' | 'all';        // 权限检查模式：any=任一权限，all=全部权限
+}
+
+const Permission: React.FC<PermissionProps> = ({
+  required = [],
+  children,
+  fallback = null,
+  mode = 'any',
+}) => {
+  const [permissions] = useLocalStorageState<string[]>('permissions', {
+    defaultValue: [],
+  });
+
+  // 权限检查逻辑
+  const hasPermission = () => {
+    if (!permissions || permissions.length === 0) {
+      return false;
+    }
+
+    if (mode === 'all') {
+      // 需要拥有所有权限
+      return required.every(permission => permissions.includes(permission));
+    } else {
+      // 需要拥有任一权限
+      return required.some(permission => permissions.includes(permission));
+    }
+  };
+
+  return hasPermission() ? <>{children}</> : <>{fallback}</>;
+};
+
+export default Permission;
+```
+
+### 2. 权限Hooks
+
+```typescript
+// src/hooks/usePermission.ts
+import { useLocalStorageState } from 'ahooks';
+
+export function usePermission() {
+  const [permissions] = useLocalStorageState<string[]>('permissions', {
+    defaultValue: [],
+  });
+
+  const hasPermission = (permission: string): boolean => {
+    return permissions?.includes(permission) || false;
+  };
+
+  const hasAnyPermission = (permissionList: string[]): boolean => {
+    return permissionList.some((permission) => hasPermission(permission));
+  };
+
+  const hasAllPermissions = (permissionList: string[]): boolean => {
+    return permissionList.every((permission) => hasPermission(permission));
+  };
+
+  const hasRole = (role: string): boolean => {
+    // 从localStorage或其他地方获取用户角色
+    const userRoles = localStorage.getItem('userRoles');
+    const roles = userRoles ? JSON.parse(userRoles) : [];
+    return roles.includes(role);
+  };
+
+  return {
+    permissions,
+    hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
+    hasRole,
+  };
+}
+```
+
+## 表格单元格组件
+
+### 1. 通用表格单元格
+
+```typescript
+// src/components/table-cell/table-cell-status.tsx
+import React from 'react';
+import { Tag } from 'antd';
+
+interface StatusCellProps {
+  status: string;
+  statusMap?: Record<string, { text: string; color: string }>;
+}
+
+const TableCellStatus: React.FC<StatusCellProps> = ({
+  status,
+  statusMap = {}
+}) => {
+  const defaultStatusMap = {
+    ACTIVE: { text: '启用', color: 'green' },
+    INACTIVE: { text: '禁用', color: 'red' },
+    PENDING: { text: '待处理', color: 'orange' },
+    COMPLETED: { text: '已完成', color: 'blue' },
+    CANCELLED: { text: '已取消', color: 'gray' },
+  };
+
+  const finalStatusMap = { ...defaultStatusMap, ...statusMap };
+  const statusInfo = finalStatusMap[status];
+
+  if (!statusInfo) {
+    return <span>{status}</span>;
+  }
+
+  return (
+    <Tag color={statusInfo.color}>
+      {statusInfo.text}
+    </Tag>
+  );
+};
+
+export default TableCellStatus;
+```
+
+### 2. 图片展示单元格
+
+```typescript
+// src/components/table-cell/table-cell-image.tsx
+import React, { useState } from 'react';
+import { Image } from 'antd';
+
+interface ImageCellProps {
+  src?: string;
+  alt?: string;
+  width?: number;
+  height?: number;
+  defaultSrc?: string;
+}
+
+const TableCellImage: React.FC<ImageCellProps> = ({
+  src,
+  alt = 'Image',
+  width = 60,
+  height = 60,
+  defaultSrc = '/images/placeholder.png',
+}) => {
+  const [imageSrc, setImageSrc] = useState(src || defaultSrc);
+
+  const handleError = () => {
+    setImageSrc(defaultSrc);
+  };
+
+  return (
+    <Image
+      src={imageSrc}
+      alt={alt}
+      width={width}
+      height={height}
+      style={{ objectFit: 'cover', borderRadius: 4 }}
+      onError={handleError}
+      preview={{
+        mask: '预览',
+      }}
+    />
+  );
+};
+
+export default TableCellImage;
+```
+
+### 3. 操作按钮单元格
+
+```typescript
+// src/components/table-cell/table-cell-actions.tsx
+import React from 'react';
+import { Button, Space, Popconfirm, Dropdown } from 'antd';
+import { EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
+import { FormattedMessage } from 'react-intl';
+import Permission from '@/components/permission';
+
+interface Action {
+  key: string;
+  label: React.ReactNode;
+  icon?: React.ReactNode;
+  permission?: string[];
+  danger?: boolean;
+  confirm?: boolean;
+  confirmTitle?: string;
+  onClick: (record: any) => void;
+}
+
+interface ActionsCellProps {
+  record: any;
+  actions: Action[];
+  maxVisible?: number; // 最多显示几个按钮，其余收起到更多菜单
+}
+
+const TableCellActions: React.FC<ActionsCellProps> = ({
+  record,
+  actions,
+  maxVisible = 2,
+}) => {
+  // 过滤有权限的操作
+  const visibleActions = actions.filter(action => {
+    if (!action.permission) return true;
+    // 这里需要实现权限检查逻辑
+    return true; // 简化处理
+  });
+
+  const primaryActions = visibleActions.slice(0, maxVisible);
+  const moreActions = visibleActions.slice(maxVisible);
+
+  const renderAction = (action: Action) => {
+    const button = (
+      <Button
+        type="link"
+        size="small"
+        icon={action.icon}
+        danger={action.danger}
+        onClick={() => action.onClick(record)}
+      >
+        {action.label}
+      </Button>
+    );
+
+    if (action.confirm) {
+      return (
+        <Popconfirm
+          key={action.key}
+          title={action.confirmTitle || '确认执行此操作吗？'}
+          onConfirm={() => action.onClick(record)}
+          okText="确认"
+          cancelText="取消"
+        >
+          {button}
+        </Popconfirm>
+      );
+    }
+
+    return React.cloneElement(button, { key: action.key });
+  };
+
+  return (
+    <Space size="small">
+      {primaryActions.map(renderAction)}
+
+      {moreActions.length > 0 && (
+        <Dropdown
+          menu={{
+            items: moreActions.map(action => ({
+              key: action.key,
+              label: action.label,
+              icon: action.icon,
+              danger: action.danger,
+              onClick: action.confirm ? undefined : () => action.onClick(record),
+            })),
+          }}
+          trigger={['click']}
+        >
+          <Button type="link" size="small" icon={<MoreOutlined />} />
+        </Dropdown>
+      )}
+    </Space>
+  );
+};
+
+export default TableCellActions;
+```
+
+## 业务表单组件
+
+### 1. 抽屉式表单
+
+```typescript
+// src/components/drawer-form.tsx
+import React, { useEffect } from 'react';
+import { Drawer, Form, Button, Space } from 'antd';
+import { useRequest } from 'ahooks';
+
+interface DrawerFormProps {
+  title: string;
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (values: any) => Promise<void>;
+  initialValues?: any;
+  children: React.ReactNode;
+  width?: number;
+  loading?: boolean;
+}
+
+const DrawerForm: React.FC<DrawerFormProps> = ({
+  title,
+  open,
+  onClose,
+  onSubmit,
+  initialValues,
+  children,
+  width = 480,
+  loading = false,
+}) => {
+  const [form] = Form.useForm();
+
+  const { run: handleSubmit, loading: submitting } = useRequest(
+    onSubmit,
+    {
+      manual: true,
+      onSuccess: () => {
+        form.resetFields();
+        onClose();
+      },
+    }
+  );
+
+  const onFinish = (values: any) => {
+    handleSubmit(values);
+  };
+
+  useEffect(() => {
+    if (open) {
+      if (initialValues) {
+        form.setFieldsValue(initialValues);
+      } else {
+        form.resetFields();
+      }
+    }
+  }, [open, initialValues, form]);
+
+  return (
+    <Drawer
+      title={title}
+      open={open}
+      onClose={onClose}
+      width={width}
+      destroyOnClose
+      extra={
+        <Space>
+          <Button onClick={onClose} disabled={submitting}>
+            取消
+          </Button>
+          <Button
+            type="primary"
+            loading={submitting}
+            onClick={() => form.submit()}
+          >
+            保存
+          </Button>
+        </Space>
+      }
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        preserve={false}
+      >
+        {children}
+      </Form>
+    </Drawer>
+  );
+};
+
+export default DrawerForm;
+```
+
+### 2. 搜索表单组件
+
+```typescript
+// src/components/search-form.tsx
+import React from 'react';
+import { Form, Row, Col, Button, Space } from 'antd';
+
+interface SearchFormProps {
+  children: React.ReactNode;
+  onSearch: (values: any) => void;
+  onReset?: () => void;
+  loading?: boolean;
+  className?: string;
+}
+
+const SearchForm: React.FC<SearchFormProps> = ({
+  children,
+  onSearch,
+  onReset,
+  loading = false,
+  className,
+}) => {
+  const [form] = Form.useForm();
+
+  const handleSearch = (values: any) => {
+    onSearch(values);
+  };
+
+  const handleReset = () => {
+    form.resetFields();
+    onReset?.();
+  };
+
+  return (
+    <div className={className} style={{ marginBottom: 16 }}>
+      <Form
+        form={form}
+        onFinish={handleSearch}
+        layout="vertical"
+      >
+        <Row gutter={16}>
+          <Col span={18}>
+            <Row gutter={16}>
+              {children}
+            </Row>
+          </Col>
+          <Col span={6} style={{ display: 'flex', alignItems: 'end' }}>
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Space>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                >
+                  搜索
+                </Button>
+                <Button onClick={handleReset}>
+                  重置
+                </Button>
+              </Space>
+            </Form.Item>
+          </Col>
+        </Row>
+      </Form>
+    </div>
+  );
+};
+
+export default SearchForm;
+```
+
+## 组件性能优化
+
+### 1. 使用 React.memo
+
+```typescript
+// 纯展示组件使用 React.memo
+const PureComponent = React.memo<Props>(({ data }) => {
+  return <div>{data.name}</div>;
+});
+
+// 自定义比较函数
+const OptimizedComponent = React.memo<Props>(
+  ({ data, options }) => {
+    return <div>{data.name}</div>;
+  },
+  (prevProps, nextProps) => {
+    return prevProps.data.id === nextProps.data.id;
+  }
+);
+```
+
+### 2. 使用 useMemo 和 useCallback
+
+```typescript
+const OptimizedTable: React.FC<TableProps> = ({ data, onEdit, onDelete }) => {
+  // 缓存列配置
+  const columns = useMemo(() => [
+    {
+      title: '名称',
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      render: (_, record) => (
+        <Space>
+          <Button onClick={() => onEdit(record)}>编辑</Button>
+          <Button onClick={() => onDelete(record)}>删除</Button>
+        </Space>
+      ),
+    },
+  ], [onEdit, onDelete]);
+
+  // 缓存事件处理函数
+  const handleEdit = useCallback((record) => {
+    onEdit(record);
+  }, [onEdit]);
+
+  return <Table dataSource={data} columns={columns} />;
+};
+```
+
+### 3. 虚拟滚动优化
+
+```typescript
+// 大数据量表格使用虚拟滚动
+import { FixedSizeList as List } from 'react-window';
+
+const VirtualTable: React.FC<{ data: any[] }> = ({ data }) => {
+  const Row = ({ index, style }) => (
+    <div style={style}>
+      {data[index].name}
+    </div>
+  );
+
+  return (
+    <List
+      height={400}
+      itemCount={data.length}
+      itemSize={50}
+    >
+      {Row}
+    </List>
+  );
+};
+```
+
+## 组件测试规范
+
+### 1. 组件单元测试
+
+```typescript
+// __tests__/components/permission.test.tsx
+import { render, screen } from '@testing-library/react';
+import Permission from '@/components/permission';
+
+describe('Permission Component', () => {
+  beforeEach(() => {
+    // Mock localStorage
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => JSON.stringify(['user:read', 'user:edit'])),
+        setItem: jest.fn(),
+      },
+      writable: true,
+    });
+  });
+
+  it('should render children when user has permission', () => {
+    render(
+      <Permission required={['user:read']}>
+        <div>有权限的内容</div>
+      </Permission>
+    );
+
+    expect(screen.getByText('有权限的内容')).toBeInTheDocument();
+  });
+
+  it('should not render children when user lacks permission', () => {
+    render(
+      <Permission required={['admin:delete']}>
+        <div>无权限的内容</div>
+      </Permission>
+    );
+
+    expect(screen.queryByText('无权限的内容')).not.toBeInTheDocument();
+  });
+
+  it('should render fallback when user lacks permission', () => {
+    render(
+      <Permission required={['admin:delete']} fallback={<div>权限不足</div>}>
+        <div>无权限的内容</div>
+      </Permission>
+    );
+
+    expect(screen.getByText('权限不足')).toBeInTheDocument();
+  });
+});
+```
+
+### 2. 集成测试
+
+```typescript
+// __tests__/components/business-table.test.tsx
+import { render, screen, fireEvent } from '@testing-library/react';
+import BusinessTable from '@/components/business-table';
+
+const mockData = [
+  { id: '1', name: '测试数据1' },
+  { id: '2', name: '测试数据2' },
+];
+
+describe('BusinessTable Component', () => {
+  it('should render table with data', () => {
+    render(
+      <BusinessTable
+        dataSource={mockData}
+        columns={[
+          { title: '名称', dataIndex: 'name', key: 'name' }
+        ]}
+      />
+    );
+
+    expect(screen.getByText('测试数据1')).toBeInTheDocument();
+    expect(screen.getByText('测试数据2')).toBeInTheDocument();
+  });
+
+  it('should call onEdit when edit button is clicked', () => {
+    const onEdit = jest.fn();
+
+    render(
+      <BusinessTable
+        dataSource={mockData}
+        onEdit={onEdit}
+        columns={[
+          { title: '名称', dataIndex: 'name', key: 'name' }
+        ]}
+      />
+    );
+
+    const editButtons = screen.getAllByText('编辑');
+    fireEvent.click(editButtons[0]);
+
+    expect(onEdit).toHaveBeenCalledWith(mockData[0]);
+  });
+});
+```
+
+这些组件开发规范确保了前端组件的可复用性、可维护性和一致性，是 Easy ERP Web 项目前端开发的重要指导。
+description:
+globs:
+alwaysApply: false
+
+---

@@ -1,0 +1,851 @@
+# Easy ERP Web - 业务逻辑规范
+
+## ERP 业务模块概览
+
+Easy ERP Web 系统包含以下核心业务模块：
+
+1. **基础数据管理**: 账户、角色、权限、系统配置
+2. **主体信息管理**: 店铺、供应商、货代、产品分类
+3. **产品管理**: 产品信息、规格、SKU管理
+4. **库存管理**: 成品库存、散件库存、库存预警
+5. **采购管理**: 采购订单、供应商管理、采购流程
+6. **仓库管理**: 仓库任务、打包发货、库存调配
+7. **物流管理**: 发货记录、物流跟踪、货代管理
+8. **财务管理**: 财务报表、成本核算、利润分析
+
+## 业务实体关系
+
+### 1. 核心业务实体
+
+```typescript
+// 参考 [schema.prisma](mdc:prisma/schema.prisma) 中的业务模型
+
+// 店铺 - 业务主体
+interface Shop {
+  id: string;
+  nickname: string; // 店铺名称
+  avatarUrl?: string; // 店铺头像
+  responsiblePerson: string; // 负责人
+  remark?: string; // 备注
+  operatorId: string; // 操作员
+}
+
+// 产品信息 - 核心商品数据
+interface ProductInfo {
+  id: string;
+  shopId: string; // 所属店铺
+  categoryId: string; // 产品分类
+  code: string; // 产品编码
+  specification?: string; // 规格
+  color?: string; // 颜色
+  setQuantity: number; // 套装数量
+  weight?: number; // 重量
+  sku: string; // SKU编码
+  imageUrl?: string; // 产品图片
+  remark?: string; // 备注
+}
+
+// 库存信息 - 成品库存
+interface FinishedInventory {
+  id: string;
+  shopId: string; // 所属店铺
+  productId: string; // 产品ID
+  boxSize?: string; // 箱规
+  packQuantity: number; // 包装数量
+  weight?: number; // 重量
+  location?: string; // 库位
+  stockQuantity: number; // 库存数量
+}
+
+// 采购订单 - 采购流程
+interface PurchaseOrder {
+  id: string;
+  shopId: string; // 所属店铺
+  supplierId: string; // 供应商
+  productId: string; // 产品
+  quantity: number; // 采购数量
+  totalAmount: number; // 总金额
+  status: PurchaseOrderStatus; // 订单状态
+  urgent: boolean; // 是否紧急
+  remark?: string; // 备注
+}
+```
+
+### 2. 业务状态枚举
+
+```typescript
+// 采购订单状态
+enum PurchaseOrderStatus {
+  PENDING = 'PENDING', // 待确认
+  CONFIRMED = 'CONFIRMED', // 已确认
+  PRODUCTION = 'PRODUCTION', // 生产中
+  SHIPPED = 'SHIPPED', // 已发货
+  RECEIVED = 'RECEIVED', // 已收货
+  CANCELLED = 'CANCELLED', // 已取消
+}
+
+// 仓库任务状态
+enum WarehouseTaskStatus {
+  PENDING = 'PENDING', // 待处理
+  IN_PROGRESS = 'IN_PROGRESS', // 进行中
+  COMPLETED = 'COMPLETED', // 已完成
+  CANCELLED = 'CANCELLED', // 已取消
+}
+
+// 发货记录状态
+enum DeliveryRecordStatus {
+  PREPARING = 'PREPARING', // 备货中
+  SHIPPED = 'SHIPPED', // 已发货
+  IN_TRANSIT = 'IN_TRANSIT', // 运输中
+  DELIVERED = 'DELIVERED', // 已送达
+  CANCELLED = 'CANCELLED', // 已取消
+}
+```
+
+## 业务流程规范
+
+### 1. 产品管理流程
+
+```typescript
+// src/services/products.ts
+export class ProductService {
+  // 创建产品
+  static async createProduct(data: CreateProductData): Promise<ProductInfo> {
+    // 1. 验证产品编码唯一性
+    const existingProduct = await prisma.productInfo.findFirst({
+      where: {
+        shopId: data.shopId,
+        code: data.code,
+      },
+    });
+
+    if (existingProduct) {
+      throw new ApiError(1, '产品编码已存在', 400);
+    }
+
+    // 2. 验证SKU唯一性
+    const existingSku = await prisma.productInfo.findUnique({
+      where: { sku: data.sku },
+    });
+
+    if (existingSku) {
+      throw new ApiError(1, 'SKU已存在', 400);
+    }
+
+    // 3. 创建产品信息
+    const product = await prisma.productInfo.create({
+      data: {
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // 4. 初始化库存记录
+    await prisma.finishedInventory.create({
+      data: {
+        shopId: data.shopId,
+        productId: product.id,
+        categoryId: data.categoryId,
+        stockQuantity: 0,
+      },
+    });
+
+    // 5. 记录操作日志
+    await logOperation({
+      category: 'PRODUCT',
+      module: 'SYSTEM',
+      operation: 'CREATE',
+      operatorAccountId: data.operatorId,
+      details: {
+        productId: product.id,
+        productCode: product.code,
+        sku: product.sku,
+      },
+    });
+
+    return product;
+  }
+
+  // 更新产品信息
+  static async updateProduct(id: string, data: UpdateProductData): Promise<ProductInfo> {
+    // 1. 验证产品存在
+    const existingProduct = await prisma.productInfo.findUnique({
+      where: { id },
+    });
+
+    if (!existingProduct) {
+      throw new ApiError(1, '产品不存在', 404);
+    }
+
+    // 2. 验证编码唯一性（如果有变更）
+    if (data.code && data.code !== existingProduct.code) {
+      const duplicateCode = await prisma.productInfo.findFirst({
+        where: {
+          shopId: existingProduct.shopId,
+          code: data.code,
+          id: { not: id },
+        },
+      });
+
+      if (duplicateCode) {
+        throw new ApiError(1, '产品编码已存在', 400);
+      }
+    }
+
+    // 3. 更新产品信息
+    const updatedProduct = await prisma.productInfo.update({
+      where: { id },
+      data: {
+        ...data,
+        updatedAt: new Date(),
+      },
+    });
+
+    // 4. 记录操作日志
+    await logOperation({
+      category: 'PRODUCT',
+      module: 'SYSTEM',
+      operation: 'UPDATE',
+      operatorAccountId: data.operatorId,
+      details: {
+        productId: id,
+        changes: data,
+        previousData: existingProduct,
+      },
+    });
+
+    return updatedProduct;
+  }
+}
+```
+
+### 2. 库存管理流程
+
+```typescript
+// src/services/inventory.ts
+export class InventoryService {
+  // 库存入库
+  static async stockIn(data: StockInData): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      // 1. 查找库存记录
+      const inventory = await tx.finishedInventory.findFirst({
+        where: {
+          productId: data.productId,
+          shopId: data.shopId,
+        },
+      });
+
+      if (!inventory) {
+        throw new ApiError(1, '库存记录不存在', 404);
+      }
+
+      // 2. 更新库存数量
+      const newQuantity = inventory.stockQuantity + data.quantity;
+      await tx.finishedInventory.update({
+        where: { id: inventory.id },
+        data: { stockQuantity: newQuantity },
+      });
+
+      // 3. 记录库存变动日志
+      await tx.log.create({
+        data: {
+          category: 'INVENTORY',
+          module: 'WAREHOUSE',
+          operation: 'STOCK_IN',
+          operatorAccountId: data.operatorId,
+          details: {
+            productId: data.productId,
+            quantity: data.quantity,
+            previousQuantity: inventory.stockQuantity,
+            newQuantity,
+            reason: data.reason,
+          },
+        },
+      });
+    });
+  }
+
+  // 库存出库
+  static async stockOut(data: StockOutData): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      // 1. 查找库存记录
+      const inventory = await tx.finishedInventory.findFirst({
+        where: {
+          productId: data.productId,
+          shopId: data.shopId,
+        },
+      });
+
+      if (!inventory) {
+        throw new ApiError(1, '库存记录不存在', 404);
+      }
+
+      // 2. 验证库存充足
+      if (inventory.stockQuantity < data.quantity) {
+        throw new ApiError(1, '库存不足', 400);
+      }
+
+      // 3. 更新库存数量
+      const newQuantity = inventory.stockQuantity - data.quantity;
+      await tx.finishedInventory.update({
+        where: { id: inventory.id },
+        data: { stockQuantity: newQuantity },
+      });
+
+      // 4. 记录库存变动日志
+      await tx.log.create({
+        data: {
+          category: 'INVENTORY',
+          module: 'WAREHOUSE',
+          operation: 'STOCK_OUT',
+          operatorAccountId: data.operatorId,
+          details: {
+            productId: data.productId,
+            quantity: data.quantity,
+            previousQuantity: inventory.stockQuantity,
+            newQuantity,
+            reason: data.reason,
+          },
+        },
+      });
+
+      // 5. 检查库存预警
+      await this.checkStockAlert(inventory.productId, newQuantity);
+    });
+  }
+
+  // 库存预警检查
+  static async checkStockAlert(productId: string, currentQuantity: number): Promise<void> {
+    const LOW_STOCK_THRESHOLD = 10; // 可配置的预警阈值
+
+    if (currentQuantity <= LOW_STOCK_THRESHOLD) {
+      // 发送库存预警通知
+      await this.sendStockAlert({
+        productId,
+        currentQuantity,
+        threshold: LOW_STOCK_THRESHOLD,
+      });
+    }
+  }
+
+  // 发送库存预警
+  static async sendStockAlert(data: StockAlertData): Promise<void> {
+    // 实现预警通知逻辑
+    console.log('库存预警:', data);
+
+    // 可以集成邮件、短信、站内消息等通知方式
+    // await emailService.sendLowStockAlert(data);
+    // await smsService.sendLowStockAlert(data);
+  }
+}
+```
+
+### 3. 采购管理流程
+
+```typescript
+// src/services/purchase.ts
+export class PurchaseService {
+  // 创建采购订单
+  static async createPurchaseOrder(data: CreatePurchaseOrderData): Promise<PurchaseOrder> {
+    // 1. 验证产品和供应商
+    const [product, supplier] = await Promise.all([
+      prisma.productInfo.findUnique({ where: { id: data.productId } }),
+      prisma.supplier.findUnique({ where: { id: data.supplierId } }),
+    ]);
+
+    if (!product) {
+      throw new ApiError(1, '产品不存在', 404);
+    }
+    if (!supplier) {
+      throw new ApiError(1, '供应商不存在', 404);
+    }
+
+    // 2. 创建采购订单
+    const purchaseOrder = await prisma.purchaseOrder.create({
+      data: {
+        ...data,
+        status: 'PENDING',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // 3. 记录操作日志
+    await logOperation({
+      category: 'PURCHASE',
+      module: 'PROCUREMENT',
+      operation: 'CREATE_ORDER',
+      operatorAccountId: data.operatorId,
+      details: {
+        orderId: purchaseOrder.id,
+        productId: data.productId,
+        supplierId: data.supplierId,
+        quantity: data.quantity,
+        totalAmount: data.totalAmount,
+      },
+    });
+
+    return purchaseOrder;
+  }
+
+  // 更新采购订单状态
+  static async updateOrderStatus(
+    orderId: string,
+    status: PurchaseOrderStatus,
+    operatorId: string
+  ): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      // 1. 获取当前订单
+      const order = await tx.purchaseOrder.findUnique({
+        where: { id: orderId },
+      });
+
+      if (!order) {
+        throw new ApiError(1, '采购订单不存在', 404);
+      }
+
+      // 2. 验证状态转换合法性
+      if (!this.isValidStatusTransition(order.status, status)) {
+        throw new ApiError(1, `无法从 ${order.status} 转换到 ${status}`, 400);
+      }
+
+      // 3. 更新订单状态
+      await tx.purchaseOrder.update({
+        where: { id: orderId },
+        data: { status, updatedAt: new Date() },
+      });
+
+      // 4. 处理状态变更的业务逻辑
+      await this.handleStatusChange(order, status, operatorId, tx);
+    });
+  }
+
+  // 验证状态转换合法性
+  static isValidStatusTransition(
+    currentStatus: PurchaseOrderStatus,
+    newStatus: PurchaseOrderStatus
+  ): boolean {
+    const validTransitions: Record<PurchaseOrderStatus, PurchaseOrderStatus[]> = {
+      PENDING: ['CONFIRMED', 'CANCELLED'],
+      CONFIRMED: ['PRODUCTION', 'CANCELLED'],
+      PRODUCTION: ['SHIPPED', 'CANCELLED'],
+      SHIPPED: ['RECEIVED'],
+      RECEIVED: [], // 终态
+      CANCELLED: [], // 终态
+    };
+
+    return validTransitions[currentStatus]?.includes(newStatus) || false;
+  }
+
+  // 处理状态变更业务逻辑
+  static async handleStatusChange(
+    order: PurchaseOrder,
+    newStatus: PurchaseOrderStatus,
+    operatorId: string,
+    tx: any
+  ): Promise<void> {
+    switch (newStatus) {
+      case 'RECEIVED':
+        // 收货时自动入库
+        await InventoryService.stockIn({
+          productId: order.productId,
+          shopId: order.shopId,
+          quantity: order.quantity,
+          reason: `采购订单收货 - ${order.id}`,
+          operatorId,
+        });
+        break;
+
+      case 'CANCELLED':
+        // 取消订单的业务逻辑
+        await this.handleOrderCancellation(order, operatorId, tx);
+        break;
+    }
+  }
+
+  // 处理订单取消
+  static async handleOrderCancellation(
+    order: PurchaseOrder,
+    operatorId: string,
+    tx: any
+  ): Promise<void> {
+    // 如果已经有预付款，可能需要退款处理
+    // 通知相关人员订单已取消
+    // 更新相关的业务数据
+
+    console.log(`采购订单 ${order.id} 已取消`);
+  }
+}
+```
+
+### 4. 仓库管理流程
+
+```typescript
+// src/services/warehouse.ts
+export class WarehouseService {
+  // 创建仓库任务
+  static async createWarehouseTask(data: CreateWarehouseTaskData): Promise<WarehouseTask> {
+    // 1. 验证数据
+    const product = await prisma.productInfo.findUnique({
+      where: { id: data.productId },
+    });
+
+    if (!product) {
+      throw new ApiError(1, '产品不存在', 404);
+    }
+
+    // 2. 创建仓库任务
+    const task = await prisma.warehouseTask.create({
+      data: {
+        ...data,
+        status: 'PENDING',
+        progress: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // 3. 记录操作日志
+    await logOperation({
+      category: 'WAREHOUSE',
+      module: 'WAREHOUSE',
+      operation: 'CREATE_TASK',
+      operatorAccountId: data.operatorId,
+      details: {
+        taskId: task.id,
+        type: data.type,
+        productId: data.productId,
+        totalQuantity: data.totalQuantity,
+      },
+    });
+
+    return task;
+  }
+
+  // 更新任务进度
+  static async updateTaskProgress(
+    taskId: string,
+    progress: number,
+    operatorId: string
+  ): Promise<void> {
+    // 1. 验证进度范围
+    if (progress < 0 || progress > 100) {
+      throw new ApiError(1, '进度必须在0-100之间', 400);
+    }
+
+    // 2. 更新进度
+    const task = await prisma.warehouseTask.update({
+      where: { id: taskId },
+      data: {
+        progress,
+        status: progress >= 100 ? 'COMPLETED' : 'IN_PROGRESS',
+        updatedAt: new Date(),
+      },
+    });
+
+    // 3. 任务完成时的处理
+    if (progress >= 100) {
+      await this.handleTaskCompletion(task, operatorId);
+    }
+  }
+
+  // 处理任务完成
+  static async handleTaskCompletion(task: WarehouseTask, operatorId: string): Promise<void> {
+    switch (task.type) {
+      case 'PACKAGING':
+        // 打包完成，创建发货任务
+        await this.createShippingTask(task, operatorId);
+        break;
+
+      case 'SHIPPING':
+        // 发货完成，更新库存
+        await InventoryService.stockOut({
+          productId: task.productId,
+          shopId: task.shopId,
+          quantity: task.totalQuantity,
+          reason: `仓库任务发货 - ${task.id}`,
+          operatorId,
+        });
+        break;
+    }
+  }
+
+  // 创建发货任务
+  static async createShippingTask(packagingTask: WarehouseTask, operatorId: string): Promise<void> {
+    await this.createWarehouseTask({
+      shopId: packagingTask.shopId,
+      categoryId: packagingTask.categoryId,
+      productId: packagingTask.productId,
+      totalQuantity: packagingTask.totalQuantity,
+      type: 'SHIPPING',
+      operatorId,
+    });
+  }
+}
+```
+
+## 业务规则约束
+
+### 1. 数据一致性规则
+
+```typescript
+// 业务约束检查
+export class BusinessRules {
+  // 产品SKU唯一性检查
+  static async validateProductSku(sku: string, excludeId?: string): Promise<void> {
+    const existing = await prisma.productInfo.findFirst({
+      where: {
+        sku,
+        id: excludeId ? { not: excludeId } : undefined,
+      },
+    });
+
+    if (existing) {
+      throw new ApiError(1, 'SKU已存在', 400);
+    }
+  }
+
+  // 库存充足性检查
+  static async validateStockSufficiency(
+    productId: string,
+    shopId: string,
+    requiredQuantity: number
+  ): Promise<void> {
+    const inventory = await prisma.finishedInventory.findFirst({
+      where: { productId, shopId },
+    });
+
+    if (!inventory || inventory.stockQuantity < requiredQuantity) {
+      throw new ApiError(1, '库存不足', 400);
+    }
+  }
+
+  // 采购订单金额计算验证
+  static validatePurchaseAmount(quantity: number, unitPrice: number, totalAmount: number): void {
+    const calculatedAmount = quantity * unitPrice;
+
+    if (Math.abs(calculatedAmount - totalAmount) > 0.01) {
+      throw new ApiError(1, '订单金额计算错误', 400);
+    }
+  }
+
+  // 仓库任务依赖检查
+  static async validateWarehouseTaskDependency(
+    productId: string,
+    type: 'PACKAGING' | 'SHIPPING'
+  ): Promise<void> {
+    if (type === 'SHIPPING') {
+      // 发货任务需要先完成打包任务
+      const packagingTask = await prisma.warehouseTask.findFirst({
+        where: {
+          productId,
+          type: 'PACKAGING',
+          status: 'COMPLETED',
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      if (!packagingTask) {
+        throw new ApiError(1, '需要先完成打包任务', 400);
+      }
+    }
+  }
+}
+```
+
+### 2. 权限控制规则
+
+```typescript
+// 业务权限检查
+export class BusinessPermissions {
+  // 店铺数据权限检查
+  static async validateShopAccess(userId: string, shopId: string): Promise<void> {
+    const user = await prisma.account.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new ApiError(1, '用户不存在', 404);
+    }
+
+    // 检查是否有全局权限
+    const hasGlobalAccess = user.roles.some((ar) =>
+      ar.role.permissions.some((rp) => rp.permission.code === 'shop:all')
+    );
+
+    if (hasGlobalAccess) {
+      return;
+    }
+
+    // 检查特定店铺权限
+    const shop = await prisma.shop.findFirst({
+      where: {
+        id: shopId,
+        operatorId: userId,
+      },
+    });
+
+    if (!shop) {
+      throw new ApiError(1, '无权访问该店铺数据', 403);
+    }
+  }
+
+  // 敏感操作权限检查
+  static async validateSensitiveOperation(userId: string, operation: string): Promise<void> {
+    const sensitiveOperations = [
+      'account:delete',
+      'role:delete',
+      'financial:export',
+      'system:config',
+    ];
+
+    if (sensitiveOperations.includes(operation)) {
+      const hasPermission = await this.hasPermission(userId, operation);
+
+      if (!hasPermission) {
+        throw new ApiError(1, '权限不足，无法执行敏感操作', 403);
+      }
+    }
+  }
+
+  // 检查用户权限
+  static async hasPermission(userId: string, permission: string): Promise<boolean> {
+    const count = await prisma.account.count({
+      where: {
+        id: userId,
+        roles: {
+          some: {
+            role: {
+              permissions: {
+                some: {
+                  permission: {
+                    code: permission,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return count > 0;
+  }
+}
+```
+
+### 3. 业务流程控制
+
+```typescript
+// 业务流程状态机
+export class BusinessWorkflow {
+  // 采购订单工作流
+  static readonly purchaseOrderWorkflow = {
+    PENDING: {
+      allowedTransitions: ['CONFIRMED', 'CANCELLED'],
+      requiredPermissions: ['purchase:confirm', 'purchase:cancel'],
+    },
+    CONFIRMED: {
+      allowedTransitions: ['PRODUCTION', 'CANCELLED'],
+      requiredPermissions: ['purchase:update', 'purchase:cancel'],
+    },
+    PRODUCTION: {
+      allowedTransitions: ['SHIPPED', 'CANCELLED'],
+      requiredPermissions: ['purchase:update', 'purchase:cancel'],
+    },
+    SHIPPED: {
+      allowedTransitions: ['RECEIVED'],
+      requiredPermissions: ['purchase:receive'],
+    },
+    RECEIVED: {
+      allowedTransitions: [],
+      requiredPermissions: [],
+    },
+    CANCELLED: {
+      allowedTransitions: [],
+      requiredPermissions: [],
+    },
+  };
+
+  // 验证工作流转换
+  static async validateWorkflowTransition(
+    entityType: string,
+    currentStatus: string,
+    newStatus: string,
+    userId: string
+  ): Promise<void> {
+    const workflow = this.getWorkflow(entityType);
+    const currentState = workflow[currentStatus];
+
+    if (!currentState) {
+      throw new ApiError(1, '无效的当前状态', 400);
+    }
+
+    if (!currentState.allowedTransitions.includes(newStatus)) {
+      throw new ApiError(1, `不允许从 ${currentStatus} 转换到 ${newStatus}`, 400);
+    }
+
+    // 检查权限
+    const requiredPermission = this.getTransitionPermission(currentStatus, newStatus);
+    if (requiredPermission) {
+      const hasPermission = await BusinessPermissions.hasPermission(userId, requiredPermission);
+      if (!hasPermission) {
+        throw new ApiError(1, '权限不足，无法执行状态转换', 403);
+      }
+    }
+  }
+
+  // 获取工作流定义
+  static getWorkflow(entityType: string): any {
+    switch (entityType) {
+      case 'PurchaseOrder':
+        return this.purchaseOrderWorkflow;
+      default:
+        throw new ApiError(1, '未知的实体类型', 400);
+    }
+  }
+
+  // 获取状态转换所需权限
+  static getTransitionPermission(currentStatus: string, newStatus: string): string | null {
+    // 根据具体的状态转换返回所需权限
+    const transitionPermissions: Record<string, string> = {
+      'PENDING->CONFIRMED': 'purchase:confirm',
+      'CONFIRMED->PRODUCTION': 'purchase:update',
+      'PRODUCTION->SHIPPED': 'purchase:ship',
+      'SHIPPED->RECEIVED': 'purchase:receive',
+      '*->CANCELLED': 'purchase:cancel',
+    };
+
+    return (
+      transitionPermissions[`${currentStatus}->${newStatus}`] ||
+      transitionPermissions[`*->${newStatus}`] ||
+      null
+    );
+  }
+}
+```
+
+这些业务逻辑规范定义了 Easy ERP Web 系统的核心业务流程、数据约束和权限控制，确保业务操作的正确性和安全性。
+description:
+globs:
+alwaysApply: false
+
+---
