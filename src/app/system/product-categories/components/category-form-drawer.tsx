@@ -1,3 +1,4 @@
+import React from 'react';
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -8,48 +9,23 @@ import { App, Button, Drawer, Form, Input, Space } from 'antd';
  */
 import { apiErrorMsg } from '@/utils/apiErrorMsg';
 
-interface ProductCategory {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  _count: {
-    products: number;
-  };
-}
-
-// API 调用函数
-const createCategory = async (data: any) => {
-  const response = await fetch('/api/v1/product-categories', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-};
-
-const updateCategory = async (id: string, data: any) => {
-  const response = await fetch(`/api/v1/product-categories/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-};
+/**
+ * Services
+ */
+import {
+  createProductCategoryApi,
+  updateProductCategoryApi,
+  type ProductCategory,
+  type ProductCategoryFormData,
+} from '@/services/products';
 
 // form submit
-const formSubmit = async (entity: ProductCategory | null, formData: any) => {
+const formSubmit = async (entity: ProductCategory | null, formData: ProductCategoryFormData) => {
   // 区分是更新还是新增
   if (entity && entity.id) {
-    return await updateCategory(entity.id, formData);
+    return await updateProductCategoryApi(entity.id, formData);
   }
-  return await createCategory(formData);
+  return await createProductCategoryApi(formData);
 };
 
 /**
@@ -94,15 +70,15 @@ const CategoryFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
             onClick={() => {
               form
                 .validateFields()
-                .then(async (formData: any) => {
+                .then(async (formData: ProductCategoryFormData) => {
                   setSubmittingTrue();
                   try {
                     const res = await formSubmit(entity, formData);
-                    if (get(res, 'code') === 200) {
+                    if (get(res, 'data.code') === 0) {
                       message.success(entity ? '更新成功' : '创建成功');
                       closeDrawer(true);
                     } else {
-                      message.error(get(res, 'msg') || '操作失败');
+                      message.error(get(res, 'data.msg') || '操作失败');
                       setSubmittingFalse();
                     }
                   } catch (error: any) {
@@ -121,8 +97,8 @@ const CategoryFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
     destroyOnClose: true,
     maskClosable: false,
     open: open,
-    title: entity ? '编辑产品分类' : '新增产品分类',
-    width: 500,
+    title: entity ? '编辑产品分类' : '新建产品分类',
+    width: 400,
     afterOpenChange: (open) => {
       if (!open) {
         setSubmittingFalse();
@@ -146,6 +122,7 @@ const CategoryFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
     layout: 'vertical',
     validateTrigger: 'onBlur',
     preserve: false,
+    requiredMark: false,
   };
 
   return (
@@ -156,10 +133,10 @@ const CategoryFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
           label="分类名称"
           rules={[
             { required: true, message: '请输入分类名称' },
-            { max: 50, message: '分类名称不能超过50个字符' },
+            { max: 50, message: '分类名称长度不能超过50个字符' },
           ]}
         >
-          <Input placeholder="请输入分类名称" maxLength={50} />
+          <Input placeholder="请输入分类名称" />
         </Form.Item>
       </Form>
     </Drawer>

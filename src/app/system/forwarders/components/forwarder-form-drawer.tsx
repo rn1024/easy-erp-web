@@ -10,70 +10,15 @@ import { App, Button, Drawer, Form, Input, Space, Row, Col } from 'antd';
 import { apiErrorMsg } from '@/utils/apiErrorMsg';
 
 /**
- * APIs
+ * Services
  */
-import axios from '@/services/index';
+import {
+  createForwarder,
+  updateForwarder,
+  type Forwarder,
+  type ForwarderFormData,
+} from '@/services/forwarders';
 import type { ResType } from '@/types/api';
-
-// 货代数据类型
-export interface Forwarder {
-  id: string;
-  nickname: string;
-  avatarUrl?: string;
-  contactPerson: string;
-  contactPhone: string;
-  companyName: string;
-  creditCode?: string;
-  bankName?: string;
-  bankAccount?: string;
-  bankAddress?: string;
-  remark?: string;
-  operatorId: string;
-  createdAt: string;
-  updatedAt: string;
-  operator: {
-    id: string;
-    name: string;
-  };
-}
-
-// 货代查询参数
-export interface ForwardersParams {
-  page?: number;
-  pageSize?: number;
-  nickname?: string;
-  companyName?: string;
-}
-
-// 创建/更新货代参数
-export interface ForwarderFormData {
-  nickname: string;
-  avatarUrl?: string;
-  contactPerson: string;
-  contactPhone: string;
-  companyName: string;
-  creditCode?: string;
-  bankName?: string;
-  bankAccount?: string;
-  bankAddress?: string;
-  remark?: string;
-}
-
-// 创建货代
-const createForwarder = (data: ForwarderFormData) => {
-  return axios<ResType<Forwarder>>('/forwarding-agents', {
-    method: 'post',
-    data,
-  });
-};
-
-// 更新货代
-const updateForwarder = (id: string, data: Partial<ForwarderFormData>) => {
-  return axios<ResType<Forwarder>>(`/forwarding-agents/${id}`, {
-    method: 'put',
-    data,
-  });
-};
 
 // form submit
 const formSubmit = async (entity: Forwarder | null, formData: ForwarderFormData) => {
@@ -130,7 +75,7 @@ const ForwarderFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => 
                   setSubmittingTrue();
                   try {
                     const res = await formSubmit(entity, formData);
-                    if (get(res, 'data.code') === 200) {
+                    if (get(res, 'data.code') === 0) {
                       message.success(entity ? '更新成功' : '创建成功');
                       closeDrawer(true);
                     } else {

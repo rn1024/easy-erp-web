@@ -19,47 +19,20 @@ import {
 import ForwarderFormDrawer from './components/forwarder-form-drawer';
 
 /**
- * APIs
+ * Services
  */
-import axios from '@/services/index';
-
-// 获取货代列表
-const getForwarders = (params: ForwardersParams) => {
-  return axios<
-    ResType<{
-      list: Forwarder[];
-      meta: {
-        page: number;
-        pageSize: number;
-        total: number;
-        totalPages: number;
-      };
-    }>
-  >('/forwarding-agents', {
-    method: 'get',
-    params,
-  });
-};
-
-// 删除货代
-const deleteForwarder = (id: string) => {
-  return axios<ResType<null>>(`/forwarding-agents/${id}`, {
-    method: 'delete',
-  });
-};
-
-// 获取单个货代信息
-const getForwarder = (id: string) => {
-  return axios<ResType<Forwarder>>(`/forwarding-agents/${id}`, {
-    method: 'get',
-  });
-};
+import {
+  getForwarders,
+  getForwarder,
+  deleteForwarder,
+  type Forwarder,
+  type ForwardersParams,
+} from '@/services/forwarders';
 
 /**
  * Types
  */
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import type { Forwarder, ForwardersParams } from './components/forwarder-form-drawer';
 import type { ResType } from '@/types/api';
 
 const ForwardersPage: React.FC = () => {
@@ -86,20 +59,32 @@ const ForwardersPage: React.FC = () => {
     data: forwardersData,
     loading,
     refresh,
-  } = useRequest(() => getForwarders(searchParams), {
-    refreshDeps: [searchParams],
-  });
+  } = useRequest(
+    async () => {
+      const response = await getForwarders(searchParams);
+      return response.data;
+    },
+    {
+      refreshDeps: [searchParams],
+    }
+  );
 
-  const { run: handleDelete } = useRequest(deleteForwarder, {
-    manual: true,
-    onSuccess: () => {
-      message.success('货代删除成功');
-      refresh();
+  const { run: handleDelete } = useRequest(
+    async (id: string) => {
+      const response = await deleteForwarder(id);
+      return response.data;
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.msg || '删除失败');
-    },
-  });
+    {
+      manual: true,
+      onSuccess: () => {
+        message.success('货代删除成功');
+        refresh();
+      },
+      onError: (error: any) => {
+        message.error(error.response?.data?.msg || '删除失败');
+      },
+    }
+  );
 
   const { run: fetchForwarderDetail } = useRequest(
     async (id: string) => {
@@ -278,13 +263,13 @@ const ForwardersPage: React.FC = () => {
    */
   const proTableProps: ProTableProps<Forwarder, ForwardersParams> = {
     columns,
-    dataSource: forwardersData?.data?.data?.list || [],
+    dataSource: forwardersData?.data?.list || [],
     loading,
     rowKey: 'id',
     pagination: {
       current: Number(searchParams.page) || 1,
       pageSize: Number(searchParams.pageSize) || 20,
-      total: forwardersData?.data?.data?.meta?.total || 0,
+      total: forwardersData?.data?.meta?.total || 0,
       showSizeChanger: true,
       showQuickJumper: true,
       showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,

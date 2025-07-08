@@ -18,36 +18,19 @@ import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
  */
 import InventoryFormDrawer from './components/inventory-form-drawer';
 
-const { Option } = Select;
+/**
+ * Services
+ */
+import {
+  getFinishedInventoryList,
+  deleteFinishedInventory,
+  type FinishedInventoryItem,
+  type FinishedInventoryQueryParams,
+} from '@/services/inventory';
+import { getShops } from '@/services/shops';
+import { getProductCategoriesApi } from '@/services/products';
 
-interface FinishedInventoryItem {
-  id: string;
-  shopId: string;
-  categoryId: string;
-  productId: string;
-  boxSize?: string;
-  packQuantity: number;
-  weight?: number;
-  location?: string;
-  stockQuantity: number;
-  createdAt: string;
-  updatedAt: string;
-  shop: {
-    id: string;
-    nickname: string;
-  };
-  category: {
-    id: string;
-    name: string;
-  };
-  product: {
-    id: string;
-    code: string;
-    sku: string;
-    specification?: string;
-    color?: string;
-  };
-}
+const { Option } = Select;
 
 interface SearchFormData {
   shopId?: string;
@@ -58,51 +41,11 @@ interface SearchFormData {
   pageSize?: number;
 }
 
-// 内嵌API调用函数
-const getInventoryList = async (params: any = {}) => {
-  const response = await fetch('/api/v1/finished-inventory?' + new URLSearchParams(params), {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  return response.json();
-};
-
-const deleteInventory = async (id: string) => {
-  const response = await fetch(`/api/v1/finished-inventory/${id}`, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  return response.json();
-};
-
-const getShops = async () => {
-  const response = await fetch('/api/v1/shops?pageSize=100', {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  const result = await response.json();
-  return result.data?.list || [];
-};
-
-const getCategories = async () => {
-  const response = await fetch('/api/v1/product-categories?pageSize=100', {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  const result = await response.json();
-  return result.data?.list || [];
-};
-
 const FinishedInventoryPage: React.FC = () => {
   const [searchForm] = Form.useForm();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinishedInventoryItem | null>(null);
-  const [searchParams, setSearchParams] = useState<SearchFormData>({
+  const [searchParams, setSearchParams] = useState<FinishedInventoryQueryParams>({
     page: 1,
     pageSize: 10,
   });
@@ -112,31 +55,49 @@ const FinishedInventoryPage: React.FC = () => {
     data: inventoryData,
     loading,
     refresh,
-  } = useRequest(() => getInventoryList(searchParams), {
-    refreshDeps: [searchParams],
-  });
+  } = useRequest(
+    async () => {
+      const response = await getFinishedInventoryList(searchParams);
+      return response.data;
+    },
+    {
+      refreshDeps: [searchParams],
+    }
+  );
 
   // 获取店铺列表
-  const { data: shopData = [] } = useRequest(getShops);
+  const { data: shopData = [] } = useRequest(async () => {
+    const response = await getShops({ pageSize: 100 });
+    return response.data?.data?.list || [];
+  });
 
   // 获取产品分类列表
-  const { data: categoryData = [] } = useRequest(getCategories);
+  const { data: categoryData = [] } = useRequest(async () => {
+    const response = await getProductCategoriesApi({ pageSize: 100 });
+    return response.data?.data?.list || [];
+  });
 
   // 删除成品库存
-  const { run: handleDelete } = useRequest(deleteInventory, {
-    manual: true,
-    onSuccess: (result) => {
-      if (result.code === 200) {
-        message.success('删除成功');
-        refresh();
-      } else {
-        message.error(result.msg || '删除失败');
-      }
+  const { run: handleDelete } = useRequest(
+    async (id: string) => {
+      const response = await deleteFinishedInventory(id);
+      return response.data;
     },
-    onError: () => {
-      message.error('删除失败');
-    },
-  });
+    {
+      manual: true,
+      onSuccess: (result) => {
+        if (result.code === 0) {
+          message.success('删除成功');
+          refresh();
+        } else {
+          message.error(result.msg || '删除失败');
+        }
+      },
+      onError: () => {
+        message.error('删除失败');
+      },
+    }
+  );
 
   // 搜索处理
   const handleSearch = () => {
@@ -274,7 +235,7 @@ const FinishedInventoryPage: React.FC = () => {
     pagination: {
       current: Number(searchParams.page) || 1,
       pageSize: Number(searchParams.pageSize) || 20,
-      total: inventoryData?.data?.data?.meta?.total || 0,
+      total: meta.total || 0,
       showSizeChanger: true,
       showQuickJumper: true,
       showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,

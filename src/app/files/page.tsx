@@ -27,9 +27,9 @@ import {
 } from '@ant-design/icons';
 
 /**
- * APIs
+ * Services
  */
-import axios from '@/services/index';
+import { uploadImage, uploadVideo } from '@/services/common';
 
 // 格式化文件大小
 const formatFileSize = (bytes: number) => {
@@ -71,14 +71,13 @@ const FilesPage: React.FC = () => {
    */
   const { loading: uploadLoading, run: uploadFile } = useRequest(
     async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
+      const isImage = file.type.startsWith('image/');
 
-      return axios.post('/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      if (isImage) {
+        return await uploadImage({ file });
+      } else {
+        return await uploadVideo({ file });
+      }
     },
     {
       manual: true,

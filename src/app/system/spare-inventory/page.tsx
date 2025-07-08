@@ -27,34 +27,22 @@ import {
 import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 
-const { Option } = Select;
+/**
+ * Services
+ */
+import {
+  getSpareInventoryList,
+  createSpareInventory,
+  updateSpareInventory,
+  deleteSpareInventory,
+  type SpareInventoryItem,
+  type SpareInventoryQueryParams,
+  type SpareInventoryParams,
+} from '@/services/inventory';
+import { getShops } from '@/services/shops';
+import { getProductCategoriesApi, getProductsApi } from '@/services/products';
 
-interface SpareInventoryItem {
-  id: string;
-  shopId: string;
-  categoryId: string;
-  productId: string;
-  spareType: string;
-  location?: string;
-  quantity: number;
-  createdAt: string;
-  updatedAt: string;
-  shop: {
-    id: string;
-    nickname: string;
-  };
-  category: {
-    id: string;
-    name: string;
-  };
-  product: {
-    id: string;
-    code: string;
-    sku: string;
-    specification?: string;
-    color?: string;
-  };
-}
+const { Option } = Select;
 
 interface SearchFormData {
   shopId?: string;
@@ -66,87 +54,13 @@ interface SearchFormData {
   pageSize?: number;
 }
 
-// 内嵌API调用函数
-const getInventoryList = async (params: any = {}) => {
-  const response = await fetch('/api/v1/spare-inventory?' + new URLSearchParams(params), {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  return response.json();
-};
-
-const createInventory = async (data: any) => {
-  const response = await fetch('/api/v1/spare-inventory', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-};
-
-const updateInventory = async (id: string, data: any) => {
-  const response = await fetch(`/api/v1/spare-inventory/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-};
-
-const deleteInventory = async (id: string) => {
-  const response = await fetch(`/api/v1/spare-inventory/${id}`, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  return response.json();
-};
-
-const getShops = async () => {
-  const response = await fetch('/api/v1/shops?pageSize=100', {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  const result = await response.json();
-  return result.data?.list || [];
-};
-
-const getCategories = async () => {
-  const response = await fetch('/api/v1/product-categories?pageSize=100', {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  const result = await response.json();
-  return result.data?.list || [];
-};
-
-const getProducts = async (categoryId: string) => {
-  const response = await fetch(`/api/v1/products?categoryId=${categoryId}&pageSize=100`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  const result = await response.json();
-  return result.data?.list || [];
-};
-
 const SpareInventoryPage: React.FC = () => {
   const [searchForm] = Form.useForm();
   const [modalForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
   const [editingRecord, setEditingRecord] = useState<SpareInventoryItem | null>(null);
-  const [searchParams, setSearchParams] = useState<SearchFormData>({
+  const [searchParams, setSearchParams] = useState<SpareInventoryQueryParams>({
     page: 1,
     pageSize: 10,
   });
@@ -157,19 +71,35 @@ const SpareInventoryPage: React.FC = () => {
     data: inventoryData,
     loading,
     refresh,
-  } = useRequest(() => getInventoryList(searchParams), {
-    refreshDeps: [searchParams],
-  });
+  } = useRequest(
+    async () => {
+      const response = await getSpareInventoryList(searchParams);
+      return response.data;
+    },
+    {
+      refreshDeps: [searchParams],
+    }
+  );
 
   // 获取店铺列表
-  const { data: shopData = [] } = useRequest(getShops);
+  const { data: shopData = [] } = useRequest(async () => {
+    const response = await getShops({ pageSize: 100 });
+    return response.data?.data?.list || [];
+  });
 
   // 获取产品分类列表
-  const { data: categoryData = [] } = useRequest(getCategories);
+  const { data: categoryData = [] } = useRequest(async () => {
+    const response = await getProductCategoriesApi({ pageSize: 100 });
+    return response.data?.data?.list || [];
+  });
 
   // 获取产品列表
   const { data: productData = [] } = useRequest(
-    () => (selectedCategoryId ? getProducts(selectedCategoryId) : Promise.resolve([])),
+    async () => {
+      if (!selectedCategoryId) return [];
+      const response = await getProductsApi({ categoryId: selectedCategoryId, pageSize: 100 });
+      return response.data?.data?.list || [];
+    },
     {
       refreshDeps: [selectedCategoryId],
     }
@@ -177,17 +107,19 @@ const SpareInventoryPage: React.FC = () => {
 
   // 创建/更新散件库存
   const { run: submitInventory, loading: submitting } = useRequest(
-    async (values: any) => {
+    async (values: SpareInventoryParams) => {
       if (modalType === 'create') {
-        return createInventory(values);
+        const response = await createSpareInventory(values);
+        return response.data;
       } else {
-        return updateInventory(editingRecord!.id, values);
+        const response = await updateSpareInventory(editingRecord!.id, values);
+        return response.data;
       }
     },
     {
       manual: true,
       onSuccess: (result) => {
-        if (result.code === 200) {
+        if (result.code === 0) {
           message.success(modalType === 'create' ? '创建成功' : '更新成功');
           setIsModalVisible(false);
           modalForm.resetFields();
@@ -204,20 +136,26 @@ const SpareInventoryPage: React.FC = () => {
   );
 
   // 删除散件库存
-  const { run: handleDelete } = useRequest(deleteInventory, {
-    manual: true,
-    onSuccess: (result) => {
-      if (result.code === 200) {
-        message.success('删除成功');
-        refresh();
-      } else {
-        message.error(result.msg || '删除失败');
-      }
+  const { run: handleDelete } = useRequest(
+    async (id: string) => {
+      const response = await deleteSpareInventory(id);
+      return response.data;
     },
-    onError: () => {
-      message.error('删除失败');
-    },
-  });
+    {
+      manual: true,
+      onSuccess: (result) => {
+        if (result.code === 0) {
+          message.success('删除成功');
+          refresh();
+        } else {
+          message.error(result.msg || '删除失败');
+        }
+      },
+      onError: () => {
+        message.error('删除失败');
+      },
+    }
+  );
 
   // 搜索处理
   const handleSearch = () => {
@@ -355,7 +293,7 @@ const SpareInventoryPage: React.FC = () => {
     pagination: {
       current: Number(searchParams.page) || 1,
       pageSize: Number(searchParams.pageSize) || 20,
-      total: inventoryData?.data?.data?.meta?.total || 0,
+      total: meta.total || 0,
       showSizeChanger: true,
       showQuickJumper: true,
       showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
@@ -504,7 +442,7 @@ const SpareInventoryPage: React.FC = () => {
             >
               {productData.map((product: any) => (
                 <Option key={product.id} value={product.id}>
-                  {product.code} - {product.sku}
+                  {product.code} - {product.specification}
                 </Option>
               ))}
             </Select>
@@ -527,23 +465,19 @@ const SpareInventoryPage: React.FC = () => {
             </Col>
           </Row>
 
-          <Form.Item name="quantity" label="数量">
-            <InputNumber min={0} placeholder="散件数量" style={{ width: '100%' }} />
+          <Form.Item
+            name="quantity"
+            label="数量"
+            rules={[{ required: true, message: '请输入数量' }]}
+          >
+            <InputNumber min={0} style={{ width: '100%' }} placeholder="输入数量" />
           </Form.Item>
 
-          <Form.Item>
+          <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Space>
+              <Button onClick={() => setIsModalVisible(false)}>取消</Button>
               <Button type="primary" htmlType="submit" loading={submitting}>
                 {modalType === 'create' ? '创建' : '更新'}
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsModalVisible(false);
-                  modalForm.resetFields();
-                  setEditingRecord(null);
-                }}
-              >
-                取消
               </Button>
             </Space>
           </Form.Item>

@@ -9,79 +9,29 @@ import { App, Button, Drawer, Form, Input, Space, Select, Row, Col, InputNumber 
  */
 import { apiErrorMsg } from '@/utils/apiErrorMsg';
 
+/**
+ * Services
+ */
+import {
+  createFinishedInventory,
+  updateFinishedInventory,
+  type FinishedInventoryItem,
+  type FinishedInventoryParams,
+} from '@/services/inventory';
+import { getProductsApi } from '@/services/products';
+
 const { Option } = Select;
 
-interface FinishedInventoryItem {
-  id: string;
-  shopId: string;
-  categoryId: string;
-  productId: string;
-  boxSize?: string;
-  packQuantity: number;
-  weight?: number;
-  location?: string;
-  stockQuantity: number;
-  createdAt: string;
-  updatedAt: string;
-  shop: {
-    id: string;
-    nickname: string;
-  };
-  category: {
-    id: string;
-    name: string;
-  };
-  product: {
-    id: string;
-    code: string;
-    sku: string;
-    specification?: string;
-    color?: string;
-  };
-}
-
-// API 调用函数
-const createInventory = async (data: any) => {
-  const response = await fetch('/api/v1/finished-inventory', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-};
-
-const updateInventory = async (id: string, data: any) => {
-  const response = await fetch(`/api/v1/finished-inventory/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return response.json();
-};
-
-const getProducts = async (categoryId: string) => {
-  const response = await fetch(`/api/v1/products?categoryId=${categoryId}&pageSize=100`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  const result = await response.json();
-  return result.data?.list || [];
-};
-
 // form submit
-const formSubmit = async (entity: FinishedInventoryItem | null, formData: any) => {
+const formSubmit = async (
+  entity: FinishedInventoryItem | null,
+  formData: FinishedInventoryParams
+) => {
   // 区分是更新还是新增
   if (entity && entity.id) {
-    return await updateInventory(entity.id, formData);
+    return await updateFinishedInventory(entity.id, formData);
   }
-  return await createInventory(formData);
+  return await createFinishedInventory(formData);
 };
 
 /**
@@ -123,8 +73,8 @@ const InventoryFormDrawer: React.FC<Props> = ({
   // 获取产品列表
   const loadProducts = async (categoryId: string) => {
     try {
-      const products = await getProducts(categoryId);
-      setProductData(products);
+      const response = await getProductsApi({ categoryId, pageSize: 100 });
+      setProductData(response.data?.data?.list || []);
     } catch (error) {
       setProductData([]);
     }
@@ -146,15 +96,15 @@ const InventoryFormDrawer: React.FC<Props> = ({
             onClick={() => {
               form
                 .validateFields()
-                .then(async (formData: any) => {
+                .then(async (formData: FinishedInventoryParams) => {
                   setSubmittingTrue();
                   try {
                     const res = await formSubmit(entity, formData);
-                    if (get(res, 'code') === 200) {
+                    if (get(res, 'data.code') === 0) {
                       message.success(entity ? '更新成功' : '创建成功');
                       closeDrawer(true);
                     } else {
-                      message.error(get(res, 'msg') || '操作失败');
+                      message.error(get(res, 'data.msg') || '操作失败');
                       setSubmittingFalse();
                     }
                   } catch (error: any) {

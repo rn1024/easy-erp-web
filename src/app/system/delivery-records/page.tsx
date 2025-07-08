@@ -46,18 +46,10 @@ import {
 } from '@/services/delivery';
 import { getShops } from '@/services/shops';
 import { getProductsApi } from '@/services/products';
-import axios from '@/services/index';
+import { getForwarders } from '@/services/forwarders';
 
 const { Option } = Select;
 const { TextArea } = Input;
-
-// 获取货代列表的API函数
-const getForwardersApi = (params: any) => {
-  return axios('/forwarding-agents', {
-    method: 'get',
-    params,
-  });
-};
 
 const DeliveryRecordsPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -89,15 +81,16 @@ const DeliveryRecordsPage: React.FC = () => {
   const { data: productsResponse } = useRequest(() => getProductsApi({ page: 1, pageSize: 1000 }));
 
   // 获取货代列表
-  const { data: forwardersResponse } = useRequest(() =>
-    getForwardersApi({ page: 1, pageSize: 1000 })
-  );
+  const { data: forwardersResponse } = useRequest(async () => {
+    const response = await getForwarders({ page: 1, pageSize: 1000 });
+    return response.data;
+  });
 
   // 处理数据
   const recordsData = recordsResponse?.data;
   const shopsData = shopsResponse?.data?.data?.list || [];
   const productsData = productsResponse?.data?.data?.list || [];
-  const forwardersData = forwardersResponse?.data?.data?.list || [];
+  const forwardersData = forwardersResponse?.data?.list || [];
 
   // 创建/更新发货记录
   const { run: handleSubmit, loading: submitLoading } = useRequest(
