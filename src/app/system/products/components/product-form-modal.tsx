@@ -1,7 +1,8 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Drawer, Form, Input, Space, Select, Row, Col, InputNumber } from 'antd';
+import { App, Button, Modal, Form, Input, Space, Select, Row, Col, InputNumber } from 'antd';
+import { useEffect } from 'react';
 
 /**
  * Utils
@@ -11,12 +12,14 @@ import { apiErrorMsg } from '@/utils/apiErrorMsg';
 /**
  * APIs
  */
-import {
-  createProductApi,
-  updateProductApi,
-  type ProductInfo,
-  type ProductFormData,
-} from '@/services/products';
+import { createProductApi, updateProductApi } from '@/services/products';
+
+/**
+ * Types
+ */
+import type { ModalProps, FormProps } from 'antd';
+import type { IntlShape } from 'react-intl';
+import type { ProductInfo, ProductFormData } from '@/services/products';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -30,20 +33,14 @@ const formSubmit = async (entity: ProductInfo | null, formData: ProductFormData)
   return await createProductApi(formData);
 };
 
-/**
- * Types
- */
-import type { DrawerProps, FormProps } from 'antd';
-import type { IntlShape } from 'react-intl';
-
 type Props = {
   open: boolean;
   entity: ProductInfo | null;
-  closeDrawer: (reload?: boolean) => void;
+  closeModal: (reload?: boolean) => void;
   categoriesList?: any[];
 };
 
-const ProductFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, categoriesList = [] }) => {
+const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categoriesList = [] }) => {
   /**
    * Hooks
    */
@@ -58,71 +55,77 @@ const ProductFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, categor
   const [form] = Form.useForm();
 
   /**
-   * DrawerProps
+   * Handlers
    */
-  const drawerProps: DrawerProps = {
-    footer: (
-      <div style={{ textAlign: 'right' }}>
-        <Space>
-          <Button type="default" onClick={() => closeDrawer()}>
-            取消
-          </Button>
-          <Button
-            type="primary"
-            loading={submitting}
-            onClick={() => {
-              form
-                .validateFields()
-                .then(async (formData: any) => {
-                  setSubmittingTrue();
-                  try {
-                    // 处理表单数据
-                    const submitData: ProductFormData = {
-                      ...formData,
-                      weight: formData.weight ? parseFloat(formData.weight) : undefined,
-                      setQuantity: formData.setQuantity || 1,
-                    };
+  const handleSubmit = async () => {
+    try {
+      const formData = await form.validateFields();
+      setSubmittingTrue();
 
-                    const res = await formSubmit(entity, submitData);
-                    if (get(res, 'data.code') === 0) {
-                      message.success(entity ? '更新产品成功' : '创建产品成功');
-                      closeDrawer(true);
-                    } else {
-                      message.error(get(res, 'data.msg') || '操作失败');
-                      setSubmittingFalse();
-                    }
-                  } catch (error: any) {
-                    message.error(error.response?.data?.msg || '操作失败');
-                    setSubmittingFalse();
-                  }
-                })
-                .catch(() => {});
-            }}
-          >
-            {entity ? '更新' : '创建'}
-          </Button>
-        </Space>
-      </div>
-    ),
-    destroyOnClose: true,
-    maskClosable: false,
-    open: open,
-    title: entity ? '编辑产品' : '新增产品',
-    width: 800,
-    afterOpenChange: (open) => {
-      if (!open) {
+      // 处理表单数据
+      const submitData: ProductFormData = {
+        ...formData,
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        setQuantity: formData.setQuantity || 1,
+      };
+
+      const res = await formSubmit(entity, submitData);
+      if (get(res, 'data.code') === 0) {
+        message.success(entity ? '更新产品成功' : '创建产品成功');
+        closeModal(true);
+      } else {
+        message.error(get(res, 'data.msg') || '操作失败');
         setSubmittingFalse();
-        form.resetFields();
-      } else if (entity) {
+      }
+    } catch (error: any) {
+      if (error.errorFields) {
+        // 表单验证错误，不显示错误消息
+        return;
+      }
+      message.error(error.response?.data?.msg || '操作失败');
+      setSubmittingFalse();
+    }
+  };
+
+  const handleCancel = () => {
+    closeModal();
+  };
+
+  /**
+   * Effects
+   */
+  useEffect(() => {
+    if (open) {
+      if (entity) {
         form.setFieldsValue({
           ...entity,
           weight: entity.weight?.toString(),
         });
+      } else {
+        form.resetFields();
       }
-    },
-    onClose: () => {
-      closeDrawer();
-    },
+    } else {
+      setSubmittingFalse();
+      form.resetFields();
+    }
+  }, [open, entity, form]);
+
+  /**
+   * ModalProps
+   */
+  const modalProps: ModalProps = {
+    title: entity ? '编辑产品' : '新增产品',
+    open: open,
+    onOk: handleSubmit,
+    onCancel: handleCancel,
+    okText: entity ? '更新' : '创建',
+    cancelText: '取消',
+    confirmLoading: submitting,
+    destroyOnClose: true,
+    maskClosable: false,
+    width: 800,
+    centered: true,
+    bodyStyle: { maxHeight: '70vh', overflowY: 'auto' },
   };
 
   /**
@@ -136,7 +139,7 @@ const ProductFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, categor
   };
 
   return (
-    <Drawer {...drawerProps}>
+    <Modal {...modalProps}>
       <Form {...formProps}>
         <Row gutter={16}>
           <Col span={12}>
@@ -246,8 +249,8 @@ const ProductFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, categor
           <TextArea rows={3} placeholder="备注" />
         </Form.Item>
       </Form>
-    </Drawer>
+    </Modal>
   );
 };
 
-export default ProductFormDrawer;
+export default ProductFormModal;

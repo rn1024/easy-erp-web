@@ -16,8 +16,8 @@ import {
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 
 // Utils工具类
-import AccountFormDrawer from './components/account-form-drawer';
-import AccountPasswordDrawer from './components/account-password-drawer';
+import AccountFormModal from './components/account-form-modal';
+import AccountPasswordModal from './components/account-password-modal';
 
 // APIs接口
 import { accounts, dAccount, rAccount } from '@/services/account';
@@ -318,19 +318,19 @@ const AccountsPage: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 账户表单抽屉 */}
-      <AccountFormDrawer
+      {/* 账户表单弹窗 */}
+      <AccountFormModal
         open={state.drawerVisible}
         entity={state.editingRecord}
-        closeDrawer={closeAccountDrawer}
+        closeModal={closeAccountDrawer}
         roleOptions={roleOptions}
       />
 
-      {/* 密码修改抽屉 */}
-      <AccountPasswordDrawer
+      {/* 密码修改弹窗 */}
+      <AccountPasswordModal
         open={state.passwordDrawerVisible}
         entity={state.editingRecord}
-        closeDrawer={closePasswordDrawer}
+        closeModal={closePasswordDrawer}
       />
     </>
   );

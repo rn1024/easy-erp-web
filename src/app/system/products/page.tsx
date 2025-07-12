@@ -20,8 +20,8 @@ import dayjs from 'dayjs';
 /**
  * Components
  */
-import ProductFormDrawer from './components/product-form-drawer';
-import ProductDetailDrawer from './components/product-detail-drawer';
+import ProductFormModal from './components/product-form-modal';
+import ProductDetailModal from './components/product-detail-modal';
 
 /**
  * APIs
@@ -350,14 +350,14 @@ const ProductManagement: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 产品表单抽屉 */}
-      <ProductFormDrawer open={drawerVisible} entity={editingProduct} closeDrawer={closeDrawer} />
+      {/* 产品表单弹窗 */}
+      <ProductFormModal open={drawerVisible} entity={editingProduct} closeModal={closeDrawer} />
 
-      {/* 产品详情抽屉 */}
-      <ProductDetailDrawer
+      {/* 产品详情弹窗 */}
+      <ProductDetailModal
         open={detailDrawerVisible}
         entity={viewingProduct}
-        closeDrawer={closeDetailDrawer}
+        closeModal={closeDetailDrawer}
       />
     </>
   );

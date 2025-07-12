@@ -1,7 +1,8 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Drawer, Form, Input, Space, Select } from 'antd';
+import { App, Button, Modal, Form, Input, Space, Select } from 'antd';
+import { useEffect } from 'react';
 
 /**
  * Utils
@@ -11,7 +12,14 @@ import { apiErrorMsg } from '@/utils/apiErrorMsg';
 /**
  * APIs
  */
-import { cAccount, uAccount, type AccountsResponse, type CAccountData } from '@/services/account';
+import { cAccount, uAccount } from '@/services/account';
+
+/**
+ * Types
+ */
+import type { ModalProps, FormProps } from 'antd';
+import type { IntlShape } from 'react-intl';
+import type { AccountsResponse, CAccountData } from '@/services/account';
 import type { RoleDataResult } from '@/services/roles';
 
 // form submit
@@ -23,20 +31,14 @@ const formSubmit = async (entity: AccountsResponse | null, formData: CAccountDat
   return await cAccount(formData);
 };
 
-/**
- * Types
- */
-import type { DrawerProps, FormProps } from 'antd';
-import type { IntlShape } from 'react-intl';
-
 type Props = {
   open: boolean;
   entity: AccountsResponse | null;
-  closeDrawer: (reload?: boolean) => void;
+  closeModal: (reload?: boolean) => void;
   roleOptions?: { label: string; value: string }[];
 };
 
-const AccountFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, roleOptions = [] }) => {
+const AccountFormModal: React.FC<Props> = ({ open, entity, closeModal, roleOptions = [] }) => {
   /**
    * Hooks
    */
@@ -51,55 +53,41 @@ const AccountFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, roleOpt
   const [form] = Form.useForm();
 
   /**
-   * DrawerProps
+   * Handlers
    */
-  const drawerProps: DrawerProps = {
-    footer: (
-      <div style={{ textAlign: 'right' }}>
-        <Space>
-          <Button type="default" onClick={() => closeDrawer()}>
-            取消
-          </Button>
-          <Button
-            type="primary"
-            loading={submitting}
-            onClick={() => {
-              form
-                .validateFields()
-                .then(async (formData: CAccountData) => {
-                  setSubmittingTrue();
-                  try {
-                    const res = await formSubmit(entity, formData);
-                    if (get(res, 'data.code') === 0) {
-                      message.success(entity ? '更新成功' : '创建成功');
-                      closeDrawer(true);
-                    } else {
-                      message.error(get(res, 'data.msg') || '操作失败');
-                      setSubmittingFalse();
-                    }
-                  } catch (error: any) {
-                    message.error(error.response?.data?.msg || '操作失败');
-                    setSubmittingFalse();
-                  }
-                })
-                .catch(() => {});
-            }}
-          >
-            确定
-          </Button>
-        </Space>
-      </div>
-    ),
-    destroyOnClose: true,
-    maskClosable: false,
-    open: open,
-    title: entity ? '编辑账户' : '新建账户',
-    width: 600,
-    afterOpenChange: (open) => {
-      if (!open) {
+  const handleSubmit = async () => {
+    try {
+      const formData = await form.validateFields();
+      setSubmittingTrue();
+
+      const res = await formSubmit(entity, formData);
+      if (get(res, 'data.code') === 0) {
+        message.success(entity ? '更新成功' : '创建成功');
+        closeModal(true);
+      } else {
+        message.error(get(res, 'data.msg') || '操作失败');
         setSubmittingFalse();
-        form.resetFields();
-      } else if (entity) {
+      }
+    } catch (error: any) {
+      if (error.errorFields) {
+        // 表单验证错误，不显示错误消息
+        return;
+      }
+      message.error(error.response?.data?.msg || '操作失败');
+      setSubmittingFalse();
+    }
+  };
+
+  const handleCancel = () => {
+    closeModal();
+  };
+
+  /**
+   * Effects
+   */
+  useEffect(() => {
+    if (open) {
+      if (entity) {
         form.setFieldsValue({
           name: entity.name,
           status: entity.status,
@@ -110,10 +98,27 @@ const AccountFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, roleOpt
           status: 1,
         });
       }
-    },
-    onClose: () => {
-      closeDrawer();
-    },
+    } else {
+      setSubmittingFalse();
+      form.resetFields();
+    }
+  }, [open, entity, form]);
+
+  /**
+   * ModalProps
+   */
+  const modalProps: ModalProps = {
+    title: entity ? '编辑账户' : '新建账户',
+    open: open,
+    onOk: handleSubmit,
+    onCancel: handleCancel,
+    okText: entity ? '更新' : '创建',
+    cancelText: '取消',
+    confirmLoading: submitting,
+    destroyOnClose: true,
+    maskClosable: false,
+    width: 600,
+    centered: true,
   };
 
   /**
@@ -127,7 +132,7 @@ const AccountFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, roleOpt
   };
 
   return (
-    <Drawer {...drawerProps}>
+    <Modal {...modalProps}>
       <Form {...formProps}>
         <Form.Item
           name="name"
@@ -158,8 +163,8 @@ const AccountFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer, roleOpt
           <Select mode="multiple" placeholder="请选择角色" options={roleOptions} />
         </Form.Item>
       </Form>
-    </Drawer>
+    </Modal>
   );
 };
 
-export default AccountFormDrawer;
+export default AccountFormModal;

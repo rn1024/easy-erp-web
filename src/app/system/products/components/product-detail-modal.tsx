@@ -1,7 +1,7 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Drawer, Space, Descriptions, Tag, Image } from 'antd';
+import { App, Button, Modal, Space, Descriptions, Tag, Image } from 'antd';
 import { ShopOutlined, TagOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -11,23 +11,19 @@ import dayjs from 'dayjs';
 import { apiErrorMsg } from '@/utils/apiErrorMsg';
 
 /**
- * APIs
- */
-import { type ProductInfo } from '@/services/products';
-
-/**
  * Types
  */
-import type { DrawerProps } from 'antd';
+import type { ModalProps } from 'antd';
 import type { IntlShape } from 'react-intl';
+import type { ProductInfo } from '@/services/products';
 
 type Props = {
   open: boolean;
   entity: ProductInfo | null;
-  closeDrawer: () => void;
+  closeModal: () => void;
 };
 
-const ProductDetailDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
+const ProductDetailModal: React.FC<Props> = ({ open, entity, closeModal }) => {
   /**
    * Hooks
    */
@@ -35,26 +31,27 @@ const ProductDetailDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => 
   const intl: IntlShape = useIntl();
 
   /**
-   * DrawerProps
+   * Handlers
    */
-  const drawerProps: DrawerProps = {
-    footer: (
-      <div style={{ textAlign: 'right' }}>
-        <Space>
-          <Button type="default" onClick={() => closeDrawer()}>
-            关闭
-          </Button>
-        </Space>
-      </div>
-    ),
-    destroyOnClose: true,
-    maskClosable: true,
-    open: open,
+  const handleCancel = () => {
+    closeModal();
+  };
+
+  /**
+   * ModalProps
+   */
+  const modalProps: ModalProps = {
     title: `产品详情 - ${entity?.code || ''}`,
+    open: open,
+    onCancel: handleCancel,
+    footer: (
+      <Button type="primary" onClick={handleCancel}>
+        关闭
+      </Button>
+    ),
     width: 800,
-    onClose: () => {
-      closeDrawer();
-    },
+    centered: true,
+    bodyStyle: { maxHeight: '70vh', overflowY: 'auto' },
   };
 
   if (!entity) {
@@ -62,7 +59,7 @@ const ProductDetailDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => 
   }
 
   return (
-    <Drawer {...drawerProps}>
+    <Modal {...modalProps}>
       <div className="mt-4">
         <Descriptions bordered column={2} size="small">
           <Descriptions.Item label="产品编码">{entity.code}</Descriptions.Item>
@@ -112,8 +109,8 @@ const ProductDetailDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => 
           </div>
         )}
       </div>
-    </Drawer>
+    </Modal>
   );
 };
 
-export default ProductDetailDrawer;
+export default ProductDetailModal;
