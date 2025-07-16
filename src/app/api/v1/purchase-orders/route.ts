@@ -5,6 +5,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
+// 生成采购订单号：CGDD+时间+序号（6位）
+async function generateOrderNumber(): Promise<string> {
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD格式
+
+  // 查询当天的订单数量（基于订单号前缀）
+  const todayPrefix = `CGDD${dateStr}`;
+  const todayCount = await prisma.purchaseOrder.count({
+    where: {
+      orderNumber: {
+        startsWith: todayPrefix,
+      },
+    },
+  });
+
+  // 生成6位序号（从000001开始）
+  const sequenceNumber = (todayCount + 1).toString().padStart(6, '0');
+
+  return `${todayPrefix}${sequenceNumber}`;
+}
+
 // 获取采购订单列表
 export async function GET(request: NextRequest) {
   try {
@@ -160,9 +181,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ code: 400, msg: '产品不存在' }, { status: 400 });
     }
 
+    // 生成订单号
+    const orderNumber = await generateOrderNumber();
+
     // 创建采购订单
     const purchaseOrder = await prisma.purchaseOrder.create({
       data: {
+        orderNumber,
         shopId,
         supplierId,
         productId,

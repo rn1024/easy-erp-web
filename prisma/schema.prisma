@@ -330,6 +330,7 @@ model SpareInventory {
 // 采购订单表
 model PurchaseOrder {
   id          String               @id @default(cuid())
+  orderNumber String               @unique // 订单号：CGDD+时间+序号
   shopId      String
   supplierId  String
   productId   String

@@ -16,6 +16,7 @@ export enum PurchaseOrderStatus {
 // 采购订单信息
 export interface PurchaseOrderInfo {
   id: string;
+  orderNumber: string;
   shopId: string;
   supplierId: string;
   productId: string;

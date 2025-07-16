@@ -200,7 +200,7 @@ const PurchaseOrdersPage: React.FC = () => {
         <div>
           <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
             {record.urgent && <Badge dot color="red" style={{ marginRight: 4 }} />}
-            订单#{record.id.slice(-8)}
+            <span style={{ fontFamily: 'monospace' }}>{record.orderNumber}</span>
           </div>
           <div style={{ color: '#666', fontSize: '12px' }}>
             创建时间: {new Date(record.createdAt).toLocaleDateString()}
