@@ -111,7 +111,7 @@ export interface SpareInventoryItem {
   shopId: string;
   categoryId: string;
   productId: string;
-  spareType: string;
+  spareType?: string;
   location?: string;
   quantity: number;
   createdAt: string;
@@ -148,7 +148,7 @@ export interface SpareInventoryParams {
   shopId: string;
   categoryId: string;
   productId: string;
-  spareType: string;
+  spareType?: string;
   location?: string;
   quantity?: number;
 }

@@ -312,7 +312,7 @@ model SpareInventory {
   shopId     String
   categoryId String
   productId  String
-  spareType  String
+  spareType  String?
   location   String?
   quantity   Int      @default(0)
   createdAt  DateTime @default(now())

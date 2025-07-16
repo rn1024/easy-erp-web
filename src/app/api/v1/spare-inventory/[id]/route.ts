@@ -116,8 +116,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         id: { not: id },
         shopId: shopId || existingInventory.shopId,
         productId: productId || existingInventory.productId,
-        spareType: spareType || existingInventory.spareType,
-        location: location !== undefined ? location : existingInventory.location,
+        spareType: spareType !== undefined ? spareType || null : existingInventory.spareType,
+        location: location !== undefined ? location || null : existingInventory.location,
       },
     });
 
@@ -135,8 +135,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         ...(shopId && { shopId }),
         ...(categoryId && { categoryId }),
         ...(productId && { productId }),
-        ...(spareType && { spareType }),
-        ...(location !== undefined && { location }),
+        ...(spareType !== undefined && { spareType: spareType || null }),
+        ...(location !== undefined && { location: location || null }),
         ...(quantity !== undefined && { quantity }),
       },
       include: {

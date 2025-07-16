@@ -229,7 +229,8 @@ const SpareInventoryPage: React.FC = () => {
       title: '散件类型',
       dataIndex: 'spareType',
       width: 120,
-      render: (_, record) => <Tag color="purple">{record.spareType}</Tag>,
+      render: (_, record) =>
+        record.spareType ? <Tag color="purple">{record.spareType}</Tag> : '-',
     },
     {
       title: '存储位置',
@@ -450,11 +451,7 @@ const SpareInventoryPage: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="spareType"
-                label="散件类型"
-                rules={[{ required: true, message: '请输入散件类型' }]}
-              >
+              <Form.Item name="spareType" label="散件类型">
                 <Input placeholder="输入散件类型" />
               </Form.Item>
             </Col>

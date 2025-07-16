@@ -98,7 +98,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     const { shopId, categoryId, productId, spareType, location, quantity } = body;
 
     // 验证必填字段
-    if (!shopId || !categoryId || !productId || !spareType) {
+    if (!shopId || !categoryId || !productId) {
       return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
     }
 
@@ -126,7 +126,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       where: {
         shopId,
         productId,
-        spareType,
+        spareType: spareType || null,
         location: location || null,
       },
     });
@@ -144,7 +144,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
         shopId,
         categoryId,
         productId,
-        spareType,
+        spareType: spareType || null,
         location: location || null,
         quantity: quantity || 0,
       },
