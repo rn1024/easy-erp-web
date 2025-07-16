@@ -16,7 +16,7 @@ import {
 /**
  * Components
  */
-import ForwarderFormDrawer from './components/forwarder-form-drawer';
+import ForwarderFormModal from './components/forwarder-form-modal';
 
 /**
  * Services
@@ -45,7 +45,7 @@ const ForwardersPage: React.FC = () => {
   /**
    * State
    */
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editingForwarder, setEditingForwarder] = useState<Forwarder | null>(null);
   const [searchParams, setSearchParams] = useState<ForwardersParams>({
     page: 1,
@@ -90,7 +90,7 @@ const ForwardersPage: React.FC = () => {
     async (id: string) => {
       const res = await getForwarder(id);
       setEditingForwarder(res.data.data);
-      setDrawerVisible(true);
+      setModalVisible(true);
     },
     {
       manual: true,
@@ -105,7 +105,7 @@ const ForwardersPage: React.FC = () => {
    */
   const handleCreateClick = useCallback(() => {
     setEditingForwarder(null);
-    setDrawerVisible(true);
+    setModalVisible(true);
   }, []);
 
   const handleEditClick = useCallback(
@@ -142,9 +142,9 @@ const ForwardersPage: React.FC = () => {
     });
   }, [searchForm]);
 
-  const closeDrawer = useCallback(
+  const closeModal = useCallback(
     (reload?: boolean) => {
-      setDrawerVisible(false);
+      setModalVisible(false);
       setEditingForwarder(null);
       if (reload) {
         refresh();
@@ -319,12 +319,8 @@ const ForwardersPage: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 货代表单抽屉 */}
-      <ForwarderFormDrawer
-        open={drawerVisible}
-        entity={editingForwarder}
-        closeDrawer={closeDrawer}
-      />
+      {/* 货代表单弹窗 */}
+      <ForwarderFormModal open={modalVisible} entity={editingForwarder} closeModal={closeModal} />
     </>
   );
 };

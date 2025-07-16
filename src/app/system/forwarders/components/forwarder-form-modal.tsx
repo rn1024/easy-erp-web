@@ -1,8 +1,8 @@
-import React from 'react';
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Drawer, Form, Input, Space, Row, Col } from 'antd';
+import { Form, Input, message, Modal, ModalProps, Row, Col } from 'antd';
+import { useEffect } from 'react';
 
 /**
  * Utils
@@ -20,6 +20,12 @@ import {
 } from '@/services/forwarders';
 import type { ResType } from '@/types/api';
 
+/**
+ * Types
+ */
+import type { IntlShape } from 'react-intl';
+import type { FormProps } from 'antd';
+
 // form submit
 const formSubmit = async (entity: Forwarder | null, formData: ForwarderFormData) => {
   // 区分是更新还是新增
@@ -29,23 +35,16 @@ const formSubmit = async (entity: Forwarder | null, formData: ForwarderFormData)
   return await createForwarder(formData);
 };
 
-/**
- * Types
- */
-import type { DrawerProps, FormProps } from 'antd';
-import type { IntlShape } from 'react-intl';
-
 type Props = {
   open: boolean;
   entity: Forwarder | null;
-  closeDrawer: (reload?: boolean) => void;
+  closeModal: (reload?: boolean) => void;
 };
 
-const ForwarderFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
+const ForwarderFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
   /**
    * Hooks
    */
-  const { message } = App.useApp();
   const intl: IntlShape = useIntl();
 
   /**
@@ -56,55 +55,11 @@ const ForwarderFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => 
   const [form] = Form.useForm();
 
   /**
-   * DrawerProps
+   * Effects
    */
-  const drawerProps: DrawerProps = {
-    footer: (
-      <div style={{ textAlign: 'right' }}>
-        <Space>
-          <Button type="default" onClick={() => closeDrawer()}>
-            取消
-          </Button>
-          <Button
-            type="primary"
-            loading={submitting}
-            onClick={() => {
-              form
-                .validateFields()
-                .then(async (formData: ForwarderFormData) => {
-                  setSubmittingTrue();
-                  try {
-                    const res = await formSubmit(entity, formData);
-                    if (get(res, 'data.code') === 0) {
-                      message.success(entity ? '更新成功' : '创建成功');
-                      closeDrawer(true);
-                    } else {
-                      message.error(get(res, 'data.msg') || '操作失败');
-                      setSubmittingFalse();
-                    }
-                  } catch (error: any) {
-                    message.error('操作失败');
-                    setSubmittingFalse();
-                  }
-                })
-                .catch(() => {});
-            }}
-          >
-            确定
-          </Button>
-        </Space>
-      </div>
-    ),
-    destroyOnClose: true,
-    maskClosable: false,
-    open: open,
-    title: entity ? '编辑货代' : '新建货代',
-    width: 800,
-    afterOpenChange: (open) => {
-      if (!open) {
-        setSubmittingFalse();
-        form.resetFields();
-      } else if (entity) {
+  useEffect(() => {
+    if (open) {
+      if (entity) {
         form.setFieldsValue({
           nickname: entity.nickname,
           contactPerson: entity.contactPerson,
@@ -116,26 +71,61 @@ const ForwarderFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => 
           bankAddress: entity.bankAddress,
           remark: entity.remark,
         });
+      } else {
+        form.resetFields();
       }
+    }
+  }, [open, entity, form]);
+
+  /**
+   * ModalProps
+   */
+  const modalProps: ModalProps = {
+    open: open,
+    title: entity ? '编辑货代' : '新建货代',
+    width: 700,
+    okButtonProps: {
+      loading: submitting,
     },
-    onClose: () => {
-      closeDrawer();
+    onOk: () => {
+      form.submit();
+    },
+    onCancel: () => {
+      closeModal();
+      form.resetFields();
+      setSubmittingFalse();
     },
   };
 
   /**
    * FormProps
    */
-  const formProps: FormProps = {
+  const formProps: FormProps<ForwarderFormData> = {
     form: form,
     layout: 'vertical',
     validateTrigger: 'onBlur',
     preserve: false,
     requiredMark: false,
+    onFinish: async (formData) => {
+      setSubmittingTrue();
+      try {
+        const res = await formSubmit(entity, formData);
+        if (get(res, 'data.code') === 0) {
+          message.success(entity ? '更新成功' : '创建成功');
+          closeModal(true);
+        } else {
+          message.error(get(res, 'data.msg') || '操作失败');
+          setSubmittingFalse();
+        }
+      } catch (error: any) {
+        message.error('操作失败');
+        setSubmittingFalse();
+      }
+    },
   };
 
   return (
-    <Drawer {...drawerProps}>
+    <Modal {...modalProps}>
       <Form {...formProps}>
         <Row gutter={16}>
           <Col span={12}>
@@ -242,8 +232,8 @@ const ForwarderFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => 
           <Input.TextArea rows={4} placeholder="请输入备注信息（可选）" />
         </Form.Item>
       </Form>
-    </Drawer>
+    </Modal>
   );
 };
 
-export default ForwarderFormDrawer;
+export default ForwarderFormModal;

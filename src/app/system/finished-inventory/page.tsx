@@ -16,7 +16,7 @@ import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 /**
  * Components
  */
-import InventoryFormDrawer from './components/inventory-form-drawer';
+import InventoryFormModal from './components/inventory-form-modal';
 
 /**
  * Services
@@ -43,7 +43,7 @@ interface SearchFormData {
 
 const FinishedInventoryPage: React.FC = () => {
   const [searchForm] = Form.useForm();
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinishedInventoryItem | null>(null);
   const [searchParams, setSearchParams] = useState<FinishedInventoryQueryParams>({
     page: 1,
@@ -121,17 +121,17 @@ const FinishedInventoryPage: React.FC = () => {
   // 打开新建弹窗
   const handleCreate = () => {
     setEditingRecord(null);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
   // 打开编辑弹窗
   const handleEdit = (record: FinishedInventoryItem) => {
     setEditingRecord(record);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
-  const closeDrawer = (reload?: boolean) => {
-    setDrawerVisible(false);
+  const closeModal = (reload?: boolean) => {
+    setModalVisible(false);
     setEditingRecord(null);
     if (reload) {
       refresh();
@@ -314,11 +314,11 @@ const FinishedInventoryPage: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 成品库存表单抽屉 */}
-      <InventoryFormDrawer
-        open={drawerVisible}
+      {/* 成品库存表单弹窗 */}
+      <InventoryFormModal
+        open={modalVisible}
         entity={editingRecord}
-        closeDrawer={closeDrawer}
+        closeModal={closeModal}
         shopData={shopData}
         categoryData={categoryData}
       />

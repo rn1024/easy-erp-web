@@ -16,7 +16,7 @@ import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 /**
  * Components
  */
-import CategoryFormDrawer from './components/category-form-drawer';
+import CategoryFormModal from './components/category-form-modal';
 
 /**
  * Services
@@ -36,7 +36,7 @@ interface SearchFormData {
 
 const ProductCategoriesPage: React.FC = () => {
   const [searchForm] = Form.useForm();
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ProductCategory | null>(null);
   const [searchParams, setSearchParams] = useState<ProductCategoriesParams>({
     page: 1,
@@ -102,17 +102,17 @@ const ProductCategoriesPage: React.FC = () => {
   // 打开新建弹窗
   const handleCreate = () => {
     setEditingRecord(null);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
   // 打开编辑弹窗
   const handleEdit = (record: ProductCategory) => {
     setEditingRecord(record);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
-  const closeDrawer = (reload?: boolean) => {
-    setDrawerVisible(false);
+  const closeModal = (reload?: boolean) => {
+    setModalVisible(false);
     setEditingRecord(null);
     if (reload) {
       refresh();
@@ -234,8 +234,8 @@ const ProductCategoriesPage: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 分类表单抽屉 */}
-      <CategoryFormDrawer open={drawerVisible} entity={editingRecord} closeDrawer={closeDrawer} />
+      {/* 分类表单弹窗 */}
+      <CategoryFormModal open={modalVisible} entity={editingRecord} closeModal={closeModal} />
     </>
   );
 };

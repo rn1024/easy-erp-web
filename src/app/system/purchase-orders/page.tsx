@@ -34,7 +34,7 @@ import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 /**
  * Components
  */
-import PurchaseOrderFormDrawer from './components/purchase-order-form-drawer';
+import PurchaseOrderFormModal from './components/purchase-order-form-modal';
 
 /**
  * APIs
@@ -66,7 +66,7 @@ interface SearchFormData {
 
 const PurchaseOrdersPage: React.FC = () => {
   const [searchForm] = Form.useForm();
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PurchaseOrderInfo | null>(null);
   const [searchParams, setSearchParams] = useState<SearchFormData>({
     page: 1,
@@ -131,17 +131,17 @@ const PurchaseOrdersPage: React.FC = () => {
   // 打开编辑弹窗
   const handleEdit = (record: PurchaseOrderInfo) => {
     setEditingRecord(record);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
   // 打开新增弹窗
   const handleAdd = () => {
     setEditingRecord(null);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
-  const closeDrawer = (reload?: boolean) => {
-    setDrawerVisible(false);
+  const closeModal = (reload?: boolean) => {
+    setModalVisible(false);
     setEditingRecord(null);
     if (reload) {
       refreshPurchaseOrders();
@@ -383,11 +383,11 @@ const PurchaseOrdersPage: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 采购订单表单抽屉 */}
-      <PurchaseOrderFormDrawer
-        open={drawerVisible}
+      {/* 采购订单表单弹窗 */}
+      <PurchaseOrderFormModal
+        open={modalVisible}
         entity={editingRecord}
-        closeDrawer={closeDrawer}
+        closeModal={closeModal}
         shopsData={shopsData}
         suppliersData={suppliersData}
         productsData={productsData}

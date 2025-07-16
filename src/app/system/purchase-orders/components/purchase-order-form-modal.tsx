@@ -2,18 +2,18 @@ import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
 import {
-  App,
-  Button,
-  Drawer,
   Form,
   Input,
-  Space,
+  message,
+  Modal,
+  ModalProps,
   Select,
   Row,
   Col,
   InputNumber,
   Switch,
 } from 'antd';
+import { useEffect } from 'react';
 
 /**
  * Utils
@@ -32,6 +32,12 @@ import {
   purchaseOrderStatusOptions,
 } from '@/services/purchase';
 
+/**
+ * Types
+ */
+import type { IntlShape } from 'react-intl';
+import type { FormProps } from 'antd';
+
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -47,25 +53,19 @@ const formSubmit = async (
   return await createPurchaseOrderApi(formData as CreatePurchaseOrderData);
 };
 
-/**
- * Types
- */
-import type { DrawerProps, FormProps } from 'antd';
-import type { IntlShape } from 'react-intl';
-
 type Props = {
   open: boolean;
   entity: PurchaseOrderInfo | null;
-  closeDrawer: (reload?: boolean) => void;
+  closeModal: (reload?: boolean) => void;
   shopsData?: any[];
   suppliersData?: any[];
   productsData?: any[];
 };
 
-const PurchaseOrderFormDrawer: React.FC<Props> = ({
+const PurchaseOrderFormModal: React.FC<Props> = ({
   open,
   entity,
-  closeDrawer,
+  closeModal,
   shopsData = [],
   suppliersData = [],
   productsData = [],
@@ -73,7 +73,6 @@ const PurchaseOrderFormDrawer: React.FC<Props> = ({
   /**
    * Hooks
    */
-  const { message } = App.useApp();
   const intl: IntlShape = useIntl();
 
   /**
@@ -84,55 +83,11 @@ const PurchaseOrderFormDrawer: React.FC<Props> = ({
   const [form] = Form.useForm();
 
   /**
-   * DrawerProps
+   * Effects
    */
-  const drawerProps: DrawerProps = {
-    footer: (
-      <div style={{ textAlign: 'right' }}>
-        <Space>
-          <Button type="default" onClick={() => closeDrawer()}>
-            取消
-          </Button>
-          <Button
-            type="primary"
-            loading={submitting}
-            onClick={() => {
-              form
-                .validateFields()
-                .then(async (formData: any) => {
-                  setSubmittingTrue();
-                  try {
-                    const res = await formSubmit(entity, formData);
-                    if (get(res, 'success') || get(res, 'code') === 200) {
-                      message.success(entity ? '更新成功' : '创建成功');
-                      closeDrawer(true);
-                    } else {
-                      message.error(get(res, 'msg') || get(res, 'message') || '操作失败');
-                      setSubmittingFalse();
-                    }
-                  } catch (error: any) {
-                    message.error(error.response?.data?.msg || '操作失败');
-                    setSubmittingFalse();
-                  }
-                })
-                .catch(() => {});
-            }}
-          >
-            确定
-          </Button>
-        </Space>
-      </div>
-    ),
-    destroyOnClose: true,
-    maskClosable: false,
-    open: open,
-    title: entity ? '编辑采购订单' : '新增采购订单',
-    width: 600,
-    afterOpenChange: (open) => {
-      if (!open) {
-        setSubmittingFalse();
-        form.resetFields();
-      } else if (entity) {
+  useEffect(() => {
+    if (open) {
+      if (entity) {
         form.setFieldsValue({
           shopId: entity.shopId,
           supplierId: entity.supplierId,
@@ -144,15 +99,33 @@ const PurchaseOrderFormDrawer: React.FC<Props> = ({
           remark: entity.remark,
         });
       } else {
+        form.resetFields();
         form.setFieldsValue({
           urgent: false,
           quantity: 1,
           totalAmount: 0,
         });
       }
+    }
+  }, [open, entity, form]);
+
+  /**
+   * ModalProps
+   */
+  const modalProps: ModalProps = {
+    open: open,
+    title: entity ? '编辑采购订单' : '新增采购订单',
+    width: 900,
+    okButtonProps: {
+      loading: submitting,
     },
-    onClose: () => {
-      closeDrawer();
+    onOk: () => {
+      form.submit();
+    },
+    onCancel: () => {
+      closeModal();
+      form.resetFields();
+      setSubmittingFalse();
     },
   };
 
@@ -164,10 +137,26 @@ const PurchaseOrderFormDrawer: React.FC<Props> = ({
     layout: 'vertical',
     validateTrigger: 'onBlur',
     preserve: false,
+    onFinish: async (formData) => {
+      setSubmittingTrue();
+      try {
+        const res = await formSubmit(entity, formData);
+        if (get(res, 'success') || get(res, 'code') === 200) {
+          message.success(entity ? '更新成功' : '创建成功');
+          closeModal(true);
+        } else {
+          message.error(get(res, 'msg') || get(res, 'message') || '操作失败');
+          setSubmittingFalse();
+        }
+      } catch (error: any) {
+        message.error(error.response?.data?.msg || '操作失败');
+        setSubmittingFalse();
+      }
+    },
   };
 
   return (
-    <Drawer {...drawerProps}>
+    <Modal {...modalProps}>
       <Form {...formProps}>
         <Row gutter={16}>
           <Col span={12}>
@@ -272,8 +261,8 @@ const PurchaseOrderFormDrawer: React.FC<Props> = ({
           <TextArea rows={4} placeholder="请输入备注信息" maxLength={500} />
         </Form.Item>
       </Form>
-    </Drawer>
+    </Modal>
   );
 };
 
-export default PurchaseOrderFormDrawer;
+export default PurchaseOrderFormModal;

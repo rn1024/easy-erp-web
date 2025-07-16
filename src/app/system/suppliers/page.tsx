@@ -16,7 +16,7 @@ import {
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 
 // Utils工具类
-import SupplierFormDrawer from './components/supplier-form-drawer';
+import SupplierFormModal from './components/supplier-form-modal';
 
 // APIs接口
 import {
@@ -37,7 +37,7 @@ const SuppliersPage: React.FC = () => {
   const [searchForm] = Form.useForm();
 
   // State
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [searchParams, setSearchParams] = useState<SuppliersParams>({
     page: 1,
@@ -90,14 +90,14 @@ const SuppliersPage: React.FC = () => {
     });
   }, [searchForm]);
 
-  const handleOpenDrawer = useCallback((supplier?: Supplier) => {
+  const handleOpenModal = useCallback((supplier?: Supplier) => {
     setEditingSupplier(supplier || null);
-    setDrawerVisible(true);
+    setModalVisible(true);
   }, []);
 
-  const closeDrawer = useCallback(
+  const closeModal = useCallback(
     (reload?: boolean) => {
-      setDrawerVisible(false);
+      setModalVisible(false);
       setEditingSupplier(null);
       if (reload) {
         refresh();
@@ -192,7 +192,7 @@ const SuppliersPage: React.FC = () => {
             <Button
               type="link"
               icon={<EditOutlined />}
-              onClick={() => handleOpenDrawer(record)}
+              onClick={() => handleOpenModal(record)}
               size="small"
             />
           </Tooltip>
@@ -247,12 +247,7 @@ const SuppliersPage: React.FC = () => {
       reload: refresh,
     },
     toolBarRender: () => [
-      <Button
-        key="create"
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={() => handleOpenDrawer()}
-      >
+      <Button key="create" type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
         新建供应商
       </Button>,
       <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh} loading={loading}>
@@ -282,8 +277,8 @@ const SuppliersPage: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 供应商表单抽屉 */}
-      <SupplierFormDrawer open={drawerVisible} entity={editingSupplier} closeDrawer={closeDrawer} />
+      {/* 供应商表单弹窗 */}
+      <SupplierFormModal open={modalVisible} entity={editingSupplier} closeModal={closeModal} />
     </>
   );
 };

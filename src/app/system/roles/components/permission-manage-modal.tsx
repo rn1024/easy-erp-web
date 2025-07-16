@@ -1,7 +1,7 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Drawer, Space, Alert, Tree, Tag, Divider, Row, Col, Card } from 'antd';
+import { message, Modal, ModalProps, Alert, Tree, Tag, Divider, Row, Col, Card } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 
 /**
@@ -17,30 +17,28 @@ import { type RoleDataResult, type Permission, queryRoleByIdApi } from '@/servic
 /**
  * Types
  */
-import type { DrawerProps } from 'antd';
 import type { IntlShape } from 'react-intl';
 
 type Props = {
   open: boolean;
   currentRoleId: string;
   currentRoleName: string;
-  closeDrawer: () => void;
+  closeModal: () => void;
   permissionsData?: any;
   permissionsLoading?: boolean;
 };
 
-const PermissionManageDrawer: React.FC<Props> = ({
+const PermissionManageModal: React.FC<Props> = ({
   open,
   currentRoleId,
   currentRoleName,
-  closeDrawer,
+  closeModal,
   permissionsData,
   permissionsLoading,
 }) => {
   /**
    * Hooks
    */
-  const { message } = App.useApp();
   const intl: IntlShape = useIntl();
 
   /**
@@ -89,44 +87,28 @@ const PermissionManageDrawer: React.FC<Props> = ({
   };
 
   /**
-   * DrawerProps
+   * ModalProps
    */
-  const drawerProps: DrawerProps = {
-    footer: (
-      <div style={{ textAlign: 'right' }}>
-        <Space>
-          <Button type="default" onClick={() => closeDrawer()}>
-            关闭
-          </Button>
-          <Button
-            type="primary"
-            loading={loading}
-            onClick={() => {
-              message.info('权限更新功能开发中...');
-            }}
-          >
-            保存权限
-          </Button>
-        </Space>
-      </div>
-    ),
-    destroyOnClose: true,
-    maskClosable: false,
+  const modalProps: ModalProps = {
     open: open,
     title: `权限管理 - ${currentRoleName}`,
-    width: 600,
-    afterOpenChange: (open) => {
-      if (!open) {
-        setLoadingFalse();
-      }
+    width: 800,
+    cancelText: '关闭',
+    okText: '保存权限',
+    okButtonProps: {
+      loading: loading,
     },
-    onClose: () => {
-      closeDrawer();
+    onOk: () => {
+      message.info('权限更新功能开发中...');
+    },
+    onCancel: () => {
+      closeModal();
+      setLoadingFalse();
     },
   };
 
   return (
-    <Drawer {...drawerProps}>
+    <Modal {...modalProps}>
       <Alert
         message="权限管理功能"
         description="此功能正在开发中，将支持更精细的权限配置。"
@@ -140,7 +122,7 @@ const PermissionManageDrawer: React.FC<Props> = ({
       {permissionsLoading ? (
         <div style={{ textAlign: 'center', padding: 40 }}>加载权限列表中...</div>
       ) : (
-        <div>
+        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
           {Object.entries((permissionsData?.data as any)?.grouped || {}).map(
             ([module, permissions]) => (
               <Card
@@ -181,11 +163,11 @@ const PermissionManageDrawer: React.FC<Props> = ({
           treeData={renderPermissionTree()}
           defaultExpandAll
           showIcon={false}
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 16, maxHeight: '300px', overflowY: 'auto' }}
         />
       )}
-    </Drawer>
+    </Modal>
   );
 };
 
-export default PermissionManageDrawer;
+export default PermissionManageModal;

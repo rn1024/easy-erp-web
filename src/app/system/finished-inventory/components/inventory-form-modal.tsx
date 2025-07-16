@@ -1,8 +1,9 @@
-import React from 'react';
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Drawer, Form, Input, Space, Select, Row, Col, InputNumber } from 'antd';
+import { Form, Input, message, Modal, ModalProps, Select, Row, Col, InputNumber } from 'antd';
+import { useEffect } from 'react';
+import React from 'react';
 
 /**
  * Utils
@@ -20,6 +21,12 @@ import {
 } from '@/services/inventory';
 import { getProductsApi } from '@/services/products';
 
+/**
+ * Types
+ */
+import type { IntlShape } from 'react-intl';
+import type { FormProps } from 'antd';
+
 const { Option } = Select;
 
 // form submit
@@ -34,31 +41,24 @@ const formSubmit = async (
   return await createFinishedInventory(formData);
 };
 
-/**
- * Types
- */
-import type { DrawerProps, FormProps } from 'antd';
-import type { IntlShape } from 'react-intl';
-
 type Props = {
   open: boolean;
   entity: FinishedInventoryItem | null;
-  closeDrawer: (reload?: boolean) => void;
+  closeModal: (reload?: boolean) => void;
   shopData?: any[];
   categoryData?: any[];
 };
 
-const InventoryFormDrawer: React.FC<Props> = ({
+const InventoryFormModal: React.FC<Props> = ({
   open,
   entity,
-  closeDrawer,
+  closeModal,
   shopData = [],
   categoryData = [],
 }) => {
   /**
    * Hooks
    */
-  const { message } = App.useApp();
   const intl: IntlShape = useIntl();
 
   /**
@@ -81,57 +81,11 @@ const InventoryFormDrawer: React.FC<Props> = ({
   };
 
   /**
-   * DrawerProps
+   * Effects
    */
-  const drawerProps: DrawerProps = {
-    footer: (
-      <div style={{ textAlign: 'right' }}>
-        <Space>
-          <Button type="default" onClick={() => closeDrawer()}>
-            取消
-          </Button>
-          <Button
-            type="primary"
-            loading={submitting}
-            onClick={() => {
-              form
-                .validateFields()
-                .then(async (formData: FinishedInventoryParams) => {
-                  setSubmittingTrue();
-                  try {
-                    const res = await formSubmit(entity, formData);
-                    if (get(res, 'data.code') === 0) {
-                      message.success(entity ? '更新成功' : '创建成功');
-                      closeDrawer(true);
-                    } else {
-                      message.error(get(res, 'data.msg') || '操作失败');
-                      setSubmittingFalse();
-                    }
-                  } catch (error: any) {
-                    message.error('操作失败');
-                    setSubmittingFalse();
-                  }
-                })
-                .catch(() => {});
-            }}
-          >
-            确定
-          </Button>
-        </Space>
-      </div>
-    ),
-    destroyOnClose: true,
-    maskClosable: false,
-    open: open,
-    title: entity ? '编辑成品库存' : '新建成品库存',
-    width: 600,
-    afterOpenChange: (open) => {
-      if (!open) {
-        setSubmittingFalse();
-        form.resetFields();
-        setSelectedCategoryId(undefined);
-        setProductData([]);
-      } else if (entity) {
+  useEffect(() => {
+    if (open) {
+      if (entity) {
         setSelectedCategoryId(entity.categoryId);
         loadProducts(entity.categoryId);
         form.setFieldsValue({
@@ -144,25 +98,64 @@ const InventoryFormDrawer: React.FC<Props> = ({
           location: entity.location,
           stockQuantity: entity.stockQuantity,
         });
+      } else {
+        form.resetFields();
+        setSelectedCategoryId(undefined);
+        setProductData([]);
       }
+    }
+  }, [open, entity, form]);
+
+  /**
+   * ModalProps
+   */
+  const modalProps: ModalProps = {
+    open: open,
+    title: entity ? '编辑成品库存' : '新建成品库存',
+    width: 800,
+    okButtonProps: {
+      loading: submitting,
     },
-    onClose: () => {
-      closeDrawer();
+    onOk: () => {
+      form.submit();
+    },
+    onCancel: () => {
+      closeModal();
+      form.resetFields();
+      setSubmittingFalse();
+      setSelectedCategoryId(undefined);
+      setProductData([]);
     },
   };
 
   /**
    * FormProps
    */
-  const formProps: FormProps = {
+  const formProps: FormProps<FinishedInventoryParams> = {
     form: form,
     layout: 'vertical',
     validateTrigger: 'onBlur',
     preserve: false,
+    onFinish: async (formData) => {
+      setSubmittingTrue();
+      try {
+        const res = await formSubmit(entity, formData);
+        if (get(res, 'data.code') === 0) {
+          message.success(entity ? '更新成功' : '创建成功');
+          closeModal(true);
+        } else {
+          message.error(get(res, 'data.msg') || '操作失败');
+          setSubmittingFalse();
+        }
+      } catch (error: any) {
+        message.error('操作失败');
+        setSubmittingFalse();
+      }
+    },
   };
 
   return (
-    <Drawer {...drawerProps}>
+    <Modal {...modalProps}>
       <Form {...formProps}>
         <Row gutter={16}>
           <Col span={12}>
@@ -255,8 +248,8 @@ const InventoryFormDrawer: React.FC<Props> = ({
           <Input placeholder="输入存储位置" />
         </Form.Item>
       </Form>
-    </Drawer>
+    </Modal>
   );
 };
 
-export default InventoryFormDrawer;
+export default InventoryFormModal;

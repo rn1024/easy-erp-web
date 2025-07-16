@@ -17,8 +17,8 @@ import {
 /**
  * Components
  */
-import RoleFormDrawer from './components/role-form-drawer';
-import PermissionManageDrawer from './components/permission-manage-drawer';
+import RoleFormModal from './components/role-form-modal';
+import PermissionManageModal from './components/permission-manage-modal';
 
 /**
  * APIs
@@ -44,8 +44,8 @@ interface RolesParams {
 }
 
 interface State {
-  drawerVisible: boolean;
-  permissionDrawerVisible: boolean;
+  modalVisible: boolean;
+  permissionModalVisible: boolean;
   editingRecord: RoleDataResult | null;
   currentRoleId: string;
   currentRoleName: string;
@@ -62,8 +62,8 @@ const RolesPage: React.FC = () => {
    * State
    */
   const [state, setState] = useSetState<State>({
-    drawerVisible: false,
-    permissionDrawerVisible: false,
+    modalVisible: false,
+    permissionModalVisible: false,
     editingRecord: null,
     currentRoleId: '',
     currentRoleName: '',
@@ -106,7 +106,7 @@ const RolesPage: React.FC = () => {
   const { run: fetchRoleDetail } = useRequest(
     async (id: string) => {
       const res = await queryRoleByIdApi(id);
-      setState({ editingRecord: res.data.data, drawerVisible: true });
+      setState({ editingRecord: res.data.data, modalVisible: true });
     },
     {
       manual: true,
@@ -120,7 +120,7 @@ const RolesPage: React.FC = () => {
    * Event Handlers
    */
   const handleCreateClick = () => {
-    setState({ editingRecord: null, drawerVisible: true });
+    setState({ editingRecord: null, modalVisible: true });
   };
 
   const handleEditClick = (record: RoleDataResult) => {
@@ -135,7 +135,7 @@ const RolesPage: React.FC = () => {
     setState({
       currentRoleId: record.id.toString(),
       currentRoleName: record.name,
-      permissionDrawerVisible: true,
+      permissionModalVisible: true,
     });
   };
 
@@ -156,15 +156,15 @@ const RolesPage: React.FC = () => {
     });
   };
 
-  const closeRoleDrawer = (reload?: boolean) => {
-    setState({ drawerVisible: false, editingRecord: null });
+  const closeRoleModal = (reload?: boolean) => {
+    setState({ modalVisible: false, editingRecord: null });
     if (reload) {
       refresh();
     }
   };
 
-  const closePermissionDrawer = (reload?: boolean) => {
-    setState({ permissionDrawerVisible: false, currentRoleId: '', currentRoleName: '' });
+  const closePermissionModal = (reload?: boolean) => {
+    setState({ permissionModalVisible: false, currentRoleId: '', currentRoleName: '' });
     if (reload) {
       refresh();
     }
@@ -333,21 +333,21 @@ const RolesPage: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 角色表单抽屉 */}
-      <RoleFormDrawer
-        open={state.drawerVisible}
+      {/* 角色表单弹窗 */}
+      <RoleFormModal
+        open={state.modalVisible}
         entity={state.editingRecord}
-        closeDrawer={closeRoleDrawer}
+        closeModal={closeRoleModal}
         permissionsData={permissionsData}
         permissionsLoading={permissionsLoading}
       />
 
-      {/* 权限管理抽屉 */}
-      <PermissionManageDrawer
-        open={state.permissionDrawerVisible}
+      {/* 权限管理弹窗 */}
+      <PermissionManageModal
+        open={state.permissionModalVisible}
         currentRoleId={state.currentRoleId}
         currentRoleName={state.currentRoleName}
-        closeDrawer={closePermissionDrawer}
+        closeModal={closePermissionModal}
         permissionsData={permissionsData}
         permissionsLoading={permissionsLoading}
       />

@@ -1,7 +1,8 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Drawer, Form, Input, Space, Row, Col, InputNumber } from 'antd';
+import { Form, Input, message, Modal, ModalProps, Row, Col, InputNumber } from 'antd';
+import { useEffect } from 'react';
 
 /**
  * Utils
@@ -18,6 +19,12 @@ import {
   type SupplierFormData,
 } from '@/services/suppliers';
 
+/**
+ * Types
+ */
+import type { IntlShape } from 'react-intl';
+import type { FormProps } from 'antd';
+
 // form submit
 const formSubmit = async (entity: Supplier | null, formData: SupplierFormData) => {
   // 区分是更新还是新增
@@ -27,23 +34,16 @@ const formSubmit = async (entity: Supplier | null, formData: SupplierFormData) =
   return await createSupplierApi(formData);
 };
 
-/**
- * Types
- */
-import type { DrawerProps, FormProps } from 'antd';
-import type { IntlShape } from 'react-intl';
-
 type Props = {
   open: boolean;
   entity: Supplier | null;
-  closeDrawer: (reload?: boolean) => void;
+  closeModal: (reload?: boolean) => void;
 };
 
-const SupplierFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
+const SupplierFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
   /**
    * Hooks
    */
-  const { message } = App.useApp();
   const intl: IntlShape = useIntl();
 
   /**
@@ -54,70 +54,11 @@ const SupplierFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
   const [form] = Form.useForm();
 
   /**
-   * DrawerProps
+   * Effects
    */
-  const drawerProps: DrawerProps = {
-    footer: (
-      <div style={{ textAlign: 'right' }}>
-        <Space>
-          <Button type="default" onClick={() => closeDrawer()}>
-            取消
-          </Button>
-          <Button
-            type="primary"
-            loading={submitting}
-            onClick={() => {
-              form
-                .validateFields()
-                .then(async (formData: any) => {
-                  setSubmittingTrue();
-                  try {
-                    // 处理表单数据
-                    const submitData: SupplierFormData = {
-                      nickname: formData.nickname,
-                      contactPerson: formData.contactPerson,
-                      contactPhone: formData.contactPhone,
-                      companyName: formData.companyName,
-                      creditCode: formData.creditCode,
-                      bankName: formData.bankName,
-                      bankAccount: formData.bankAccount,
-                      bankAddress: formData.bankAddress,
-                      productionDays: formData.productionDays,
-                      deliveryDays: formData.deliveryDays,
-                      remark: formData.remark,
-                    };
-
-                    const res = await formSubmit(entity, submitData);
-                    if (get(res, 'data.code') === 200) {
-                      message.success(entity ? '更新供应商成功' : '创建供应商成功');
-                      closeDrawer(true);
-                    } else {
-                      message.error(get(res, 'data.msg') || '操作失败');
-                      setSubmittingFalse();
-                    }
-                  } catch (error: any) {
-                    message.error(error.response?.data?.msg || '操作失败');
-                    setSubmittingFalse();
-                  }
-                })
-                .catch(() => {});
-            }}
-          >
-            {entity ? '更新' : '创建'}
-          </Button>
-        </Space>
-      </div>
-    ),
-    destroyOnClose: true,
-    maskClosable: false,
-    open: open,
-    title: entity ? '编辑供应商' : '新建供应商',
-    width: 800,
-    afterOpenChange: (open) => {
-      if (!open) {
-        setSubmittingFalse();
-        form.resetFields();
-      } else if (entity) {
+  useEffect(() => {
+    if (open) {
+      if (entity) {
         form.setFieldsValue({
           nickname: entity.nickname,
           contactPerson: entity.contactPerson,
@@ -131,26 +72,77 @@ const SupplierFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
           deliveryDays: entity.deliveryDays,
           remark: entity.remark,
         });
+      } else {
+        form.resetFields();
       }
+    }
+  }, [open, entity, form]);
+
+  /**
+   * ModalProps
+   */
+  const modalProps: ModalProps = {
+    open: open,
+    title: entity ? '编辑供应商' : '新建供应商',
+    width: 800,
+    okButtonProps: {
+      loading: submitting,
     },
-    onClose: () => {
-      closeDrawer();
+    okText: entity ? '更新' : '创建',
+    onOk: () => {
+      form.submit();
+    },
+    onCancel: () => {
+      closeModal();
+      form.resetFields();
+      setSubmittingFalse();
     },
   };
 
   /**
    * FormProps
    */
-  const formProps: FormProps = {
+  const formProps: FormProps<SupplierFormData> = {
     form: form,
     layout: 'vertical',
     validateTrigger: 'onBlur',
     preserve: false,
     requiredMark: false,
+    onFinish: async (formData) => {
+      setSubmittingTrue();
+      try {
+        // 处理表单数据
+        const submitData: SupplierFormData = {
+          nickname: formData.nickname,
+          contactPerson: formData.contactPerson,
+          contactPhone: formData.contactPhone,
+          companyName: formData.companyName,
+          creditCode: formData.creditCode,
+          bankName: formData.bankName,
+          bankAccount: formData.bankAccount,
+          bankAddress: formData.bankAddress,
+          productionDays: formData.productionDays,
+          deliveryDays: formData.deliveryDays,
+          remark: formData.remark,
+        };
+
+        const res = await formSubmit(entity, submitData);
+        if (get(res, 'data.code') === 200) {
+          message.success(entity ? '更新供应商成功' : '创建供应商成功');
+          closeModal(true);
+        } else {
+          message.error(get(res, 'data.msg') || '操作失败');
+          setSubmittingFalse();
+        }
+      } catch (error: any) {
+        message.error(error.response?.data?.msg || '操作失败');
+        setSubmittingFalse();
+      }
+    },
   };
 
   return (
-    <Drawer {...drawerProps}>
+    <Modal {...modalProps}>
       <Form {...formProps}>
         <Row gutter={16}>
           <Col span={12}>
@@ -281,8 +273,8 @@ const SupplierFormDrawer: React.FC<Props> = ({ open, entity, closeDrawer }) => {
           </Col>
         </Row>
       </Form>
-    </Drawer>
+    </Modal>
   );
 };
 
-export default SupplierFormDrawer;
+export default SupplierFormModal;

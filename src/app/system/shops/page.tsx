@@ -16,7 +16,7 @@ import {
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 
 // Utils工具类
-import ShopFormDrawer from './components/shop-form-drawer';
+import ShopFormModal from './components/shop-form-modal';
 
 // APIs接口
 import { getShops, deleteShop, type Shop, type ShopsParams } from '@/services/shops';
@@ -26,7 +26,7 @@ const ShopsPage: React.FC = () => {
   const [searchForm] = Form.useForm();
 
   // State
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editingShop, setEditingShop] = useState<Shop | null>(null);
   const [searchParams, setSearchParams] = useState<ShopsParams>({
     page: 1,
@@ -72,16 +72,16 @@ const ShopsPage: React.FC = () => {
 
   const handleCreateClick = () => {
     setEditingShop(null);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
   const handleEditClick = (record: Shop) => {
     setEditingShop(record);
-    setDrawerVisible(true);
+    setModalVisible(true);
   };
 
-  const closeDrawer = (reload?: boolean) => {
-    setDrawerVisible(false);
+  const closeModal = (reload?: boolean) => {
+    setModalVisible(false);
     setEditingShop(null);
     if (reload) {
       refresh();
@@ -206,8 +206,8 @@ const ShopsPage: React.FC = () => {
       {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 店铺表单抽屉 */}
-      <ShopFormDrawer open={drawerVisible} entity={editingShop} closeDrawer={closeDrawer} />
+      {/* 店铺表单弹窗 */}
+      <ShopFormModal open={modalVisible} entity={editingShop} closeModal={closeModal} />
     </>
   );
 };
