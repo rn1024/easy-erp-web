@@ -15,6 +15,7 @@ import {
   Tooltip,
   Badge,
   Flex,
+  DatePicker,
 } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
@@ -51,8 +52,10 @@ import {
 import { getShops } from '@/services/shops';
 import { getSuppliers } from '@/services/suppliers';
 import { getProductsApi } from '@/services/products';
+import { accounts } from '@/services/account';
 
 const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 interface SearchFormData {
   shopId?: string;
@@ -60,6 +63,9 @@ interface SearchFormData {
   productId?: string;
   status?: PurchaseOrderStatus;
   urgent?: boolean;
+  operatorId?: string;
+  startDate?: string;
+  endDate?: string;
   page?: number;
   pageSize?: number;
 }
@@ -91,11 +97,29 @@ const PurchaseOrdersPage: React.FC = () => {
   // 获取产品列表
   const { data: productsResponse } = useRequest(() => getProductsApi({ page: 1, pageSize: 100 }));
 
+  // 员工搜索状态
+  const [operatorSearchValue, setOperatorSearchValue] = useState('');
+
+  // 获取员工列表 - 支持搜索
+  const { data: accountsResponse, loading: accountsLoading } = useRequest(
+    () =>
+      accounts({
+        page: 1,
+        limit: operatorSearchValue ? 50 : 20, // 搜索时多显示，默认显示最常用的
+        name: operatorSearchValue || undefined,
+      }),
+    {
+      refreshDeps: [operatorSearchValue],
+      debounceWait: 300, // 防抖300ms
+    }
+  );
+
   // 处理数据
   const purchaseOrdersData = purchaseOrdersResponse?.data?.data;
   const shopsData = shopsResponse?.data?.data?.list || [];
   const suppliersData = suppliersResponse?.data?.data?.list || [];
   const productsData = productsResponse?.data?.data?.list || [];
+  const accountsData = accountsResponse?.data?.data?.list || [];
 
   // 删除采购订单
   const { run: deletePurchaseOrder } = useRequest(deletePurchaseOrderApi, {
@@ -112,8 +136,19 @@ const PurchaseOrdersPage: React.FC = () => {
   // 搜索处理
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
+    const { dateRange, ...otherValues } = values;
+
+    // 处理日期范围
+    let startDate, endDate;
+    if (dateRange && dateRange.length === 2) {
+      startDate = dateRange[0].format('YYYY-MM-DD 00:00:00');
+      endDate = dateRange[1].format('YYYY-MM-DD 23:59:59');
+    }
+
     setSearchParams({
-      ...values,
+      ...otherValues,
+      startDate,
+      endDate,
       page: 1,
       pageSize: searchParams.pageSize,
     });
@@ -122,6 +157,7 @@ const PurchaseOrdersPage: React.FC = () => {
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
+    setOperatorSearchValue(''); // 重置操作员搜索
     setSearchParams({
       page: 1,
       pageSize: 10,
@@ -263,6 +299,11 @@ const PurchaseOrdersPage: React.FC = () => {
       render: (_, record) => record.operator.name,
     },
     {
+      title: '订单时间',
+      width: 160,
+      render: (_, record) => new Date(record.createdAt).toLocaleString(),
+    },
+    {
       title: '操作',
       width: 120,
       fixed: 'right',
@@ -364,6 +405,28 @@ const PurchaseOrdersPage: React.FC = () => {
             </Form.Item>
             <Form.Item name="urgent" valuePropName="checked" style={{ marginRight: 0 }}>
               <Switch checkedChildren="紧急" unCheckedChildren="常规" />
+            </Form.Item>
+            <Form.Item name="operatorId" style={{ marginRight: 0 }}>
+              <Select
+                placeholder="请选择操作员"
+                style={{ width: 150 }}
+                allowClear
+                showSearch
+                loading={accountsLoading}
+                filterOption={false}
+                onSearch={(value) => setOperatorSearchValue(value.trim())}
+                onClear={() => setOperatorSearchValue('')}
+                notFoundContent={accountsLoading ? '搜索中...' : '暂无数据'}
+              >
+                {accountsData?.map((account: any) => (
+                  <Option key={account.id} value={account.id}>
+                    {account.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="dateRange" style={{ marginRight: 0 }}>
+              <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: 280 }} />
             </Form.Item>
             <Button
               type="primary"

@@ -21,6 +21,9 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get('productId');
     const status = searchParams.get('status');
     const urgent = searchParams.get('urgent');
+    const operatorId = searchParams.get('operatorId');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     const skip = (page - 1) * pageSize;
 
@@ -32,6 +35,21 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status;
     if (urgent !== null && urgent !== undefined) {
       where.urgent = urgent === 'true';
+    }
+    if (operatorId) where.operatorId = operatorId;
+    if (startDate && endDate) {
+      where.createdAt = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    } else if (startDate) {
+      where.createdAt = {
+        gte: new Date(startDate),
+      };
+    } else if (endDate) {
+      where.createdAt = {
+        lte: new Date(endDate),
+      };
     }
 
     // 获取总数

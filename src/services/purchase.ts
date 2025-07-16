@@ -97,6 +97,9 @@ export interface PurchaseOrderQueryParams {
   productId?: string;
   status?: PurchaseOrderStatus;
   urgent?: boolean;
+  operatorId?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 // 获取采购订单列表
