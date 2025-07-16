@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRequest } from 'ahooks';
 import { Button, Form, Select, Space, Tag, Progress, Popconfirm, message, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
@@ -10,35 +11,50 @@ import {
   SearchOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { useRequest } from 'ahooks';
-import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+
+/**
+ * APIs
+ */
 import {
   getWarehouseTasksApi,
   createWarehouseTaskApi,
   updateWarehouseTaskApi,
   deleteWarehouseTaskApi,
-  type WarehouseTaskInfo,
-  type CreateWarehouseTaskData,
-  type UpdateWarehouseTaskData,
-  type WarehouseTaskQueryParams,
-  WarehouseTaskStatus,
   WarehouseTaskType,
   warehouseTaskStatusOptions,
   getWarehouseTaskStatusLabel,
 } from '@/services/warehouse';
 import { getShops } from '@/services/shops';
-import {
-  saveProductItemsApi,
-  getProductItemsApi,
-  ProductItemRelatedType,
-} from '@/services/product-items';
+import { saveProductItemsApi, ProductItemRelatedType } from '@/services/product-items';
+
+/**
+ * Types
+ */
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import type {
+  WarehouseTaskInfo,
+  CreateWarehouseTaskData,
+  UpdateWarehouseTaskData,
+  WarehouseTaskQueryParams,
+} from '@/services/warehouse';
 import type { UniversalProductItem } from '@/components/universal-product-items-table';
+
+/**
+ * Components
+ */
 import PackagingTaskFormModal from './components/packaging-task-form-modal';
 
 const { Option } = Select;
 
 const PackagingTasksPage: React.FC = () => {
+  /**
+   * Hooks
+   */
   const [searchForm] = Form.useForm();
+
+  /**
+   * State
+   */
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<WarehouseTaskInfo | null>(null);
   const [searchParams, setSearchParams] = useState<WarehouseTaskQueryParams>({
@@ -47,6 +63,9 @@ const PackagingTasksPage: React.FC = () => {
     type: WarehouseTaskType.PACKAGING, // 固定为包装任务
   });
 
+  /**
+   * Requests
+   */
   const {
     data: tasksData,
     loading,
@@ -57,10 +76,9 @@ const PackagingTasksPage: React.FC = () => {
 
   const { data: shopsData } = useRequest(() => getShops({}));
 
-  const shops = shopsData?.data?.data?.list || [];
-  const tasks = tasksData?.data?.list || [];
-  const total = tasksData?.data?.total || 0;
-
+  /**
+   * Event Handlers
+   */
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
     setSearchParams({
@@ -138,6 +156,9 @@ const PackagingTasksPage: React.FC = () => {
     }
   };
 
+  /**
+   * Table Columns
+   */
   const columns: ProColumns<WarehouseTaskInfo>[] = [
     {
       title: '任务ID',
@@ -219,16 +240,19 @@ const PackagingTasksPage: React.FC = () => {
     },
   ];
 
+  /**
+   * ProTableProps
+   */
   const proTableProps: ProTableProps<WarehouseTaskInfo, any> = {
     columns,
-    dataSource: tasks,
+    dataSource: tasksData?.data?.list || [],
     loading,
     rowKey: 'id',
     search: false,
     pagination: {
       current: Number(searchParams.page) || 1,
       pageSize: Number(searchParams.pageSize) || 20,
-      total: total || 0,
+      total: tasksData?.data?.total || 0,
       showSizeChanger: true,
       showQuickJumper: true,
       showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
@@ -254,8 +278,14 @@ const PackagingTasksPage: React.FC = () => {
     ],
   };
 
+  /**
+   * Data Processing
+   */
+  const shops = shopsData?.data?.data?.list || [];
+
   return (
     <>
+      {/* 搜索区域 */}
       <ProCard className="mb-16">
         <Form form={searchForm} layout="inline">
           <Flex gap={16} wrap={true}>
@@ -292,8 +322,10 @@ const PackagingTasksPage: React.FC = () => {
         </Form>
       </ProCard>
 
+      {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
+      {/* 弹窗组件 */}
       <PackagingTaskFormModal
         visible={isModalVisible}
         editingTask={editingTask}
