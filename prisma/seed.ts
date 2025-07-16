@@ -530,19 +530,187 @@ async function main() {
   });
   console.log('✓ 创建产品分类');
 
-  // 创建测试产品
-  const testProduct = await prisma.productInfo.upsert({
-    where: { sku: 'PRD001' },
-    update: {},
-    create: {
-      shopId: testShop.id,
-      categoryId: testCategory.id,
-      code: 'PRD001',
-      sku: 'PRD001',
-      operatorId: adminAccount.id,
-    },
-  });
+  // 创建多个测试产品
+  const testProducts = await Promise.all([
+    prisma.productInfo.upsert({
+      where: { sku: 'PRD001' },
+      update: {},
+      create: {
+        shopId: testShop.id,
+        categoryId: testCategory.id,
+        code: 'PRD001',
+        sku: 'PRD001',
+        specification: '手机保护壳-透明',
+        color: '透明',
+        setQuantity: 1,
+        operatorId: adminAccount.id,
+      },
+    }),
+    prisma.productInfo.upsert({
+      where: { sku: 'PRD002' },
+      update: {},
+      create: {
+        shopId: testShop.id,
+        categoryId: testCategory.id,
+        code: 'PRD002',
+        sku: 'PRD002',
+        specification: '数据线-Type-C',
+        color: '黑色',
+        setQuantity: 1,
+        operatorId: adminAccount.id,
+      },
+    }),
+    prisma.productInfo.upsert({
+      where: { sku: 'PRD003' },
+      update: {},
+      create: {
+        shopId: testShop.id,
+        categoryId: testCategory.id,
+        code: 'PRD003',
+        sku: 'PRD003',
+        specification: '无线充电器-15W',
+        color: '白色',
+        setQuantity: 1,
+        operatorId: adminAccount.id,
+      },
+    }),
+  ]);
   console.log('✓ 创建测试产品');
+
+  // 生成采购订单号
+  const generateOrderNumber = (index: number) => {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const sequence = (index + 1).toString().padStart(6, '0');
+    return `CGDD${dateStr}${sequence}`;
+  };
+
+  // 创建测试采购订单
+  const testPurchaseOrders = await Promise.all([
+    // 第一个采购订单 - 包含2个产品
+    prisma.purchaseOrder.create({
+      data: {
+        orderNumber: generateOrderNumber(0),
+        shopId: testShop.id,
+        supplierId: testSupplier.id,
+        totalAmount: 1518.0,
+        discountRate: 0,
+        discountAmount: 0,
+        finalAmount: 1518.0,
+        urgent: true,
+        remark: '紧急采购手机配件',
+        operatorId: adminAccount.id,
+        status: 'PENDING',
+        items: {
+          create: [
+            {
+              productId: testProducts[0].id, // 手机保护壳
+              quantity: 100,
+              unitPrice: 8.5,
+              amount: 850.0,
+              taxRate: 13.0,
+              taxAmount: 110.5,
+              totalAmount: 960.5,
+              remark: '透明保护壳',
+            },
+            {
+              productId: testProducts[1].id, // 数据线
+              quantity: 50,
+              unitPrice: 12.0,
+              amount: 600.0,
+              taxRate: 13.0,
+              taxAmount: 78.0,
+              totalAmount: 678.0,
+              remark: 'Type-C数据线',
+            },
+          ],
+        },
+      },
+    }),
+
+    // 第二个采购订单 - 包含1个产品
+    prisma.purchaseOrder.create({
+      data: {
+        orderNumber: generateOrderNumber(1),
+        shopId: testShop.id,
+        supplierId: testSupplier.id,
+        totalAmount: 2480.0,
+        discountRate: 5.0,
+        discountAmount: 124.0,
+        finalAmount: 2356.0,
+        urgent: false,
+        remark: '无线充电器补货',
+        operatorId: adminAccount.id,
+        status: 'CONFIRMED',
+        items: {
+          create: [
+            {
+              productId: testProducts[2].id, // 无线充电器
+              quantity: 80,
+              unitPrice: 25.0,
+              amount: 2000.0,
+              taxRate: 13.0,
+              taxAmount: 260.0,
+              totalAmount: 2260.0,
+              remark: '15W无线充电器',
+            },
+          ],
+        },
+      },
+    }),
+
+    // 第三个采购订单 - 包含3个产品
+    prisma.purchaseOrder.create({
+      data: {
+        orderNumber: generateOrderNumber(2),
+        shopId: testShop.id,
+        supplierId: testSupplier.id,
+        totalAmount: 4680.0,
+        discountRate: 0,
+        discountAmount: 0,
+        finalAmount: 4680.0,
+        urgent: false,
+        remark: '月度常规采购',
+        operatorId: adminAccount.id,
+        status: 'CREATED',
+        items: {
+          create: [
+            {
+              productId: testProducts[0].id, // 手机保护壳
+              quantity: 200,
+              unitPrice: 8.5,
+              amount: 1700.0,
+              taxRate: 13.0,
+              taxAmount: 221.0,
+              totalAmount: 1921.0,
+              remark: '透明保护壳批量采购',
+            },
+            {
+              productId: testProducts[1].id, // 数据线
+              quantity: 150,
+              unitPrice: 12.0,
+              amount: 1800.0,
+              taxRate: 13.0,
+              taxAmount: 234.0,
+              totalAmount: 2034.0,
+              remark: 'Type-C数据线批量采购',
+            },
+            {
+              productId: testProducts[2].id, // 无线充电器
+              quantity: 30,
+              unitPrice: 25.0,
+              amount: 750.0,
+              taxRate: 13.0,
+              taxAmount: 97.5,
+              totalAmount: 847.5,
+              remark: '无线充电器少量补货',
+            },
+          ],
+        },
+      },
+    }),
+  ]);
+  console.log('✓ 创建测试采购订单');
 
   console.log('\n🎉 ERP数据库初始化完成！');
   console.log('📋 默认管理员账户信息:');

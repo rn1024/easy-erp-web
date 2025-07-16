@@ -27,7 +27,13 @@ const approveHandler = async (
         status: true,
         shop: { select: { nickname: true } },
         supplier: { select: { nickname: true } },
-        product: { select: { label: true, sku: true } },
+        items: {
+          select: {
+            product: {
+              select: { code: true, sku: true },
+            },
+          },
+        },
       },
     });
 
@@ -96,11 +102,15 @@ const approveHandler = async (
               contactPerson: true,
             },
           },
-          product: {
-            select: {
-              id: true,
-              label: true,
-              sku: true,
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  code: true,
+                  sku: true,
+                },
+              },
             },
           },
           operator: {

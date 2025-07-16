@@ -190,9 +190,19 @@ const PurchaseOrderApprovalModal: React.FC<ApprovalModalProps> = ({ open, record
               </Descriptions.Item>
               <Descriptions.Item label="店铺">{record.shop?.nickname}</Descriptions.Item>
               <Descriptions.Item label="供应商">{record.supplier?.nickname}</Descriptions.Item>
-              <Descriptions.Item label="产品">{record.product?.code}</Descriptions.Item>
-              <Descriptions.Item label="数量">{record.quantity}</Descriptions.Item>
-              <Descriptions.Item label="金额">¥{record.totalAmount}</Descriptions.Item>
+              <Descriptions.Item label="产品">
+                {record.items && record.items.length > 0
+                  ? record.items.length === 1
+                    ? record.items[0].product?.code
+                    : `${record.items.length}个产品`
+                  : '暂无产品'}
+              </Descriptions.Item>
+              <Descriptions.Item label="数量">
+                {record.items?.reduce((sum, item) => sum + item.quantity, 0) || 0}
+              </Descriptions.Item>
+              <Descriptions.Item label="金额">
+                ¥{record.finalAmount || record.totalAmount}
+              </Descriptions.Item>
               <Descriptions.Item label="紧急程度">
                 {record.urgent ? <Tag color="red">紧急</Tag> : <Tag color="default">常规</Tag>}
               </Descriptions.Item>

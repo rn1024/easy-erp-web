@@ -218,13 +218,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // 检查是否有相关业务数据
-    const [finishedInventoryCount, spareInventoryCount, purchaseOrderCount] = await Promise.all([
-      prisma.finishedInventory.count({ where: { productId: id } }),
-      prisma.spareInventory.count({ where: { productId: id } }),
-      prisma.purchaseOrder.count({ where: { productId: id } }),
-    ]);
+    const [finishedInventoryCount, spareInventoryCount, purchaseOrderItemCount] = await Promise.all(
+      [
+        prisma.finishedInventory.count({ where: { productId: id } }),
+        prisma.spareInventory.count({ where: { productId: id } }),
+        prisma.purchaseOrderItem.count({ where: { productId: id } }),
+      ]
+    );
 
-    if (finishedInventoryCount > 0 || spareInventoryCount > 0 || purchaseOrderCount > 0) {
+    if (finishedInventoryCount > 0 || spareInventoryCount > 0 || purchaseOrderItemCount > 0) {
       return NextResponse.json(
         { code: 400, msg: '该产品存在相关业务数据，无法删除' },
         { status: 400 }

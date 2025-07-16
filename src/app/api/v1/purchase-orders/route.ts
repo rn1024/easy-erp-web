@@ -26,6 +26,20 @@ async function generateOrderNumber(): Promise<string> {
   return `${todayPrefix}${sequenceNumber}`;
 }
 
+// 计算订单总金额
+function calculateOrderTotal(items: any[]): {
+  totalAmount: number;
+  finalAmount: number;
+  discountAmount: number;
+} {
+  const totalAmount = items.reduce((sum, item) => sum + item.totalAmount, 0);
+  // 这里可以根据业务需求计算优惠
+  const discountAmount = 0; // 暂时不计算优惠
+  const finalAmount = totalAmount - discountAmount;
+
+  return { totalAmount, finalAmount, discountAmount };
+}
+
 // 获取采购订单列表
 export async function GET(request: NextRequest) {
   try {
@@ -52,7 +66,6 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     if (shopId) where.shopId = shopId;
     if (supplierId) where.supplierId = supplierId;
-    if (productId) where.productId = productId;
     if (status) where.status = status;
     if (urgent !== null && urgent !== undefined) {
       where.urgent = urgent === 'true';
@@ -70,6 +83,15 @@ export async function GET(request: NextRequest) {
     } else if (endDate) {
       where.createdAt = {
         lte: new Date(endDate),
+      };
+    }
+
+    // 如果按产品查询，需要在订单明细中查找
+    if (productId) {
+      where.items = {
+        some: {
+          productId: productId,
+        },
       };
     }
 
@@ -96,24 +118,31 @@ export async function GET(request: NextRequest) {
             contactPhone: true,
           },
         },
-        product: {
-          select: {
-            id: true,
-            code: true,
-            specification: true,
-            sku: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
         operator: {
           select: {
             id: true,
             name: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                code: true,
+                specification: true,
+                sku: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
           },
         },
       },
@@ -184,23 +213,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { shopId, supplierId, productId, quantity, totalAmount, urgent = false, remark } = body;
+    const { shopId, supplierId, urgent = false, remark, discountRate = 0, items } = body;
 
     // 验证必填字段
-    if (!shopId || !supplierId || !productId || !quantity || !totalAmount) {
-      return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
+    if (!shopId || !supplierId || !items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ code: 400, msg: '缺少必要参数或产品明细为空' }, { status: 400 });
     }
 
-    // 验证数量和金额
-    if (quantity <= 0 || totalAmount <= 0) {
-      return NextResponse.json({ code: 400, msg: '数量和金额必须大于0' }, { status: 400 });
+    // 验证产品明细
+    for (const item of items) {
+      if (!item.productId || !item.quantity || !item.unitPrice || item.taxRate === undefined) {
+        return NextResponse.json({ code: 400, msg: '产品明细信息不完整' }, { status: 400 });
+      }
+      if (item.quantity <= 0 || item.unitPrice <= 0) {
+        return NextResponse.json({ code: 400, msg: '产品数量和单价必须大于0' }, { status: 400 });
+      }
     }
 
     // 验证关联数据是否存在
-    const [shop, supplier, product] = await Promise.all([
+    const [shop, supplier] = await Promise.all([
       prisma.shop.findUnique({ where: { id: shopId } }),
       prisma.supplier.findUnique({ where: { id: supplierId } }),
-      prisma.productInfo.findUnique({ where: { id: productId } }),
     ]);
 
     if (!shop) {
@@ -211,27 +244,73 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ code: 400, msg: '供应商不存在' }, { status: 400 });
     }
 
-    if (!product) {
-      return NextResponse.json({ code: 400, msg: '产品不存在' }, { status: 400 });
+    // 验证所有产品是否存在
+    const productIds = items.map((item: any) => item.productId);
+    const products = await prisma.productInfo.findMany({
+      where: { id: { in: productIds } },
+    });
+
+    if (products.length !== productIds.length) {
+      return NextResponse.json({ code: 400, msg: '部分产品不存在' }, { status: 400 });
     }
+
+    // 计算明细金额
+    const calculatedItems = items.map((item: any) => {
+      const amount = item.quantity * item.unitPrice;
+      const taxAmount = amount * (item.taxRate / 100);
+      const totalAmount = amount + taxAmount;
+
+      return {
+        productId: item.productId,
+        quantity: parseInt(item.quantity),
+        unitPrice: parseFloat(item.unitPrice),
+        amount: parseFloat(amount.toFixed(2)),
+        taxRate: parseFloat(item.taxRate),
+        taxAmount: parseFloat(taxAmount.toFixed(2)),
+        totalAmount: parseFloat(totalAmount.toFixed(2)),
+        remark: item.remark || null,
+      };
+    });
+
+    // 计算订单总金额
+    const { totalAmount, finalAmount, discountAmount } = calculateOrderTotal(calculatedItems);
 
     // 生成订单号
     const orderNumber = await generateOrderNumber();
 
-    // 创建采购订单（默认状态为 CREATED）
-    const purchaseOrder = await prisma.purchaseOrder.create({
-      data: {
-        orderNumber,
-        shopId,
-        supplierId,
-        productId,
-        quantity: parseInt(quantity),
-        totalAmount: parseFloat(totalAmount),
-        urgent: Boolean(urgent),
-        remark: remark || null,
-        operatorId: user.id,
-        status: 'CREATED', // 新增默认状态
-      },
+    // 创建采购订单及明细（使用事务）
+    const purchaseOrder = await prisma.$transaction(async (tx) => {
+      // 创建采购订单
+      const order = await tx.purchaseOrder.create({
+        data: {
+          orderNumber,
+          shopId,
+          supplierId,
+          totalAmount: parseFloat(totalAmount.toFixed(2)),
+          discountRate: discountRate ? parseFloat(discountRate) : null,
+          discountAmount: discountAmount ? parseFloat(discountAmount.toFixed(2)) : null,
+          finalAmount: parseFloat(finalAmount.toFixed(2)),
+          urgent: Boolean(urgent),
+          remark: remark || null,
+          operatorId: user.id,
+          status: 'CREATED',
+        },
+      });
+
+      // 创建订单明细
+      await tx.purchaseOrderItem.createMany({
+        data: calculatedItems.map((item) => ({
+          ...item,
+          purchaseOrderId: order.id,
+        })),
+      });
+
+      return order;
+    });
+
+    // 获取完整的订单信息（包含明细）
+    const fullOrder = await prisma.purchaseOrder.findUnique({
+      where: { id: purchaseOrder.id },
       include: {
         shop: {
           select: {
@@ -249,24 +328,31 @@ export async function POST(request: NextRequest) {
             contactPhone: true,
           },
         },
-        product: {
-          select: {
-            id: true,
-            code: true,
-            specification: true,
-            sku: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
         operator: {
           select: {
             id: true,
             name: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                code: true,
+                specification: true,
+                sku: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
           },
         },
       },
@@ -284,8 +370,7 @@ export async function POST(request: NextRequest) {
           purchaseOrderId: purchaseOrder.id,
           shopId,
           supplierId,
-          productId,
-          quantity,
+          itemsCount: items.length,
           totalAmount,
           urgent,
         },
@@ -295,7 +380,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       code: 0,
       msg: '创建成功',
-      data: purchaseOrder,
+      data: fullOrder,
     });
   } catch (error) {
     console.error('创建采购订单失败:', error);

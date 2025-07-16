@@ -266,44 +266,71 @@ const PurchaseOrdersPage: React.FC = () => {
     },
     {
       title: '产品',
-      width: 180,
-      render: (_, record) => (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <Avatar
-            src={record.product.imageUrl}
-            icon={<ProductOutlined />}
-            size="small"
-            style={{ marginRight: 8 }}
-          />
-          <div>
-            <div style={{ fontWeight: 'bold' }}>{record.product.code}</div>
-            <div style={{ color: '#666', fontSize: '12px' }}>
-              {record.product.specification || record.product.sku}
+      width: 200,
+      render: (_, record) => {
+        const items = record.items || [];
+        const itemCount = items.length;
+        const firstItem = items[0];
+
+        if (itemCount === 0) {
+          return <span style={{ color: '#ccc' }}>暂无产品</span>;
+        }
+
+        return (
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Avatar
+              src={firstItem?.product?.imageUrl}
+              icon={<ProductOutlined />}
+              size="small"
+              style={{ marginRight: 8 }}
+            />
+            <div>
+              <div style={{ fontWeight: 'bold' }}>
+                {itemCount > 1 ? `${itemCount}个产品` : firstItem?.product?.code}
+              </div>
+              {itemCount === 1 ? (
+                <>
+                  <div style={{ color: '#666', fontSize: '12px' }}>
+                    {firstItem?.product?.specification || firstItem?.product?.sku}
+                  </div>
+                  <div style={{ color: '#999', fontSize: '12px' }}>
+                    {firstItem?.product?.category?.name}
+                  </div>
+                </>
+              ) : (
+                <div style={{ color: '#666', fontSize: '12px' }}>
+                  {firstItem?.product?.code} 等{itemCount}个
+                </div>
+              )}
             </div>
-            <div style={{ color: '#999', fontSize: '12px' }}>{record.product.category.name}</div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       title: '数量',
-      dataIndex: 'quantity',
       width: 80,
       align: 'center',
-      render: (_, record) => (
-        <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
-          {record.quantity.toLocaleString()}
-        </span>
-      ),
+      render: (_, record) => {
+        const totalQuantity = (record.items || []).reduce(
+          (sum: number, item: any) => sum + item.quantity,
+          0
+        );
+        return (
+          <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
+            {totalQuantity.toLocaleString()}
+          </span>
+        );
+      },
     },
     {
       title: '金额',
-      dataIndex: 'totalAmount',
+      dataIndex: 'finalAmount',
       width: 100,
       align: 'right',
       render: (_, record) => (
         <span style={{ fontWeight: 'bold', color: '#f50' }}>
-          ¥{record.totalAmount.toLocaleString()}
+          ¥{(record.finalAmount || record.totalAmount).toLocaleString()}
         </span>
       ),
     },

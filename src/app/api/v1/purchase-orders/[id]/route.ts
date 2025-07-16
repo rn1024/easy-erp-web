@@ -5,6 +5,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
+// 计算订单总金额
+function calculateOrderTotal(items: any[]): {
+  totalAmount: number;
+  finalAmount: number;
+  discountAmount: number;
+} {
+  const totalAmount = items.reduce((sum, item) => sum + item.totalAmount, 0);
+  // 这里可以根据业务需求计算优惠
+  const discountAmount = 0; // 暂时不计算优惠
+  const finalAmount = totalAmount - discountAmount;
+
+  return { totalAmount, finalAmount, discountAmount };
+}
+
 // 获取采购订单详情
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -38,30 +52,37 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             deliveryDays: true,
           },
         },
-        product: {
-          select: {
-            id: true,
-            code: true,
-            specification: true,
-            sku: true,
-            color: true,
-            setQuantity: true,
-            internalSize: true,
-            externalSize: true,
-            weight: true,
-            imageUrl: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
         operator: {
           select: {
             id: true,
             name: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                code: true,
+                specification: true,
+                sku: true,
+                color: true,
+                setQuantity: true,
+                internalSize: true,
+                externalSize: true,
+                weight: true,
+                imageUrl: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
           },
         },
       },
@@ -92,44 +113,62 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const { id } = params;
     const body = await request.json();
-    const { shopId, supplierId, productId, quantity, totalAmount, status, urgent, remark } = body;
+    const { shopId, supplierId, status, urgent, remark, discountRate, items } = body;
 
     // 检查采购订单是否存在
     const existingOrder = await prisma.purchaseOrder.findUnique({
       where: { id },
+      include: {
+        items: true,
+      },
     });
 
     if (!existingOrder) {
       return NextResponse.json({ code: 404, msg: '采购订单不存在' }, { status: 404 });
     }
 
+    // 如果有产品明细更新，验证明细
+    if (items) {
+      if (!Array.isArray(items) || items.length === 0) {
+        return NextResponse.json({ code: 400, msg: '产品明细不能为空' }, { status: 400 });
+      }
+
+      // 验证产品明细
+      for (const item of items) {
+        if (!item.productId || !item.quantity || !item.unitPrice || item.taxRate === undefined) {
+          return NextResponse.json({ code: 400, msg: '产品明细信息不完整' }, { status: 400 });
+        }
+        if (item.quantity <= 0 || item.unitPrice <= 0) {
+          return NextResponse.json({ code: 400, msg: '产品数量和单价必须大于0' }, { status: 400 });
+        }
+      }
+
+      // 验证所有产品是否存在
+      const productIds = items.map((item: any) => item.productId);
+      const products = await prisma.productInfo.findMany({
+        where: { id: { in: productIds } },
+      });
+
+      if (products.length !== productIds.length) {
+        return NextResponse.json({ code: 400, msg: '部分产品不存在' }, { status: 400 });
+      }
+    }
+
     // 构建更新数据
     const updateData: any = {};
     if (shopId !== undefined) updateData.shopId = shopId;
     if (supplierId !== undefined) updateData.supplierId = supplierId;
-    if (productId !== undefined) updateData.productId = productId;
-    if (quantity !== undefined) {
-      if (quantity <= 0) {
-        return NextResponse.json({ code: 400, msg: '数量必须大于0' }, { status: 400 });
-      }
-      updateData.quantity = parseInt(quantity);
-    }
-    if (totalAmount !== undefined) {
-      if (totalAmount <= 0) {
-        return NextResponse.json({ code: 400, msg: '金额必须大于0' }, { status: 400 });
-      }
-      updateData.totalAmount = parseFloat(totalAmount);
-    }
     if (status !== undefined) updateData.status = status;
     if (urgent !== undefined) updateData.urgent = Boolean(urgent);
     if (remark !== undefined) updateData.remark = remark || null;
+    if (discountRate !== undefined)
+      updateData.discountRate = discountRate ? parseFloat(discountRate) : null;
 
     // 如果更改了关联数据，验证是否存在
-    if (shopId || supplierId || productId) {
+    if (shopId || supplierId) {
       const checks = [];
       if (shopId) checks.push(prisma.shop.findUnique({ where: { id: shopId } }));
       if (supplierId) checks.push(prisma.supplier.findUnique({ where: { id: supplierId } }));
-      if (productId) checks.push(prisma.productInfo.findUnique({ where: { id: productId } }));
 
       const results = await Promise.all(checks);
 
@@ -139,15 +178,69 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       if (supplierId && !results[shopId ? 1 : 0]) {
         return NextResponse.json({ code: 400, msg: '供应商不存在' }, { status: 400 });
       }
-      if (productId && !results[results.length - 1]) {
-        return NextResponse.json({ code: 400, msg: '产品不存在' }, { status: 400 });
+    }
+
+    // 如果有产品明细更新，计算新的总金额
+    let calculatedItems: any[] = [];
+    if (items) {
+      calculatedItems = items.map((item: any) => {
+        const amount = item.quantity * item.unitPrice;
+        const taxAmount = amount * (item.taxRate / 100);
+        const totalAmount = amount + taxAmount;
+
+        return {
+          id: item.id || undefined, // 如果有ID则是更新，否则是新增
+          productId: item.productId,
+          quantity: parseInt(item.quantity),
+          unitPrice: parseFloat(item.unitPrice),
+          amount: parseFloat(amount.toFixed(2)),
+          taxRate: parseFloat(item.taxRate),
+          taxAmount: parseFloat(taxAmount.toFixed(2)),
+          totalAmount: parseFloat(totalAmount.toFixed(2)),
+          remark: item.remark || null,
+        };
+      });
+
+      // 计算订单总金额
+      const { totalAmount, finalAmount, discountAmount } = calculateOrderTotal(calculatedItems);
+      updateData.totalAmount = parseFloat(totalAmount.toFixed(2));
+      updateData.finalAmount = parseFloat(finalAmount.toFixed(2));
+      if (discountAmount > 0) {
+        updateData.discountAmount = parseFloat(discountAmount.toFixed(2));
       }
     }
 
-    // 更新采购订单
-    const updatedOrder = await prisma.purchaseOrder.update({
+    // 使用事务更新订单和明细
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      // 更新采购订单基本信息
+      const order = await tx.purchaseOrder.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // 如果有产品明细更新
+      if (items) {
+        // 删除现有明细
+        await tx.purchaseOrderItem.deleteMany({
+          where: { purchaseOrderId: id },
+        });
+
+        // 创建新明细
+        await tx.purchaseOrderItem.createMany({
+          data: calculatedItems.map((item) => ({
+            ...item,
+            id: undefined, // 确保不带ID，让数据库自动生成
+            purchaseOrderId: id,
+          })),
+        });
+      }
+
+      return order;
+    });
+
+    // 获取完整的更新后订单信息
+    const fullOrder = await prisma.purchaseOrder.findUnique({
       where: { id },
-      data: updateData,
       include: {
         shop: {
           select: {
@@ -165,24 +258,31 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             contactPhone: true,
           },
         },
-        product: {
-          select: {
-            id: true,
-            code: true,
-            specification: true,
-            sku: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
         operator: {
           select: {
             id: true,
             name: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                code: true,
+                specification: true,
+                sku: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
           },
         },
       },
@@ -198,8 +298,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         status: 'SUCCESS',
         details: {
           purchaseOrderId: id,
-          originalData: existingOrder,
           updatedData: updateData,
+          itemsCount: items ? items.length : undefined,
         },
       },
     });
@@ -207,7 +307,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({
       code: 200,
       msg: '更新成功',
-      data: updatedOrder,
+      data: fullOrder,
     });
   } catch (error) {
     console.error('更新采购订单失败:', error);
@@ -228,6 +328,18 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // 检查采购订单是否存在
     const existingOrder = await prisma.purchaseOrder.findUnique({
       where: { id },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                code: true,
+                sku: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!existingOrder) {
@@ -235,14 +347,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // 检查是否可以删除（只有待处理和已取消的订单可以删除）
-    if (!['PENDING', 'CANCELLED'].includes(existingOrder.status)) {
+    if (!['CREATED', 'PENDING', 'CANCELLED'].includes(existingOrder.status)) {
       return NextResponse.json(
-        { code: 400, msg: '只有待处理和已取消的订单可以删除' },
+        { code: 400, msg: '只有已创建、待处理和已取消的订单可以删除' },
         { status: 400 }
       );
     }
 
-    // 删除采购订单
+    // 删除采购订单（明细会通过CASCADE自动删除）
     await prisma.purchaseOrder.delete({
       where: { id },
     });
@@ -257,7 +369,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         status: 'SUCCESS',
         details: {
           purchaseOrderId: id,
-          deletedData: existingOrder,
+          orderNumber: existingOrder.orderNumber,
+          itemsCount: existingOrder.items.length,
         },
       },
     });

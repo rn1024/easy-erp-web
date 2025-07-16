@@ -5,6 +5,7 @@ import type { ResType } from '@/types/api';
 
 // 采购订单状态枚举
 export enum PurchaseOrderStatus {
+  CREATED = 'CREATED',
   PENDING = 'PENDING',
   CONFIRMED = 'CONFIRMED',
   PRODUCTION = 'PRODUCTION',
@@ -13,15 +14,48 @@ export enum PurchaseOrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
+// 采购订单明细项
+export interface PurchaseOrderItemInfo {
+  id: string;
+  purchaseOrderId: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number; // 小计金额 (quantity * unitPrice)
+  taxRate: number; // 税率 (%)
+  taxAmount: number; // 税额 (amount * taxRate / 100)
+  totalAmount: number; // 含税总额 (amount + taxAmount)
+  remark?: string; // 明细备注
+  createdAt: string;
+  updatedAt: string;
+  product: {
+    id: string;
+    code: string;
+    specification?: string;
+    sku: string;
+    color?: string;
+    setQuantity?: number;
+    internalSize?: string;
+    externalSize?: string;
+    weight?: number;
+    imageUrl?: string;
+    category: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
 // 采购订单信息
 export interface PurchaseOrderInfo {
   id: string;
   orderNumber: string;
   shopId: string;
   supplierId: string;
-  productId: string;
-  quantity: number;
-  totalAmount: number;
+  totalAmount: number; // 订单总金额
+  discountRate?: number; // 优惠率 (%)
+  discountAmount?: number; // 优惠金额
+  finalAmount: number; // 最终金额
   status: PurchaseOrderStatus;
   urgent: boolean;
   remark?: string;
@@ -44,36 +78,39 @@ export interface PurchaseOrderInfo {
     productionDays?: number;
     deliveryDays?: number;
   };
-  product: {
-    id: string;
-    code: string;
-    specification?: string;
-    sku: string;
-    color?: string;
-    setQuantity?: number;
-    internalSize?: string;
-    externalSize?: string;
-    weight?: number;
-    imageUrl?: string;
-    category: {
-      id: string;
-      name: string;
-    };
-  };
   operator: {
     id: string;
     name: string;
   };
+  items: PurchaseOrderItemInfo[]; // 订单明细列表
+}
+
+// 创建采购订单明细项数据
+export interface CreatePurchaseOrderItemData {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate: number;
+  remark?: string;
 }
 
 // 创建采购订单数据
 export interface CreatePurchaseOrderData {
   shopId: string;
   supplierId: string;
+  urgent?: boolean;
+  remark?: string;
+  discountRate?: number; // 优惠率 (%)
+  items: CreatePurchaseOrderItemData[]; // 产品明细列表
+}
+
+// 更新采购订单明细项数据
+export interface UpdatePurchaseOrderItemData {
+  id?: string; // 存在则更新，不存在则新增
   productId: string;
   quantity: number;
-  totalAmount: number;
-  urgent?: boolean;
+  unitPrice: number;
+  taxRate: number;
   remark?: string;
 }
 
@@ -81,12 +118,11 @@ export interface CreatePurchaseOrderData {
 export interface UpdatePurchaseOrderData {
   shopId?: string;
   supplierId?: string;
-  productId?: string;
-  quantity?: number;
-  totalAmount?: number;
   status?: PurchaseOrderStatus;
   urgent?: boolean;
   remark?: string;
+  discountRate?: number; // 优惠率 (%)
+  items?: UpdatePurchaseOrderItemData[]; // 产品明细列表
 }
 
 // 采购订单查询参数
@@ -95,7 +131,7 @@ export interface PurchaseOrderQueryParams {
   pageSize?: number;
   shopId?: string;
   supplierId?: string;
-  productId?: string;
+  productId?: string; // 可以按产品查询
   status?: PurchaseOrderStatus;
   urgent?: boolean;
   operatorId?: string;
@@ -143,6 +179,7 @@ export const deletePurchaseOrderApi = (id: string) => {
 
 // 采购订单状态选项
 export const purchaseOrderStatusOptions = [
+  { label: '已创建', value: PurchaseOrderStatus.CREATED, color: 'default' },
   { label: '待处理', value: PurchaseOrderStatus.PENDING, color: 'orange' },
   { label: '已确认', value: PurchaseOrderStatus.CONFIRMED, color: 'blue' },
   { label: '生产中', value: PurchaseOrderStatus.PRODUCTION, color: 'purple' },

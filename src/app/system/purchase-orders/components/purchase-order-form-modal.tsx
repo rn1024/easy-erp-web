@@ -12,13 +12,22 @@ import {
   Col,
   InputNumber,
   Switch,
+  Divider,
 } from 'antd';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Utils
  */
 import { apiErrorMsg } from '@/utils/apiErrorMsg';
+
+/**
+ * Components
+ */
+import PurchaseOrderItemsTable, {
+  type PurchaseOrderItem,
+  type ProductOption,
+} from './purchase-order-items-table';
 
 /**
  * APIs
@@ -81,6 +90,16 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
   const [submitting, { setFalse: setSubmittingFalse, setTrue: setSubmittingTrue }] =
     useBoolean(false);
   const [form] = Form.useForm();
+  const [orderItems, setOrderItems] = useState<PurchaseOrderItem[]>([]);
+
+  // 转换产品数据格式
+  const productOptions: ProductOption[] = productsData.map((product: any) => ({
+    id: product.id,
+    code: product.code,
+    sku: product.sku,
+    specification: product.specification,
+    category: product.category,
+  }));
 
   /**
    * Effects
@@ -92,21 +111,36 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         form.setFieldsValue({
           shopId: entity.shopId,
           supplierId: entity.supplierId,
-          productId: entity.productId,
-          quantity: entity.quantity,
-          totalAmount: entity.totalAmount,
           status: entity.status,
           urgent: entity.urgent,
           remark: entity.remark,
+          discountRate: entity.discountRate || 0,
         });
+
+        // 设置产品明细
+        if (entity.items && entity.items.length > 0) {
+          const items: PurchaseOrderItem[] = entity.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            amount: item.amount,
+            taxRate: item.taxRate,
+            taxAmount: item.taxAmount,
+            totalAmount: item.totalAmount,
+            remark: item.remark || '',
+          }));
+          setOrderItems(items);
+        } else {
+          setOrderItems([]);
+        }
       } else {
-        // 创建模式：不设置状态字段，默认为 CREATED
+        // 创建模式：重置表单和产品明细
         form.resetFields();
         form.setFieldsValue({
           urgent: false,
-          quantity: 1,
-          totalAmount: 0,
+          discountRate: 0,
         });
+        setOrderItems([]);
       }
     }
   }, [open, entity, form]);
@@ -117,7 +151,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
   const modalProps: ModalProps = {
     open: open,
     title: entity ? '编辑采购订单' : '新增采购订单',
-    width: 900,
+    width: 1200,
     okButtonProps: {
       loading: submitting,
     },
@@ -127,8 +161,11 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
     onCancel: () => {
       closeModal();
       form.resetFields();
+      setOrderItems([]);
       setSubmittingFalse();
     },
+    destroyOnClose: true,
+    maskClosable: false,
   };
 
   /**
@@ -140,20 +177,49 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
     validateTrigger: 'onBlur',
     preserve: false,
     onFinish: async (formData) => {
+      // 验证产品明细
+      if (!orderItems || orderItems.length === 0) {
+        message.error('请添加至少一个产品');
+        return;
+      }
+
+      // 验证每个产品明细
+      const invalidItems = orderItems.filter(
+        (item) => !item.productId || item.quantity <= 0 || item.unitPrice <= 0
+      );
+
+      if (invalidItems.length > 0) {
+        message.error('请完善产品明细信息，确保产品、数量、单价均已正确填写');
+        return;
+      }
+
       setSubmittingTrue();
       try {
+        // 准备提交数据
+        const submitData = {
+          ...formData,
+          items: orderItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            taxRate: item.taxRate,
+            remark: item.remark || '',
+          })),
+        };
+
         // 如果是创建模式，移除状态字段（后端会默认设置为 CREATED）
-        const submitData = { ...formData };
         if (!entity) {
           delete submitData.status;
         }
 
         const res = await formSubmit(entity, submitData);
-        if (get(res, 'success') || get(res, 'code') === 200) {
+        if (get(res, 'data.code') === 0 || get(res, 'code') === 200) {
           message.success(entity ? '更新成功' : '创建成功');
           closeModal(true);
         } else {
-          message.error(get(res, 'msg') || get(res, 'message') || '操作失败');
+          message.error(
+            get(res, 'data.msg') || get(res, 'msg') || get(res, 'message') || '操作失败'
+          );
           setSubmittingFalse();
         }
       } catch (error: any) {
@@ -163,9 +229,15 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
     },
   };
 
+  // 处理产品明细变更
+  const handleItemsChange = (items: PurchaseOrderItem[]) => {
+    setOrderItems(items);
+  };
+
   return (
     <Modal {...modalProps}>
       <Form {...formProps}>
+        {/* 基本信息 */}
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -199,56 +271,33 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
           </Col>
         </Row>
 
-        <Form.Item
-          name="productId"
-          label="产品"
-          rules={[{ required: true, message: '请选择产品' }]}
-        >
-          <Select placeholder="请选择产品" showSearch optionFilterProp="children">
-            {productsData.map((product: any) => (
-              <Option key={product.id} value={product.id}>
-                {product.code} - {product.specification || product.sku}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
-              name="quantity"
-              label="数量"
-              rules={[
-                { required: true, message: '请输入数量' },
-                { type: 'number', min: 1, message: '数量必须大于0' },
-              ]}
+              name="discountRate"
+              label="优惠率(%)"
+              rules={[{ type: 'number', min: 0, max: 100, message: '优惠率范围为0-100%' }]}
             >
-              <InputNumber placeholder="请输入数量" style={{ width: '100%' }} min={1} />
+              <InputNumber
+                placeholder="请输入优惠率"
+                style={{ width: '100%' }}
+                min={0}
+                max={100}
+                precision={2}
+                suffix="%"
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item
-              name="totalAmount"
-              label="总金额"
-              rules={[
-                { required: true, message: '请输入总金额' },
-                { type: 'number', min: 0, message: '金额不能为负数' },
-              ]}
-            >
-              <InputNumber
-                placeholder="请输入总金额"
-                style={{ width: '100%' }}
-                min={0}
-                precision={2}
-                prefix="¥"
-              />
+            <Form.Item name="urgent" label="紧急标记" valuePropName="checked">
+              <Switch checkedChildren="紧急" unCheckedChildren="常规" />
             </Form.Item>
           </Col>
         </Row>
 
-        <Row gutter={16}>
-          {/* 只在编辑模式下显示状态选择器 */}
-          {entity && (
+        {/* 只在编辑模式下显示状态选择器 */}
+        {entity && (
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="status" label="状态">
                 <Select placeholder="请选择状态">
@@ -260,17 +309,22 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
                 </Select>
               </Form.Item>
             </Col>
-          )}
-          <Col span={entity ? 12 : 24}>
-            <Form.Item name="urgent" label="紧急标记" valuePropName="checked">
-              <Switch checkedChildren="紧急" unCheckedChildren="常规" />
-            </Form.Item>
-          </Col>
-        </Row>
+          </Row>
+        )}
 
         <Form.Item name="remark" label="备注">
-          <TextArea rows={4} placeholder="请输入备注信息" maxLength={500} />
+          <TextArea rows={3} placeholder="请输入备注信息" maxLength={500} />
         </Form.Item>
+
+        <Divider orientation="left">产品明细</Divider>
+
+        {/* 产品明细表格 */}
+        <PurchaseOrderItemsTable
+          items={orderItems}
+          onChange={handleItemsChange}
+          productsData={productOptions}
+          disabled={false}
+        />
       </Form>
     </Modal>
   );
