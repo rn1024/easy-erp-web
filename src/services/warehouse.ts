@@ -54,10 +54,7 @@ export const getWarehouseTaskTypeLabel = (type: string) => {
 export interface WarehouseTaskInfo {
   id: string;
   shopId: string;
-  categoryId: string;
-  productId: string;
-  totalQuantity: number;
-  progress: number;
+  progress?: number; // 包装任务才有进度，发货任务为null
   status: WarehouseTaskStatus;
   type: WarehouseTaskType;
   operatorId: string;
@@ -67,39 +64,23 @@ export interface WarehouseTaskInfo {
   // 关联数据
   shop?: {
     id: string;
-    name: string;
-    code: string;
-  };
-  category?: {
-    id: string;
-    name: string;
-  };
-  product?: {
-    id: string;
-    code: string;
-    specification: string;
-    sku: string;
+    nickname: string;
   };
   operator?: {
     id: string;
-    username: string;
-    realName: string;
+    name: string;
   };
 }
 
 // 创建仓库任务数据接口
 export interface CreateWarehouseTaskData {
   shopId: string;
-  categoryId: string;
-  productId: string;
-  totalQuantity: number;
   type: WarehouseTaskType;
-  progress?: number;
+  progress?: number; // 包装任务才有进度，发货任务为null
 }
 
 // 更新仓库任务数据接口
 export interface UpdateWarehouseTaskData {
-  totalQuantity?: number;
   progress?: number;
   status?: WarehouseTaskStatus;
   type?: WarehouseTaskType;
@@ -108,8 +89,6 @@ export interface UpdateWarehouseTaskData {
 // 仓库任务查询参数接口
 export interface WarehouseTaskQueryParams {
   shopId?: string;
-  categoryId?: string;
-  productId?: string;
   status?: WarehouseTaskStatus;
   type?: WarehouseTaskType;
   page?: number;
