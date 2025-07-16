@@ -1,0 +1,315 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Button, Form, Select, Space, Tag, Progress, Popconfirm, message, Flex } from 'antd';
+import { ProCard, ProTable } from '@ant-design/pro-components';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
+import { useRequest } from 'ahooks';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
+import {
+  getWarehouseTasksApi,
+  createWarehouseTaskApi,
+  updateWarehouseTaskApi,
+  deleteWarehouseTaskApi,
+  type WarehouseTaskInfo,
+  type CreateWarehouseTaskData,
+  type UpdateWarehouseTaskData,
+  type WarehouseTaskQueryParams,
+  WarehouseTaskStatus,
+  WarehouseTaskType,
+  warehouseTaskStatusOptions,
+  getWarehouseTaskStatusLabel,
+} from '@/services/warehouse';
+import { getShops } from '@/services/shops';
+import {
+  saveProductItemsApi,
+  getProductItemsApi,
+  ProductItemRelatedType,
+} from '@/services/product-items';
+import type { UniversalProductItem } from '@/components/universal-product-items-table';
+import PackagingTaskFormModal from './components/packaging-task-form-modal';
+
+const { Option } = Select;
+
+const PackagingTasksPage: React.FC = () => {
+  const [searchForm] = Form.useForm();
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingTask, setEditingTask] = useState<WarehouseTaskInfo | null>(null);
+  const [searchParams, setSearchParams] = useState<WarehouseTaskQueryParams>({
+    page: 1,
+    pageSize: 10,
+    type: WarehouseTaskType.PACKAGING, // 固定为包装任务
+  });
+
+  const {
+    data: tasksData,
+    loading,
+    refresh,
+  } = useRequest(() => getWarehouseTasksApi(searchParams), {
+    refreshDeps: [searchParams],
+  });
+
+  const { data: shopsData } = useRequest(() => getShops({}));
+
+  const shops = shopsData?.data?.data?.list || [];
+  const tasks = tasksData?.data?.list || [];
+  const total = tasksData?.data?.total || 0;
+
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue();
+    setSearchParams({
+      ...values,
+      type: WarehouseTaskType.PACKAGING, // 确保始终是包装任务
+      page: 1,
+      pageSize: searchParams.pageSize,
+    });
+  };
+
+  const handleReset = () => {
+    searchForm.resetFields();
+    setSearchParams({
+      page: 1,
+      pageSize: 10,
+      type: WarehouseTaskType.PACKAGING,
+    });
+  };
+
+  const showModal = (task?: WarehouseTaskInfo) => {
+    setEditingTask(task || null);
+    setIsModalVisible(true);
+  };
+
+  const handleSubmit = async (
+    data: CreateWarehouseTaskData | UpdateWarehouseTaskData,
+    productItems: UniversalProductItem[]
+  ) => {
+    try {
+      let taskId: string;
+
+      // 确保任务类型为包装
+      const taskData = {
+        ...data,
+        type: WarehouseTaskType.PACKAGING,
+      };
+
+      if (editingTask) {
+        // 更新包装任务
+        await updateWarehouseTaskApi(editingTask.id, taskData as UpdateWarehouseTaskData);
+        taskId = editingTask.id;
+      } else {
+        // 创建包装任务
+        const response = await createWarehouseTaskApi(taskData as CreateWarehouseTaskData);
+        taskId = response.data.id;
+      }
+
+      // 保存产品明细
+      await saveProductItemsApi({
+        relatedType: ProductItemRelatedType.WAREHOUSE_TASK,
+        relatedId: taskId,
+        items: productItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          completedQuantity: item.completedQuantity,
+          remark: item.remark,
+        })),
+      });
+
+      setIsModalVisible(false);
+      setEditingTask(null);
+      refresh();
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || '操作失败');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteWarehouseTaskApi(id);
+      message.success('删除包装任务成功');
+      refresh();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || '删除失败');
+    }
+  };
+
+  const columns: ProColumns<WarehouseTaskInfo>[] = [
+    {
+      title: '任务ID',
+      dataIndex: 'id',
+      width: 120,
+      render: (_, record) => record.id.slice(-8),
+    },
+    {
+      title: '店铺',
+      dataIndex: ['shop'],
+      render: (_, record) => record.shop?.nickname || '-',
+    },
+    {
+      title: '包装进度',
+      dataIndex: 'progress',
+      width: 150,
+      render: (_, record) => {
+        if (record.progress !== null && record.progress !== undefined) {
+          return (
+            <Progress
+              percent={record.progress}
+              size="small"
+              status={record.progress === 100 ? 'success' : 'active'}
+              format={(percent) => `${percent}%`}
+            />
+          );
+        }
+        return '-';
+      },
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      render: (_, record) => {
+        const config = getWarehouseTaskStatusLabel(record.status);
+        return <Tag color={config.color}>{config.label}</Tag>;
+      },
+    },
+    {
+      title: '操作员',
+      dataIndex: ['operator'],
+      render: (_, record) => record.operator?.name || '-',
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      render: (_, record) => new Date(record.createdAt).toLocaleString('zh-CN'),
+    },
+    {
+      title: '操作',
+      width: 150,
+      render: (_, record) => (
+        <Space size="small">
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => showModal(record)}
+          >
+            编辑
+          </Button>
+          <Popconfirm
+            title="确定要删除这个包装任务吗？"
+            description="删除后不可恢复"
+            onConfirm={() => handleDelete(record.id)}
+          >
+            <Button
+              type="link"
+              danger
+              icon={<DeleteOutlined />}
+              size="small"
+              disabled={record.status === 'IN_PROGRESS' || record.status === 'COMPLETED'}
+            >
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  const proTableProps: ProTableProps<WarehouseTaskInfo, any> = {
+    columns,
+    dataSource: tasks,
+    loading,
+    rowKey: 'id',
+    search: false,
+    pagination: {
+      current: Number(searchParams.page) || 1,
+      pageSize: Number(searchParams.pageSize) || 20,
+      total: total || 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+      showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+      onChange: (page, pageSize) => {
+        setSearchParams({
+          ...searchParams,
+          page: page,
+          pageSize: pageSize || 20,
+          type: WarehouseTaskType.PACKAGING,
+        });
+      },
+    },
+    options: {
+      reload: refresh,
+    },
+    toolBarRender: () => [
+      <Button key="add" type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+        新增包装任务
+      </Button>,
+      <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
+        刷新
+      </Button>,
+    ],
+  };
+
+  return (
+    <>
+      <ProCard className="mb-16">
+        <Form form={searchForm} layout="inline">
+          <Flex gap={16} wrap={true}>
+            <Form.Item name="shopId" style={{ marginRight: 0 }}>
+              <Select placeholder="选择店铺" style={{ width: 200 }} allowClear>
+                {shops.map((shop: any) => (
+                  <Option key={shop.id} value={shop.id}>
+                    {shop.nickname}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item name="status" style={{ marginRight: 0 }}>
+              <Select placeholder="选择状态" style={{ width: 120 }} allowClear>
+                {warehouseTaskStatusOptions.map((option) => (
+                  <Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={handleSearch}
+              loading={loading}
+            >
+              搜索
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleReset}>
+              重置
+            </Button>
+          </Flex>
+        </Form>
+      </ProCard>
+
+      <ProTable {...proTableProps} />
+
+      <PackagingTaskFormModal
+        visible={isModalVisible}
+        editingTask={editingTask}
+        onCancel={() => {
+          setIsModalVisible(false);
+          setEditingTask(null);
+        }}
+        onSuccess={() => {
+          setIsModalVisible(false);
+          setEditingTask(null);
+          refresh();
+        }}
+        onSubmit={handleSubmit}
+      />
+    </>
+  );
+};
+
+export default PackagingTasksPage;

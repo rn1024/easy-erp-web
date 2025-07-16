@@ -429,7 +429,7 @@ async function main() {
 
   // 创建默认管理员账户
   console.log('创建默认管理员账户...');
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123456';
+  const adminPassword = process.env.ADMIN_PASSWORD || '123456';
   const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
   let adminAccount = await prisma.account.findFirst({

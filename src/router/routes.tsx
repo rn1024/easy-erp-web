@@ -100,9 +100,15 @@ const routes: MenuDataItem[] = [
     children: [
       {
         icon: <InboxOutlined />,
-        name: 'Warehouse-Management_Tasks',
-        path: '/system/warehouse-tasks',
-        key: '/system/warehouse-tasks',
+        name: 'Warehouse-Management_Packaging-Tasks',
+        path: '/system/packaging-tasks',
+        key: '/system/packaging-tasks',
+      },
+      {
+        icon: <TruckOutlined />,
+        name: 'Warehouse-Management_Shipping-Tasks',
+        path: '/system/shipping-tasks',
+        key: '/system/shipping-tasks',
       },
     ],
   },
