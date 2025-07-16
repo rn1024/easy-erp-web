@@ -10,7 +10,6 @@ import {
   Popconfirm,
   message,
   Tag,
-  Switch,
   Avatar,
   Tooltip,
   Badge,
@@ -136,7 +135,7 @@ const PurchaseOrdersPage: React.FC = () => {
   // 搜索处理
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
-    const { dateRange, ...otherValues } = values;
+    const { dateRange, urgent, ...otherValues } = values;
 
     // 处理日期范围
     let startDate, endDate;
@@ -145,13 +144,21 @@ const PurchaseOrdersPage: React.FC = () => {
       endDate = dateRange[1].format('YYYY-MM-DD 23:59:59');
     }
 
-    setSearchParams({
+    // 处理紧急程度筛选
+    const params: any = {
       ...otherValues,
       startDate,
       endDate,
       page: 1,
       pageSize: searchParams.pageSize,
-    });
+    };
+
+    // 只有选择了具体的紧急程度才传递参数
+    if (urgent !== undefined && urgent !== '') {
+      params.urgent = urgent;
+    }
+
+    setSearchParams(params);
   };
 
   // 重置搜索
@@ -403,8 +410,12 @@ const PurchaseOrdersPage: React.FC = () => {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item name="urgent" valuePropName="checked" style={{ marginRight: 0 }}>
-              <Switch checkedChildren="紧急" unCheckedChildren="常规" />
+            <Form.Item name="urgent" style={{ marginRight: 0 }}>
+              <Select placeholder="请选择紧急程度" style={{ width: 150 }} allowClear>
+                <Option value="">全部</Option>
+                <Option value="true">紧急</Option>
+                <Option value="false">常规</Option>
+              </Select>
             </Form.Item>
             <Form.Item name="operatorId" style={{ marginRight: 0 }}>
               <Select
