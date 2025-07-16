@@ -37,7 +37,34 @@ model Account {
   operatedWarehouseTasks WarehouseTask[]   @relation("WarehouseTaskOperator")
   operatedDeliveries    DeliveryRecord[]   @relation("DeliveryOperator")
 
+  // 关联关系 - 审批系统
+  approvalRecords       ApprovalRecord[]   @relation("ApprovalRecords")
+
   @@map("accounts")
+}
+
+// 通用审批记录表
+model ApprovalRecord {
+  id            String      @id @default(cuid())
+  entityType    EntityType  // 业务类型：采购订单、销售订单等
+  entityId      String      // 关联的业务单据ID
+  entityNumber  String      // 业务单据号码 (如订单号)
+  approverId    String      // 审批人ID
+  fromStatus    String      // 审批前状态 (字符串，支持不同业务的状态)
+  toStatus      String      // 审批后状态
+  reason        String      // 审批原因
+  remark        String?     // 备注信息
+  createdAt     DateTime    @default(now())
+
+  // 关联关系
+  approver      Account     @relation("ApprovalRecords", fields: [approverId], references: [id])
+
+  // 复合索引优化查询性能
+  @@index([entityType, entityId])
+  @@index([entityType, entityNumber])
+  @@index([approverId])
+  @@index([createdAt])
+  @@map("approval_records")
 }
 
 // 角色表
@@ -336,7 +363,7 @@ model PurchaseOrder {
   productId   String
   quantity    Int
   totalAmount Decimal @db.Decimal(12, 2)
-  status      PurchaseOrderStatus  @default(PENDING)
+  status      PurchaseOrderStatus  @default(CREATED)
   urgent      Boolean              @default(false)
   remark      String?
   operatorId  String
@@ -432,13 +459,21 @@ model DeliveryRecord {
 
 // ========== ERP 业务枚举定义 ==========
 
+// 业务实体类型枚举 (通用审批系统)
+enum EntityType {
+  PURCHASE_ORDER     // 采购订单
+  SALES_ORDER       // 销售订单 (预留)
+  INVENTORY_TRANSFER // 库存调拨 (预留)
+  EXPENSE_REPORT    // 费用报销 (预留)
+}
+
 enum PurchaseOrderStatus {
-  PENDING
-  CONFIRMED
-  PRODUCTION
-  SHIPPED
-  RECEIVED
-  CANCELLED
+  CREATED    // 已创建 (新增，默认状态)
+  PENDING    // 待审批
+  APPROVED   // 已审批
+  REJECTED   // 已拒绝
+  COMPLETED  // 已完成
+  CANCELLED  // 已取消
 }
 
 enum WarehouseTaskStatus {

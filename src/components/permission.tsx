@@ -75,7 +75,18 @@ const Permission: React.FC<Props> = ({
   // 兼容旧的 permission 单个权限参数
   const requiredPermissions = permission ? [permission] : permissions;
 
-  if (!userPermissions || requiredPermissions.length === 0) {
+  // 如果没有用户权限信息，返回fallback
+  if (!userPermissions) {
+    return fallback;
+  }
+
+  // 🔥 优先检查超级管理员身份，如果是超级管理员直接返回children
+  if (isSuperAdmin(userPermissions, userRoles)) {
+    return children;
+  }
+
+  // 如果没有指定权限要求，对于普通用户返回fallback
+  if (requiredPermissions.length === 0) {
     return fallback;
   }
 
@@ -148,6 +159,8 @@ export const useAccess = () => {
      */
     hasAllPermissions: (permissions: string[]) => {
       if (!userPermissions) return false;
+      // 🔥 超级管理员直接返回 true
+      if (isSuperAdmin(userPermissions, userRoles)) return true;
       return permissions.every((perm) => hasPermission(userPermissions, perm, userRoles));
     },
 
@@ -156,6 +169,8 @@ export const useAccess = () => {
      */
     hasAnyPermission: (permissions: string[]) => {
       if (!userPermissions) return false;
+      // 🔥 超级管理员直接返回 true
+      if (isSuperAdmin(userPermissions, userRoles)) return true;
       return permissions.some((perm) => hasPermission(userPermissions, perm, userRoles));
     },
 
@@ -165,6 +180,28 @@ export const useAccess = () => {
     isSuperAdmin: () => {
       if (!userPermissions) return false;
       return isSuperAdmin(userPermissions, userRoles);
+    },
+
+    /**
+     * 检查是否拥有任何权限（包括超级管理员）
+     */
+    hasAnyAccess: () => {
+      if (!userPermissions) return false;
+      // 🔥 超级管理员直接返回 true
+      if (isSuperAdmin(userPermissions, userRoles)) return true;
+      // 普通用户检查是否有任何权限
+      return userPermissions.length > 0;
+    },
+
+    /**
+     * 检查是否有管理员权限（超级管理员或拥有任何 admin.* 权限）
+     */
+    isAdmin: () => {
+      if (!userPermissions) return false;
+      // 🔥 超级管理员直接返回 true
+      if (isSuperAdmin(userPermissions, userRoles)) return true;
+      // 检查是否有任何 admin.* 权限
+      return userPermissions.some((perm) => perm.startsWith('admin.'));
     },
 
     /**

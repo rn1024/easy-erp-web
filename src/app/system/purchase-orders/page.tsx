@@ -35,6 +35,8 @@ import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
  * Components
  */
 import PurchaseOrderFormModal from './components/purchase-order-form-modal';
+import PurchaseOrderApprovalModal from './components/purchase-order-approval-modal';
+import Permission from '@/components/permission';
 
 /**
  * APIs
@@ -73,6 +75,8 @@ const PurchaseOrdersPage: React.FC = () => {
   const [searchForm] = Form.useForm();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PurchaseOrderInfo | null>(null);
+  const [approvalModalVisible, setApprovalModalVisible] = useState(false);
+  const [approvalRecord, setApprovalRecord] = useState<PurchaseOrderInfo | null>(null);
   const [searchParams, setSearchParams] = useState<SearchFormData>({
     page: 1,
     pageSize: 10,
@@ -183,9 +187,23 @@ const PurchaseOrdersPage: React.FC = () => {
     setModalVisible(true);
   };
 
+  // 打开审批弹窗
+  const handleApproval = (record: PurchaseOrderInfo) => {
+    setApprovalRecord(record);
+    setApprovalModalVisible(true);
+  };
+
   const closeModal = (reload?: boolean) => {
     setModalVisible(false);
     setEditingRecord(null);
+    if (reload) {
+      refreshPurchaseOrders();
+    }
+  };
+
+  const closeApprovalModal = (reload?: boolean) => {
+    setApprovalModalVisible(false);
+    setApprovalRecord(null);
     if (reload) {
       refreshPurchaseOrders();
     }
@@ -292,12 +310,33 @@ const PurchaseOrdersPage: React.FC = () => {
     {
       title: '状态',
       dataIndex: 'status',
-      width: 100,
+      width: 120,
       align: 'center',
       render: (_, record) => (
-        <Tag color={getPurchaseOrderStatusColor(record.status)}>
-          {getPurchaseOrderStatusLabel(record.status)}
-        </Tag>
+        <div>
+          <Tag color={getPurchaseOrderStatusColor(record.status)}>
+            {getPurchaseOrderStatusLabel(record.status)}
+          </Tag>
+          {(record as any).latestApproval && (
+            <Tooltip
+              title={
+                <div>
+                  <div>最新审批：{(record as any).latestApproval.approver.name}</div>
+                  <div>
+                    操作：{(record as any).latestApproval.fromStatus} →{' '}
+                    {(record as any).latestApproval.toStatus}
+                  </div>
+                  <div>原因：{(record as any).latestApproval.reason}</div>
+                  <div>
+                    时间：{new Date((record as any).latestApproval.createdAt).toLocaleString()}
+                  </div>
+                </div>
+              }
+            >
+              <Badge dot color="blue" />
+            </Tooltip>
+          )}
+        </div>
       ),
     },
     {
@@ -312,7 +351,7 @@ const PurchaseOrdersPage: React.FC = () => {
     },
     {
       title: '操作',
-      width: 120,
+      width: 180,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
@@ -324,6 +363,18 @@ const PurchaseOrdersPage: React.FC = () => {
               size="small"
             />
           </Tooltip>
+          <Permission permission="purchase.approve">
+            <Tooltip title="审批">
+              <Button
+                type="link"
+                onClick={() => handleApproval(record)}
+                size="small"
+                disabled={!['CREATED', 'PENDING', 'REJECTED'].includes(record.status)}
+              >
+                审批
+              </Button>
+            </Tooltip>
+          </Permission>
           <Tooltip title="删除">
             <Popconfirm
               title="确定要删除这个采购订单吗？"
@@ -465,6 +516,13 @@ const PurchaseOrdersPage: React.FC = () => {
         shopsData={shopsData}
         suppliersData={suppliersData}
         productsData={productsData}
+      />
+
+      {/* 采购订单审批弹窗 */}
+      <PurchaseOrderApprovalModal
+        open={approvalModalVisible}
+        record={approvalRecord}
+        onClose={closeApprovalModal}
       />
     </>
   );

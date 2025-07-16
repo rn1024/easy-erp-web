@@ -124,12 +124,16 @@ export class PermissionHelper {
   /**
    * 检查用户是否为超级管理员
    * 支持多种判断方式：
-   * 1. 权限中包含 admin.* 或 *
+   * 1. 权限中包含 admin.* 或 * 或 super_admin
    * 2. 角色中包含"超级管理员"
    */
   static isSuperAdmin(userPermissions: string[], userRoles?: string[]): boolean {
     // 方式1：通过权限判断
-    if (userPermissions.includes('admin.*') || userPermissions.includes('*')) {
+    if (
+      userPermissions.includes('admin.*') ||
+      userPermissions.includes('*') ||
+      userPermissions.includes('super_admin')
+    ) {
       return true;
     }
 
@@ -157,6 +161,55 @@ export class PermissionHelper {
 
     // 普通用户检查具体权限
     return userPermissions.includes(requiredPermission);
+  }
+
+  /**
+   * 检查用户是否拥有所有指定权限
+   * 超级管理员直接返回 true
+   */
+  static hasAllPermissions(
+    userPermissions: string[],
+    requiredPermissions: string[],
+    userRoles?: string[]
+  ): boolean {
+    // 超级管理员直接跳过权限检查
+    if (this.isSuperAdmin(userPermissions, userRoles)) {
+      return true;
+    }
+
+    // 普通用户检查所有权限
+    return requiredPermissions.every((permission) => userPermissions.includes(permission));
+  }
+
+  /**
+   * 检查用户是否拥有任一指定权限
+   * 超级管理员直接返回 true
+   */
+  static hasAnyPermission(
+    userPermissions: string[],
+    requiredPermissions: string[],
+    userRoles?: string[]
+  ): boolean {
+    // 超级管理员直接跳过权限检查
+    if (this.isSuperAdmin(userPermissions, userRoles)) {
+      return true;
+    }
+
+    // 普通用户检查是否有任一权限
+    return requiredPermissions.some((permission) => userPermissions.includes(permission));
+  }
+
+  /**
+   * 检查是否有管理员权限（超级管理员或拥有任何 admin.* 权限）
+   */
+  static isAdmin(userPermissions: string[], userRoles?: string[]): boolean {
+    // 超级管理员直接返回 true
+    if (this.isSuperAdmin(userPermissions, userRoles)) {
+      return true;
+    }
+
+    // 检查是否有任何 admin.* 权限
+    return userPermissions.some((perm) => perm.startsWith('admin.'));
   }
 }
 

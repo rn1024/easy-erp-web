@@ -88,6 +88,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
   useEffect(() => {
     if (open) {
       if (entity) {
+        // 编辑模式：设置所有字段包括状态
         form.setFieldsValue({
           shopId: entity.shopId,
           supplierId: entity.supplierId,
@@ -99,6 +100,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
           remark: entity.remark,
         });
       } else {
+        // 创建模式：不设置状态字段，默认为 CREATED
         form.resetFields();
         form.setFieldsValue({
           urgent: false,
@@ -140,7 +142,13 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
     onFinish: async (formData) => {
       setSubmittingTrue();
       try {
-        const res = await formSubmit(entity, formData);
+        // 如果是创建模式，移除状态字段（后端会默认设置为 CREATED）
+        const submitData = { ...formData };
+        if (!entity) {
+          delete submitData.status;
+        }
+
+        const res = await formSubmit(entity, submitData);
         if (get(res, 'success') || get(res, 'code') === 200) {
           message.success(entity ? '更新成功' : '创建成功');
           closeModal(true);
@@ -239,18 +247,21 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         </Row>
 
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="status" label="状态">
-              <Select placeholder="请选择状态">
-                {purchaseOrderStatusOptions.map((option) => (
-                  <Option key={option.value} value={option.value}>
-                    {option.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
+          {/* 只在编辑模式下显示状态选择器 */}
+          {entity && (
+            <Col span={12}>
+              <Form.Item name="status" label="状态">
+                <Select placeholder="请选择状态">
+                  {purchaseOrderStatusOptions.map((option) => (
+                    <Option key={option.value} value={option.value}>
+                      {option.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          )}
+          <Col span={entity ? 12 : 24}>
             <Form.Item name="urgent" label="紧急标记" valuePropName="checked">
               <Switch checkedChildren="紧急" unCheckedChildren="常规" />
             </Form.Item>

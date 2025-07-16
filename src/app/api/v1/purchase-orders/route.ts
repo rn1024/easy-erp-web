@@ -122,11 +122,45 @@ export async function GET(request: NextRequest) {
       take: pageSize,
     });
 
+    // 获取每个订单的最新审批记录
+    const orderIds = list.map((order) => order.id);
+    const latestApprovals = await Promise.all(
+      orderIds.map(async (orderId) => {
+        const latestApproval = await prisma.approvalRecord.findFirst({
+          where: {
+            entityType: 'PURCHASE_ORDER',
+            entityId: orderId,
+          },
+          include: {
+            approver: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+        return { orderId, approval: latestApproval };
+      })
+    );
+
+    // 将审批记录关联到对应的订单
+    const listWithApprovals = list.map((order) => {
+      const approvalData = latestApprovals.find((item) => item.orderId === order.id);
+      return {
+        ...order,
+        latestApproval: approvalData?.approval || null,
+      };
+    });
+
     return NextResponse.json({
       code: 0,
       msg: '获取成功',
       data: {
-        list,
+        list: listWithApprovals,
         meta: {
           page,
           pageSize,
@@ -184,7 +218,7 @@ export async function POST(request: NextRequest) {
     // 生成订单号
     const orderNumber = await generateOrderNumber();
 
-    // 创建采购订单
+    // 创建采购订单（默认状态为 CREATED）
     const purchaseOrder = await prisma.purchaseOrder.create({
       data: {
         orderNumber,
@@ -196,6 +230,7 @@ export async function POST(request: NextRequest) {
         urgent: Boolean(urgent),
         remark: remark || null,
         operatorId: user.id,
+        status: 'CREATED', // 新增默认状态
       },
       include: {
         shop: {
