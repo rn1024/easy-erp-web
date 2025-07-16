@@ -124,27 +124,7 @@ export async function GET(request: NextRequest) {
             name: true,
           },
         },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                code: true,
-                specification: true,
-                sku: true,
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
+        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=PURCHASE_ORDER&relatedId=orderId
       },
       orderBy: [{ urgent: 'desc' }, { createdAt: 'desc' }],
       skip,
@@ -297,11 +277,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 创建订单明细
-      await tx.purchaseOrderItem.createMany({
+      // 创建订单明细（使用通用ProductItem表）
+      await tx.productItem.createMany({
         data: calculatedItems.map((item) => ({
-          ...item,
-          purchaseOrderId: order.id,
+          relatedType: 'PURCHASE_ORDER',
+          relatedId: order.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          amount: item.amount,
+          taxRate: item.taxRate,
+          taxAmount: item.taxAmount,
+          totalAmount: item.totalAmount,
+          remark: item.remark,
         })),
       });
 
@@ -334,27 +322,7 @@ export async function POST(request: NextRequest) {
             name: true,
           },
         },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                code: true,
-                specification: true,
-                sku: true,
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
+        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=PURCHASE_ORDER&relatedId=orderId
       },
     });
 

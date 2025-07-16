@@ -27,13 +27,7 @@ const approveHandler = async (
         status: true,
         shop: { select: { nickname: true } },
         supplier: { select: { nickname: true } },
-        items: {
-          select: {
-            product: {
-              select: { code: true, sku: true },
-            },
-          },
-        },
+        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=PURCHASE_ORDER&relatedId=orderId
       },
     });
 
@@ -100,17 +94,6 @@ const approveHandler = async (
               id: true,
               nickname: true,
               contactPerson: true,
-            },
-          },
-          items: {
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  code: true,
-                  sku: true,
-                },
-              },
             },
           },
           operator: {

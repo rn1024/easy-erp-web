@@ -52,15 +52,10 @@ export async function GET(request: NextRequest) {
           shop: {
             select: { id: true, nickname: true },
           },
-          category: {
+          operator: {
             select: { id: true, name: true },
           },
-          product: {
-            select: { id: true, code: true, specification: true, sku: true },
-          },
-          operator: {
-            select: { id: true, name: true, operator: true },
-          },
+          // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=WAREHOUSE_TASK&relatedId=taskId
         },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -91,75 +86,149 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
     if (!user) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        {
+          code: 401,
+          msg: '未授权访问',
+        },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
-    const { shopId, categoryId, productId, totalQuantity, type, progress = 0 } = body;
+    const { shopId, type, items } = body;
 
     // 数据验证
-    if (!shopId || !categoryId || !productId || !totalQuantity || !type) {
-      return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
-    }
-
-    if (totalQuantity <= 0) {
+    if (!shopId || !type || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
-        { message: 'Total quantity must be greater than 0' },
+        {
+          code: 400,
+          msg: '缺少必要参数或产品明细为空',
+        },
         { status: 400 }
       );
     }
 
-    // 验证关联数据是否存在
-    const [shop, category, product] = await Promise.all([
-      prisma.shop.findUnique({ where: { id: shopId } }),
-      prisma.productCategory.findUnique({ where: { id: categoryId } }),
-      prisma.productInfo.findUnique({ where: { id: productId } }),
-    ]);
+    // 验证任务类型
+    if (!['PACKAGING', 'SHIPPING'].includes(type)) {
+      return NextResponse.json(
+        {
+          code: 400,
+          msg: '无效的任务类型',
+        },
+        { status: 400 }
+      );
+    }
 
+    // 验证产品明细
+    for (const item of items) {
+      if (!item.productId || !item.quantity) {
+        return NextResponse.json(
+          {
+            code: 400,
+            msg: '产品明细信息不完整',
+          },
+          { status: 400 }
+        );
+      }
+      if (item.quantity <= 0) {
+        return NextResponse.json(
+          {
+            code: 400,
+            msg: '产品数量必须大于0',
+          },
+          { status: 400 }
+        );
+      }
+      // 包装任务验证完成数量
+      if (type === 'PACKAGING' && item.completedQuantity !== undefined) {
+        if (item.completedQuantity < 0 || item.completedQuantity > item.quantity) {
+          return NextResponse.json(
+            {
+              code: 400,
+              msg: '完成数量不能小于0或大于总数量',
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // 验证店铺是否存在
+    const shop = await prisma.shop.findUnique({ where: { id: shopId } });
     if (!shop) {
-      return NextResponse.json({ message: 'Shop not found' }, { status: 404 });
+      return NextResponse.json(
+        {
+          code: 404,
+          msg: '店铺不存在',
+        },
+        { status: 404 }
+      );
     }
 
-    if (!category) {
-      return NextResponse.json({ message: 'Category not found' }, { status: 404 });
+    // 验证所有产品是否存在
+    const productIds = items.map((item: any) => item.productId);
+    const products = await prisma.productInfo.findMany({
+      where: { id: { in: productIds } },
+    });
+
+    if (products.length !== productIds.length) {
+      return NextResponse.json(
+        {
+          code: 400,
+          msg: '部分产品不存在',
+        },
+        { status: 400 }
+      );
     }
 
-    if (!product) {
-      return NextResponse.json({ message: 'Product not found' }, { status: 404 });
-    }
+    // 创建仓库任务及产品明细（使用事务）
+    const task = await prisma.$transaction(async (tx) => {
+      // 创建仓库任务
+      const createdTask = await tx.warehouseTask.create({
+        data: {
+          shopId,
+          type,
+          status: 'PENDING',
+          operatorId: user.id,
+          // 仅包装任务设置初始进度
+          progress: type === 'PACKAGING' ? 0 : null,
+        },
+      });
 
-    // 创建仓库任务
-    const task = await prisma.warehouseTask.create({
-      data: {
-        shopId,
-        categoryId,
-        productId,
-        totalQuantity,
-        progress,
-        type,
-        status: 'PENDING',
-        operatorId: user.id,
-      },
+      // 创建产品明细
+      await tx.productItem.createMany({
+        data: items.map((item: any) => ({
+          relatedType: 'WAREHOUSE_TASK',
+          relatedId: createdTask.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          completedQuantity: item.completedQuantity || null,
+          remark: item.remark || null,
+        })),
+      });
+
+      return createdTask;
+    });
+
+    // 获取完整的任务信息
+    const fullTask = await prisma.warehouseTask.findUnique({
+      where: { id: task.id },
       include: {
         shop: {
           select: { id: true, nickname: true },
         },
-        category: {
+        operator: {
           select: { id: true, name: true },
         },
-        product: {
-          select: { id: true, code: true, specification: true, sku: true },
-        },
-        operator: {
-          select: { id: true, name: true, operator: true },
-        },
+        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=WAREHOUSE_TASK&relatedId=taskId
       },
     });
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       msg: '创建仓库任务成功',
-      data: task,
+      data: fullTask,
     });
   } catch (error) {
     console.error('Create warehouse task error:', error);

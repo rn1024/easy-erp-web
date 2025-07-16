@@ -84,6 +84,14 @@ jest.mock('../../src/lib/db', () => ({
       delete: jest.fn(),
       count: jest.fn(),
     },
+    productItem: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
     role: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -133,7 +141,7 @@ describe('/api/v1/products', () => {
     // 设置删除产品时需要检查的关联表
     mockPrisma.finishedInventory.count.mockResolvedValue(0);
     mockPrisma.spareInventory.count.mockResolvedValue(0);
-    mockPrisma.purchaseOrder.count.mockResolvedValue(0);
+    mockPrisma.productItem.count.mockResolvedValue(0);
   });
 
   describe('GET /api/v1/products', () => {
@@ -635,7 +643,7 @@ describe('/api/v1/products', () => {
       // Mock存在相关业务数据
       mockPrisma.finishedInventory.count.mockResolvedValue(1); // 有成品库存
       mockPrisma.spareInventory.count.mockResolvedValue(0);
-      mockPrisma.purchaseOrder.count.mockResolvedValue(0);
+      mockPrisma.productItem.count.mockResolvedValue(0);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/products/1', {

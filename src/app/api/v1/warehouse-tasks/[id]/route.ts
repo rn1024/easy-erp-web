@@ -18,15 +18,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         shop: {
           select: { id: true, nickname: true },
         },
-        category: {
+        operator: {
           select: { id: true, name: true },
         },
-        product: {
-          select: { id: true, code: true, specification: true, sku: true },
-        },
-        operator: {
-          select: { id: true, name: true, operator: true },
-        },
+        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=WAREHOUSE_TASK&relatedId=taskId
       },
     });
 
@@ -108,15 +103,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         shop: {
           select: { id: true, nickname: true },
         },
-        category: {
+        operator: {
           select: { id: true, name: true },
         },
-        product: {
-          select: { id: true, code: true, specification: true, sku: true },
-        },
-        operator: {
-          select: { id: true, name: true, operator: true },
-        },
+        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=WAREHOUSE_TASK&relatedId=taskId
       },
     });
 

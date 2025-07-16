@@ -601,30 +601,6 @@ async function main() {
         remark: '紧急采购手机配件',
         operatorId: adminAccount.id,
         status: 'PENDING',
-        items: {
-          create: [
-            {
-              productId: testProducts[0].id, // 手机保护壳
-              quantity: 100,
-              unitPrice: 8.5,
-              amount: 850.0,
-              taxRate: 13.0,
-              taxAmount: 110.5,
-              totalAmount: 960.5,
-              remark: '透明保护壳',
-            },
-            {
-              productId: testProducts[1].id, // 数据线
-              quantity: 50,
-              unitPrice: 12.0,
-              amount: 600.0,
-              taxRate: 13.0,
-              taxAmount: 78.0,
-              totalAmount: 678.0,
-              remark: 'Type-C数据线',
-            },
-          ],
-        },
       },
     }),
 
@@ -642,20 +618,6 @@ async function main() {
         remark: '无线充电器补货',
         operatorId: adminAccount.id,
         status: 'CONFIRMED',
-        items: {
-          create: [
-            {
-              productId: testProducts[2].id, // 无线充电器
-              quantity: 80,
-              unitPrice: 25.0,
-              amount: 2000.0,
-              taxRate: 13.0,
-              taxAmount: 260.0,
-              totalAmount: 2260.0,
-              remark: '15W无线充电器',
-            },
-          ],
-        },
       },
     }),
 
@@ -673,44 +635,169 @@ async function main() {
         remark: '月度常规采购',
         operatorId: adminAccount.id,
         status: 'CREATED',
-        items: {
-          create: [
-            {
-              productId: testProducts[0].id, // 手机保护壳
-              quantity: 200,
-              unitPrice: 8.5,
-              amount: 1700.0,
-              taxRate: 13.0,
-              taxAmount: 221.0,
-              totalAmount: 1921.0,
-              remark: '透明保护壳批量采购',
-            },
-            {
-              productId: testProducts[1].id, // 数据线
-              quantity: 150,
-              unitPrice: 12.0,
-              amount: 1800.0,
-              taxRate: 13.0,
-              taxAmount: 234.0,
-              totalAmount: 2034.0,
-              remark: 'Type-C数据线批量采购',
-            },
-            {
-              productId: testProducts[2].id, // 无线充电器
-              quantity: 30,
-              unitPrice: 25.0,
-              amount: 750.0,
-              taxRate: 13.0,
-              taxAmount: 97.5,
-              totalAmount: 847.5,
-              remark: '无线充电器少量补货',
-            },
-          ],
-        },
       },
     }),
   ]);
   console.log('✓ 创建测试采购订单');
+
+  // 获取创建的采购订单
+  const createdOrders = await prisma.purchaseOrder.findMany({
+    where: {
+      operatorId: adminAccount.id,
+    },
+    orderBy: {
+      orderNumber: 'asc',
+    },
+  });
+
+  // 为采购订单创建产品明细
+  await prisma.productItem.createMany({
+    data: [
+      // 第一个订单的产品明细 (2个产品)
+      {
+        relatedType: 'PURCHASE_ORDER',
+        relatedId: createdOrders[0].id,
+        productId: testProducts[0].id, // 手机保护壳
+        quantity: 100,
+        unitPrice: 8.5,
+        amount: 850.0,
+        taxRate: 13.0,
+        taxAmount: 110.5,
+        totalAmount: 960.5,
+        remark: '透明保护壳',
+      },
+      {
+        relatedType: 'PURCHASE_ORDER',
+        relatedId: createdOrders[0].id,
+        productId: testProducts[1].id, // 数据线
+        quantity: 50,
+        unitPrice: 12.0,
+        amount: 600.0,
+        taxRate: 13.0,
+        taxAmount: 78.0,
+        totalAmount: 678.0,
+        remark: 'Type-C数据线',
+      },
+
+      // 第二个订单的产品明细 (1个产品)
+      {
+        relatedType: 'PURCHASE_ORDER',
+        relatedId: createdOrders[1].id,
+        productId: testProducts[2].id, // 无线充电器
+        quantity: 80,
+        unitPrice: 25.0,
+        amount: 2000.0,
+        taxRate: 13.0,
+        taxAmount: 260.0,
+        totalAmount: 2260.0,
+        remark: '15W无线充电器',
+      },
+
+      // 第三个订单的产品明细 (3个产品)
+      {
+        relatedType: 'PURCHASE_ORDER',
+        relatedId: createdOrders[2].id,
+        productId: testProducts[0].id, // 手机保护壳
+        quantity: 200,
+        unitPrice: 8.5,
+        amount: 1700.0,
+        taxRate: 13.0,
+        taxAmount: 221.0,
+        totalAmount: 1921.0,
+        remark: '透明保护壳批量采购',
+      },
+      {
+        relatedType: 'PURCHASE_ORDER',
+        relatedId: createdOrders[2].id,
+        productId: testProducts[1].id, // 数据线
+        quantity: 150,
+        unitPrice: 12.0,
+        amount: 1800.0,
+        taxRate: 13.0,
+        taxAmount: 234.0,
+        totalAmount: 2034.0,
+        remark: 'Type-C数据线批量采购',
+      },
+      {
+        relatedType: 'PURCHASE_ORDER',
+        relatedId: createdOrders[2].id,
+        productId: testProducts[2].id, // 无线充电器
+        quantity: 30,
+        unitPrice: 25.0,
+        amount: 750.0,
+        taxRate: 13.0,
+        taxAmount: 97.5,
+        totalAmount: 847.5,
+        remark: '无线充电器少量补货',
+      },
+    ],
+  });
+  console.log('✓ 创建采购订单产品明细');
+
+  // 创建测试仓库任务
+  const warehouseTasks = await prisma.warehouseTask.createMany({
+    data: [
+      {
+        shopId: testShop.id,
+        type: 'PACKAGING',
+        status: 'IN_PROGRESS',
+        progress: 65.0,
+        operatorId: adminAccount.id,
+      },
+      {
+        shopId: testShop.id,
+        type: 'SHIPPING',
+        status: 'PENDING',
+        progress: null, // 发货任务不需要进度
+        operatorId: adminAccount.id,
+      },
+    ],
+  });
+  console.log('✓ 创建测试仓库任务');
+
+  // 获取创建的仓库任务
+  const createdTasks = await prisma.warehouseTask.findMany({
+    where: {
+      operatorId: adminAccount.id,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  // 为仓库任务创建产品明细
+  await prisma.productItem.createMany({
+    data: [
+      // 包装任务明细
+      {
+        relatedType: 'WAREHOUSE_TASK',
+        relatedId: createdTasks[0].id,
+        productId: testProducts[0].id, // 手机保护壳
+        quantity: 50,
+        completedQuantity: 35,
+        remark: '包装进行中',
+      },
+      {
+        relatedType: 'WAREHOUSE_TASK',
+        relatedId: createdTasks[0].id,
+        productId: testProducts[1].id, // 数据线
+        quantity: 30,
+        completedQuantity: 15,
+        remark: '包装进行中',
+      },
+
+      // 发货任务明细
+      {
+        relatedType: 'WAREHOUSE_TASK',
+        relatedId: createdTasks[1].id,
+        productId: testProducts[2].id, // 无线充电器
+        quantity: 20,
+        completedQuantity: null, // 发货任务不需要完成数量
+        remark: '待发货',
+      },
+    ],
+  });
+  console.log('✓ 创建仓库任务产品明细');
 
   console.log('\n🎉 ERP数据库初始化完成！');
   console.log('📋 默认管理员账户信息:');

@@ -265,7 +265,6 @@ model ProductCategory {
   products  ProductInfo[]
   finishedInventory FinishedInventory[]
   spareInventory    SpareInventory[]
-  warehouseTasks    WarehouseTask[]
 
   @@map("product_categories")
 }
@@ -299,8 +298,7 @@ model ProductInfo {
   operator         Account             @relation("ProductOperator", fields: [operatorId], references: [id])
   finishedInventory FinishedInventory[]
   spareInventory   SpareInventory[]
-  purchaseOrderItems PurchaseOrderItem[] // 采购订单明细
-  warehouseTasks   WarehouseTask[]
+  productItems       ProductItem[]       // 通用产品明细
   deliveryRecords  DeliveryRecord[]
 
   @@index([shopId])
@@ -375,7 +373,7 @@ model PurchaseOrder {
   shop     Shop                 @relation(fields: [shopId], references: [id])
   supplier Supplier             @relation(fields: [supplierId], references: [id])
   operator Account              @relation("PurchaseOperator", fields: [operatorId], references: [id])
-  items    PurchaseOrderItem[]  // 订单明细
+  // 产品明细通过多态关联查询: ProductItem where relatedType='PURCHASE_ORDER' AND relatedId=id
 
   @@index([shopId, status])
   @@index([supplierId])
@@ -383,28 +381,41 @@ model PurchaseOrder {
   @@map("purchase_orders")
 }
 
-// 采购订单明细表
-model PurchaseOrderItem {
+// 通用产品明细表 (支持采购订单、仓库任务等多种业务场景)
+model ProductItem {
   id              String        @id @default(cuid())
-  purchaseOrderId String
+
+  // 多态关联字段
+  relatedType     String        // 'PURCHASE_ORDER' | 'WAREHOUSE_TASK'
+  relatedId       String        // 关联的业务单据ID
+
+  // 产品基础信息
   productId       String
   quantity        Int
-  unitPrice       Decimal       @db.Decimal(10, 2) // 单价
-  amount          Decimal       @db.Decimal(12, 2) // 小计金额 (quantity * unitPrice)
-  taxRate         Decimal       @db.Decimal(5, 2)  // 税率 (%)
-  taxAmount       Decimal       @db.Decimal(12, 2) // 税额 (amount * taxRate / 100)
-  totalAmount     Decimal       @db.Decimal(12, 2) // 含税总额 (amount + taxAmount)
-  remark          String?       // 明细备注
+
+  // 采购订单专用字段
+  unitPrice       Decimal?      @db.Decimal(10, 2) // 单价
+  amount          Decimal?      @db.Decimal(12, 2) // 小计金额 (quantity * unitPrice)
+  taxRate         Decimal?      @db.Decimal(5, 2)  // 税率 (%)
+  taxAmount       Decimal?      @db.Decimal(12, 2) // 税额 (amount * taxRate / 100)
+  totalAmount     Decimal?      @db.Decimal(12, 2) // 含税总额 (amount + taxAmount)
+
+  // 仓库任务专用字段
+  completedQuantity Int?        // 已完成数量 (仅包装任务使用)
+
+  // 通用字段
+  remark          String?       // 备注
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   // 关联关系
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   product         ProductInfo   @relation(fields: [productId], references: [id])
 
-  @@index([purchaseOrderId])
-  @@index([productId])
-  @@map("purchase_order_items")
+  // 优化索引
+  @@index([relatedType, relatedId])  // 多态关联查询优化
+  @@index([productId])               // 产品查询优化
+  @@index([relatedType, relatedId, productId]) // 复合查询优化
+  @@map("product_items")
 }
 
 // 财务报表表
@@ -425,23 +436,19 @@ model FinancialReport {
 
 // 仓库任务表
 model WarehouseTask {
-  id            String              @id @default(cuid())
-  shopId        String
-  categoryId    String
-  productId     String
-  totalQuantity Int
-  progress      Decimal             @default(0.00) @db.Decimal(5, 2)
-  status        WarehouseTaskStatus @default(PENDING)
-  type          WarehouseTaskType
-  operatorId    String
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  id         String              @id @default(cuid())
+  shopId     String
+  progress   Decimal?            @default(0.00) @db.Decimal(5, 2) // 总体进度 (仅包装任务使用)
+  status     WarehouseTaskStatus @default(PENDING)
+  type       WarehouseTaskType
+  operatorId String
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 
   // 关联关系
-  shop     Shop            @relation(fields: [shopId], references: [id])
-  category ProductCategory @relation(fields: [categoryId], references: [id])
-  product  ProductInfo     @relation(fields: [productId], references: [id])
-  operator Account         @relation("WarehouseTaskOperator", fields: [operatorId], references: [id])
+  shop     Shop    @relation(fields: [shopId], references: [id])
+  operator Account @relation("WarehouseTaskOperator", fields: [operatorId], references: [id])
+  // 产品明细通过多态关联查询: ProductItem where relatedType='WAREHOUSE_TASK' AND relatedId=id
 
   @@index([shopId, status])
   @@index([type, status])
@@ -500,6 +507,11 @@ enum PurchaseOrderStatus {
   SHIPPED      // 已发货
   RECEIVED     // 已收货
   CANCELLED    // 已取消
+}
+
+enum ProductItemRelatedType {
+  PURCHASE_ORDER  // 采购订单
+  WAREHOUSE_TASK  // 仓库任务
 }
 
 enum WarehouseTaskStatus {

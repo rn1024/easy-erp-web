@@ -58,33 +58,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             name: true,
           },
         },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                code: true,
-                specification: true,
-                sku: true,
-                color: true,
-                setQuantity: true,
-                internalSize: true,
-                externalSize: true,
-                weight: true,
-                imageUrl: true,
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
+        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=PURCHASE_ORDER&relatedId=orderId
       },
     });
 
@@ -118,9 +92,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // 检查采购订单是否存在
     const existingOrder = await prisma.purchaseOrder.findUnique({
       where: { id },
-      include: {
-        items: true,
-      },
     });
 
     if (!existingOrder) {
@@ -221,16 +192,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       // 如果有产品明细更新
       if (items) {
         // 删除现有明细
-        await tx.purchaseOrderItem.deleteMany({
-          where: { purchaseOrderId: id },
+        await tx.productItem.deleteMany({
+          where: {
+            relatedType: 'PURCHASE_ORDER',
+            relatedId: id,
+          },
         });
 
         // 创建新明细
-        await tx.purchaseOrderItem.createMany({
+        await tx.productItem.createMany({
           data: calculatedItems.map((item) => ({
-            ...item,
-            id: undefined, // 确保不带ID，让数据库自动生成
-            purchaseOrderId: id,
+            relatedType: 'PURCHASE_ORDER',
+            relatedId: id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            amount: item.amount,
+            taxRate: item.taxRate,
+            taxAmount: item.taxAmount,
+            totalAmount: item.totalAmount,
+            remark: item.remark,
           })),
         });
       }
@@ -264,27 +245,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             name: true,
           },
         },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                code: true,
-                specification: true,
-                sku: true,
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        },
+        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=PURCHASE_ORDER&relatedId=orderId
       },
     });
 
@@ -328,18 +289,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // 检查采购订单是否存在
     const existingOrder = await prisma.purchaseOrder.findUnique({
       where: { id },
-      include: {
-        items: {
-          include: {
-            product: {
-              select: {
-                code: true,
-                sku: true,
-              },
-            },
-          },
-        },
-      },
     });
 
     if (!existingOrder) {
@@ -370,7 +319,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         details: {
           purchaseOrderId: id,
           orderNumber: existingOrder.orderNumber,
-          itemsCount: existingOrder.items.length,
         },
       },
     });

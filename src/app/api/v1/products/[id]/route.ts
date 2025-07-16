@@ -222,7 +222,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       [
         prisma.finishedInventory.count({ where: { productId: id } }),
         prisma.spareInventory.count({ where: { productId: id } }),
-        prisma.purchaseOrderItem.count({ where: { productId: id } }),
+        prisma.productItem.count({
+          where: {
+            productId: id,
+            relatedType: 'PURCHASE_ORDER',
+          },
+        }),
       ]
     );
 
