@@ -26,7 +26,6 @@ model Account {
 
   // 关联关系 - 原有系统
   roles     AccountRole[]
-  logs      Log[]
 
   // 关联关系 - ERP业务扩展
   operatedShops         Shop[]             @relation("ShopOperator")
@@ -133,13 +132,10 @@ model Log {
   category          String
   module            String
   operation         String
-  operatorAccountId String?  // 改为可选，支持系统操作
+  operatorAccountId String?  // 改为可选，支持系统操作 - 仅存储ID，不建立关系
   status            String   @default("SUCCESS")
   details           Json?
   createdAt         DateTime @default(now())
-
-  // 关联关系 (可选)
-  operator          Account? @relation(fields: [operatorAccountId], references: [id])
 
   @@map("logs")
 }

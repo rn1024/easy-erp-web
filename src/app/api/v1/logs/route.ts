@@ -71,14 +71,6 @@ export async function GET(request: NextRequest) {
     const [logs, total] = await Promise.all([
       prisma.log.findMany({
         where,
-        include: {
-          operator: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
         skip,
         take: pageSize,
         orderBy: {
@@ -97,10 +89,6 @@ export async function GET(request: NextRequest) {
       status: log.status,
       details: log.details,
       createdAt: log.createdAt.toISOString(),
-      operator: log.operator ? {
-        id: log.operator.id,
-        name: log.operator.name,
-      } : null,
       operatorAccountId: log.operatorAccountId,
     }));
 
