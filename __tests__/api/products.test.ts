@@ -200,6 +200,11 @@ describe('/api/v1/products', () => {
               name: true,
             },
           },
+          images: {
+            orderBy: {
+              sortOrder: 'asc',
+            },
+          },
         },
         skip: 0,
         take: 10,
@@ -247,6 +252,11 @@ describe('/api/v1/products', () => {
               name: true,
             },
           },
+          images: {
+            orderBy: {
+              sortOrder: 'asc',
+            },
+          },
         },
         skip: 0,
         take: 10,
@@ -290,6 +300,11 @@ describe('/api/v1/products', () => {
             select: {
               id: true,
               name: true,
+            },
+          },
+          images: {
+            orderBy: {
+              sortOrder: 'asc',
             },
           },
         },
@@ -360,13 +375,18 @@ describe('/api/v1/products', () => {
           sku: 'SKU001',
           label: null,
           codeFileUrl: null,
-          imageUrl: null,
           styleInfo: null,
           accessoryInfo: null,
           remark: null,
           operatorId: 1,
         },
         include: {
+          shop: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
           category: {
             select: {
               id: true,
@@ -379,10 +399,9 @@ describe('/api/v1/products', () => {
               name: true,
             },
           },
-          shop: {
-            select: {
-              id: true,
-              nickname: true,
+          images: {
+            orderBy: {
+              sortOrder: 'asc',
             },
           },
         },
@@ -485,6 +504,12 @@ describe('/api/v1/products', () => {
       expect(mockPrisma.productInfo.findUnique).toHaveBeenCalledWith({
         where: { id: '1' },
         include: {
+          shop: {
+            select: {
+              id: true,
+              nickname: true,
+            },
+          },
           category: {
             select: {
               id: true,
@@ -497,10 +522,9 @@ describe('/api/v1/products', () => {
               name: true,
             },
           },
-          shop: {
-            select: {
-              id: true,
-              nickname: true,
+          images: {
+            orderBy: {
+              sortOrder: 'asc',
             },
           },
         },
@@ -588,6 +612,11 @@ describe('/api/v1/products', () => {
             select: {
               id: true,
               name: true,
+            },
+          },
+          images: {
+            orderBy: {
+              sortOrder: 'asc',
             },
           },
         },

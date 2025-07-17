@@ -285,7 +285,6 @@ model ProductInfo {
   asin          String?  // Amazon Standard Identification Number
   label         String?
   codeFileUrl   String?
-  imageUrl      String?
   styleInfo     String?  @db.Text
   accessoryInfo String?  @db.Text
   remark        String?
@@ -297,6 +296,7 @@ model ProductInfo {
   shop             Shop                @relation(fields: [shopId], references: [id])
   category         ProductCategory     @relation(fields: [categoryId], references: [id])
   operator         Account             @relation("ProductOperator", fields: [operatorId], references: [id])
+  images           ProductImage[]      // 产品图片关联
   finishedInventory FinishedInventory[]
   spareInventory   SpareInventory[]
   productItems       ProductItem[]       // 通用产品明细
@@ -306,6 +306,27 @@ model ProductInfo {
   @@index([categoryId])
   @@index([code])
   @@map("product_info")
+}
+
+// 产品图片表
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  imageUrl  String   // OSS图片URL
+  fileName  String   // 原始文件名
+  fileSize  Int      // 文件大小(字节)
+  sortOrder Int      // 排序顺序 (1-10)
+  isCover   Boolean  @default(false) // 是否为封面图
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联关系
+  product ProductInfo @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([productId, sortOrder])
+  @@index([productId, isCover])
+  @@map("product_images")
 }
 
 // 成品库存表

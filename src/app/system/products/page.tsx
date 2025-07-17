@@ -2,7 +2,20 @@
 
 import React, { useState } from 'react';
 import { useRequest } from 'ahooks';
-import { Button, Form, Input, Select, Space, message, Image, Tag, Tooltip, Flex } from 'antd';
+import {
+  Button,
+  Form,
+  Input,
+  Select,
+  Space,
+  message,
+  Image,
+  Tag,
+  Tooltip,
+  Flex,
+  Badge,
+  Popover,
+} from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -171,17 +184,72 @@ const ProductManagement: React.FC = () => {
     },
     {
       title: '产品图片',
-      dataIndex: 'imageUrl',
-      width: 80,
-      render: (_, record: ProductInfo) => (
-        <Image
-          width={40}
-          height={40}
-          src={record.imageUrl}
-          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
-          style={{ objectFit: 'cover', borderRadius: 4 }}
-        />
-      ),
+      dataIndex: 'images',
+      width: 100,
+      render: (_, record: ProductInfo) => {
+        const images = record.images || [];
+        const coverImage = images.find((img) => img.isCover) || images[0];
+
+        if (!coverImage) {
+          return (
+            <Image
+              width={40}
+              height={40}
+              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQr"
+              style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #d9d9d9' }}
+              preview={false}
+            />
+          );
+        }
+
+        // 多图片预览内容
+        const previewContent = (
+          <div style={{ maxWidth: 320 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {images.slice(0, 8).map((img, index) => (
+                <Image
+                  key={img.id}
+                  width={60}
+                  height={60}
+                  src={img.imageUrl}
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                />
+              ))}
+            </div>
+            {images.length > 8 && (
+              <div style={{ textAlign: 'center', marginTop: 8, color: '#666', fontSize: 12 }}>
+                还有 {images.length - 8} 张图片...
+              </div>
+            )}
+          </div>
+        );
+
+        const imageElement = (
+          <Badge count={images.length > 1 ? images.length : 0} size="small">
+            <Image
+              width={40}
+              height={40}
+              src={coverImage.imageUrl}
+              style={{
+                objectFit: 'cover',
+                borderRadius: 4,
+                cursor: images.length > 1 ? 'pointer' : 'default',
+              }}
+              preview={{
+                src: coverImage.imageUrl,
+              }}
+            />
+          </Badge>
+        );
+
+        return images.length > 1 ? (
+          <Popover content={previewContent} trigger="hover" placement="right">
+            {imageElement}
+          </Popover>
+        ) : (
+          imageElement
+        );
+      },
     },
     {
       title: '产品编码',

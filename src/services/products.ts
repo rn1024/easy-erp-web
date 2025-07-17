@@ -1,6 +1,32 @@
 import axios from './index';
 import type { ResType } from '@/types/api';
 
+// 产品图片相关接口
+export interface ProductImage {
+  id: string;
+  productId: string;
+  imageUrl: string;
+  fileName: string;
+  fileSize: number;
+  sortOrder: number;
+  isCover: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductImageFormData {
+  imageUrl: string;
+  fileName: string;
+  fileSize: number;
+  sortOrder: number;
+  isCover: boolean;
+}
+
+export interface ProductImageUploadParams {
+  productId: string;
+  images: ProductImageFormData[];
+}
+
 // 产品分类相关接口
 export interface ProductCategory {
   id: string;
@@ -38,7 +64,6 @@ export interface ProductInfo {
   asin?: string;
   label?: string;
   codeFileUrl?: string;
-  imageUrl?: string;
   styleInfo?: string;
   accessoryInfo?: string;
   remark?: string;
@@ -57,6 +82,7 @@ export interface ProductInfo {
     id: string;
     name: string;
   };
+  images?: ProductImage[]; // 产品图片数组
   _count?: {
     finishedInventory: number;
     spareInventory: number;
@@ -90,7 +116,6 @@ export interface ProductFormData {
   asin?: string;
   label?: string;
   codeFileUrl?: string;
-  imageUrl?: string;
   styleInfo?: string;
   accessoryInfo?: string;
   remark?: string;
@@ -181,5 +206,42 @@ export const updateProductApi = (id: string, data: ProductFormData) => {
 export const deleteProductApi = (id: string) => {
   return axios<ResType<null>>(`/products/${id}`, {
     method: 'delete',
+  });
+};
+
+// 产品图片管理 API
+export const getProductImagesApi = (productId: string) => {
+  return axios<ResType<ProductImage[]>>(`/products/${productId}/images`, {
+    method: 'get',
+  });
+};
+
+export const uploadProductImagesApi = (productId: string, data: ProductImageFormData[]) => {
+  return axios<ResType<ProductImage[]>>(`/products/${productId}/images`, {
+    method: 'post',
+    data: { images: data },
+  });
+};
+
+export const updateProductImageApi = (
+  productId: string,
+  imageId: string,
+  data: Partial<ProductImageFormData>
+) => {
+  return axios<ResType<ProductImage>>(`/products/${productId}/images/${imageId}`, {
+    method: 'put',
+    data,
+  });
+};
+
+export const deleteProductImageApi = (productId: string, imageId: string) => {
+  return axios<ResType<null>>(`/products/${productId}/images/${imageId}`, {
+    method: 'delete',
+  });
+};
+
+export const setCoverImageApi = (productId: string, imageId: string) => {
+  return axios<ResType<ProductImage>>(`/products/${productId}/images/${imageId}/set-cover`, {
+    method: 'patch',
   });
 };

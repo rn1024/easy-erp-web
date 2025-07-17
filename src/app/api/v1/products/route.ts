@@ -61,6 +61,11 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
               name: true,
             },
           },
+          images: {
+            orderBy: {
+              sortOrder: 'asc',
+            },
+          },
         },
         skip,
         take: pageSize,
@@ -163,7 +168,6 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
         sku,
         label: label || null,
         codeFileUrl: codeFileUrl || null,
-        imageUrl: imageUrl || null,
         styleInfo: styleInfo || null,
         accessoryInfo: accessoryInfo || null,
         remark: remark || null,
@@ -186,6 +190,11 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
           select: {
             id: true,
             name: true,
+          },
+        },
+        images: {
+          orderBy: {
+            sortOrder: 'asc',
           },
         },
       },

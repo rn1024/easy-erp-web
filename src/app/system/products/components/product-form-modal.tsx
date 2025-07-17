@@ -3,6 +3,7 @@ import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { App, Button, Modal, Form, Input, Space, Select, Row, Col, InputNumber } from 'antd';
 import { useEffect } from 'react';
+import ProductImageUploader from '@/components/product-image-uploader';
 
 /**
  * Utils
@@ -237,17 +238,26 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={24}>
               <Form.Item name="label" label="标签">
                 <Input placeholder="标签" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="imageUrl" label="产品图片">
-                <Input placeholder="图片URL" />
-              </Form.Item>
-            </Col>
           </Row>
+
+          {/* 产品图片上传 */}
+          <Form.Item label="产品图片">
+            <ProductImageUploader
+              productId={entity?.id || ''}
+              disabled={!entity?.id}
+              maxCount={10}
+            />
+            {!entity?.id && (
+              <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+                请先保存产品信息后再上传图片
+              </div>
+            )}
+          </Form.Item>
 
           <Form.Item name="styleInfo" label="款式信息">
             <TextArea rows={3} placeholder="款式信息" />

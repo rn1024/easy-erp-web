@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { ProductItemRelatedType } from '@/services/product-items';
 
 export const dynamic = 'force-dynamic';
-
-// 通用产品明细类型枚举
-export enum ProductItemRelatedType {
-  PURCHASE_ORDER = 'PURCHASE_ORDER',
-  WAREHOUSE_TASK = 'WAREHOUSE_TASK',
-}
 
 // 获取产品明细列表
 export async function GET(request: NextRequest) {

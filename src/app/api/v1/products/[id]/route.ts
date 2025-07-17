@@ -39,6 +39,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             name: true,
           },
         },
+        images: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
       },
     });
 
@@ -85,9 +90,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       externalSize,
       weight,
       sku,
+      asin,
       label,
       codeFileUrl,
-      imageUrl,
       styleInfo,
       accessoryInfo,
       remark,
@@ -147,9 +152,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         ...(externalSize !== undefined && { externalSize }),
         ...(weight !== undefined && { weight: weight ? parseFloat(weight) : null }),
         ...(sku && { sku }),
+        ...(asin !== undefined && { asin }),
         ...(label !== undefined && { label }),
         ...(codeFileUrl !== undefined && { codeFileUrl }),
-        ...(imageUrl !== undefined && { imageUrl }),
         ...(styleInfo !== undefined && { styleInfo }),
         ...(accessoryInfo !== undefined && { accessoryInfo }),
         ...(remark !== undefined && { remark }),
@@ -171,6 +176,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           select: {
             id: true,
             name: true,
+          },
+        },
+        images: {
+          orderBy: {
+            sortOrder: 'asc',
           },
         },
       },

@@ -98,15 +98,37 @@ const ProductDetailModal: React.FC<Props> = ({ open, entity, closeModal }) => {
           </Descriptions.Item>
         </Descriptions>
 
-        {entity.imageUrl && (
+        {entity.images && entity.images.length > 0 && (
           <div className="mt-4">
-            <h4 className="mb-2">产品图片</h4>
-            <Image
-              width={200}
-              src={entity.imageUrl}
-              style={{ objectFit: 'cover', borderRadius: '4px' }}
-              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYnN"
-            />
+            <h4 className="mb-2">产品图片 ({entity.images.length}张)</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {entity.images.map((image) => (
+                <div key={image.id} style={{ position: 'relative' }}>
+                  <Image
+                    width={100}
+                    height={100}
+                    src={image.imageUrl}
+                    style={{ objectFit: 'cover', borderRadius: '4px' }}
+                  />
+                  {image.isCover && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        background: '#faad14',
+                        color: 'white',
+                        fontSize: 10,
+                        padding: '2px 4px',
+                        borderRadius: 2,
+                      }}
+                    >
+                      封面
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
