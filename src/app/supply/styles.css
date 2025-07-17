@@ -1,0 +1,247 @@
+/* 供应商端整体布局样式 */
+.supply-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Header 样式 */
+.supply-header {
+  background: linear-gradient(90deg, #1890ff 0%, #096dd9 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  height: 64px;
+}
+
+.supply-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Content 样式 */
+.supply-content {
+  padding: 24px;
+  min-height: calc(100vh - 64px - 64px); /* 减去header和footer高度 */
+  background: transparent;
+}
+
+.supply-container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+/* Footer 样式 */
+.supply-footer {
+  background: rgba(0, 0, 0, 0.8);
+  text-align: center;
+  padding: 16px 24px;
+  backdrop-filter: blur(10px);
+}
+
+/* 卡片样式 */
+.supply-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  margin: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.supply-card-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 验证表单样式 */
+.verify-form {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.verify-input {
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 4px;
+  font-weight: bold;
+}
+
+/* 供货表单样式 */
+.supply-form {
+  padding: 24px;
+}
+
+.form-section {
+  margin-bottom: 32px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 6px;
+  border-left: 4px solid #1890ff;
+}
+
+.form-section-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #262626;
+}
+
+/* 产品选择区域 */
+.product-selection {
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.product-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.product-code {
+  font-weight: 600;
+  color: #1890ff;
+  margin-right: 12px;
+}
+
+.product-spec {
+  color: #666;
+  font-size: 14px;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.quantity-info {
+  font-size: 12px;
+  color: #666;
+  margin-left: 8px;
+}
+
+/* 统计信息样式 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .supply-header-content {
+    padding: 0 16px;
+  }
+
+  .supply-content {
+    padding: 16px;
+  }
+
+  .supply-container {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .supply-card {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .verify-form {
+    padding: 24px 16px;
+  }
+
+  .quantity-controls {
+    justify-content: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 动画效果 */
+.supply-container {
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 按钮样式增强 */
+.supply-btn {
+  height: 40px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.supply-btn-primary {
+  background: linear-gradient(90deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+}
+
+.supply-btn-primary:hover {
+  background: linear-gradient(90deg, #096dd9 0%, #0050b3 100%);
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* 安全提示样式 */
+.security-tips {
+  background: linear-gradient(90deg, #f6ffed 0%, #f0f9ff 100%);
+  border: 1px solid #b7eb8f;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+}
+
+.security-tips .anticon {
+  color: #52c41a;
+  margin-right: 8px;
+}

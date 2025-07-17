@@ -1,0 +1,164 @@
+{
+  "timestamp": "2025-07-17T12:21:28.393Z",
+  "stats": {
+    "total": 20,
+    "passed": 16,
+    "failed": 0,
+    "warnings": 0,
+    "warning": null
+  },
+  "config": {
+    "baseUrl": "http://localhost:3000",
+    "testShareCode": "TEST2024",
+    "testExtractCode": "1234",
+    "maxResponseTime": 5000,
+    "testPurchaseOrderId": "test-order-001"
+  },
+  "results": [
+    {
+      "name": "分享码格式",
+      "status": "passed",
+      "message": "8位大写字母和数字组合，符合安全要求",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.388Z"
+    },
+    {
+      "name": "提取码格式",
+      "status": "passed",
+      "message": "4位大写字母和数字组合",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.389Z"
+    },
+    {
+      "name": "文件敏感信息检查",
+      "status": "passed",
+      "message": "未发现明显的敏感信息泄露",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.390Z"
+    },
+    {
+      "name": "公开API识别",
+      "status": "passed",
+      "message": "已识别3个公开API端点",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.390Z"
+    },
+    {
+      "name": "受保护API识别",
+      "status": "passed",
+      "message": "已识别3个受保护API端点",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.390Z"
+    },
+    {
+      "name": "API安全响应头",
+      "status": "passed",
+      "message": "配置了4/4个必要的安全响应头",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.391Z"
+    },
+    {
+      "name": "输入验证库",
+      "status": "warning",
+      "message": "未检测到专门的输入验证库",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.391Z"
+    },
+    {
+      "name": "SQL注入防护",
+      "status": "passed",
+      "message": "使用Prisma ORM，自动防护SQL注入",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.391Z"
+    },
+    {
+      "name": "供应商端身份验证绕过",
+      "status": "passed",
+      "message": "正确配置了供应商端路由的身份验证绕过",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.391Z"
+    },
+    {
+      "name": "数据库表结构",
+      "status": "passed",
+      "message": "成功创建了3个供货记录相关表",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.391Z"
+    },
+    {
+      "name": "数据库索引",
+      "status": "passed",
+      "message": "配置了数据库索引以优化查询性能",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.391Z"
+    },
+    {
+      "name": "API端点完整性",
+      "status": "passed",
+      "message": "所有6个API端点文件都存在",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.391Z"
+    },
+    {
+      "name": "前端组件完整性",
+      "status": "passed",
+      "message": "所有6个组件文件都存在",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.392Z"
+    },
+    {
+      "name": "错误处理: src/services/supply.ts",
+      "status": "warning",
+      "message": "可能缺少充分的错误处理机制",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.392Z"
+    },
+    {
+      "name": "业务逻辑文件",
+      "status": "passed",
+      "message": "所有3个业务逻辑文件都存在",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.392Z"
+    },
+    {
+      "name": "构建状态",
+      "status": "passed",
+      "message": "项目已成功构建",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.392Z"
+    },
+    {
+      "name": "页面大小: page.js",
+      "status": "passed",
+      "message": "14.16 KB (优秀)",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.392Z"
+    },
+    {
+      "name": "页面大小: page.js",
+      "status": "passed",
+      "message": "17.35 KB (优秀)",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.392Z"
+    },
+    {
+      "name": "代码复杂度: supply-share.ts",
+      "status": "warning",
+      "message": "225 行 (中等)",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.392Z"
+    },
+    {
+      "name": "代码复杂度: supply-validator.ts",
+      "status": "warning",
+      "message": "292 行 (中等)",
+      "details": null,
+      "timestamp": "2025-07-17T12:21:28.392Z"
+    }
+  ],
+  "summary": {
+    "status": "PASSED",
+    "successRate": "80.0%",
+    "recommendations": ["定期运行安全扫描", "监控API响应性能", "设置自动化测试流程"]
+  }
+}

@@ -27,6 +27,8 @@ import {
   ShopOutlined,
   UserOutlined,
   ProductOutlined,
+  ShareAltOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
@@ -36,6 +38,8 @@ import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
  */
 import PurchaseOrderFormModal from './components/purchase-order-form-modal';
 import PurchaseOrderApprovalModal from './components/purchase-order-approval-modal';
+import SupplyShareModal from './components/supply-share-modal';
+import SupplyRecordsModal from './components/supply-records-modal';
 import Permission from '@/components/permission';
 
 /**
@@ -77,6 +81,10 @@ const PurchaseOrdersPage: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<PurchaseOrderInfo | null>(null);
   const [approvalModalVisible, setApprovalModalVisible] = useState(false);
   const [approvalRecord, setApprovalRecord] = useState<PurchaseOrderInfo | null>(null);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareRecord, setShareRecord] = useState<PurchaseOrderInfo | null>(null);
+  const [supplyRecordsModalVisible, setSupplyRecordsModalVisible] = useState(false);
+  const [supplyRecordsRecord, setSupplyRecordsRecord] = useState<PurchaseOrderInfo | null>(null);
   const [searchParams, setSearchParams] = useState<SearchFormData>({
     page: 1,
     pageSize: 10,
@@ -209,6 +217,30 @@ const PurchaseOrdersPage: React.FC = () => {
     }
   };
 
+  // 打开分享弹窗
+  const handleShare = (record: PurchaseOrderInfo) => {
+    setShareRecord(record);
+    setShareModalVisible(true);
+  };
+
+  // 关闭分享弹窗
+  const closeShareModal = () => {
+    setShareModalVisible(false);
+    setShareRecord(null);
+  };
+
+  // 打开供货记录弹窗
+  const handleSupplyRecords = (record: PurchaseOrderInfo) => {
+    setSupplyRecordsRecord(record);
+    setSupplyRecordsModalVisible(true);
+  };
+
+  // 关闭供货记录弹窗
+  const closeSupplyRecordsModal = () => {
+    setSupplyRecordsModalVisible(false);
+    setSupplyRecordsRecord(null);
+  };
+
   // 表格列定义
   const columns: ProColumns<PurchaseOrderInfo>[] = [
     {
@@ -335,6 +367,21 @@ const PurchaseOrdersPage: React.FC = () => {
       ),
     },
     {
+      title: '供货记录',
+      width: 100,
+      align: 'center',
+      render: (_, record) => (
+        <Button
+          type="link"
+          size="small"
+          onClick={() => handleSupplyRecords(record)}
+          style={{ padding: 0 }}
+        >
+          <span style={{ color: '#1890ff' }}>共?条</span>
+        </Button>
+      ),
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       width: 120,
@@ -378,7 +425,7 @@ const PurchaseOrdersPage: React.FC = () => {
     },
     {
       title: '操作',
-      width: 180,
+      width: 240,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
@@ -388,6 +435,24 @@ const PurchaseOrdersPage: React.FC = () => {
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
               size="small"
+            />
+          </Tooltip>
+          <Tooltip title="分享给供应商">
+            <Button
+              type="link"
+              icon={<ShareAltOutlined />}
+              onClick={() => handleShare(record)}
+              size="small"
+              style={{ color: '#52c41a' }}
+            />
+          </Tooltip>
+          <Tooltip title="供货记录">
+            <Button
+              type="link"
+              icon={<InfoCircleOutlined />}
+              onClick={() => handleSupplyRecords(record)}
+              size="small"
+              style={{ color: '#1890ff' }}
             />
           </Tooltip>
           <Permission permission="purchase.approve">
@@ -551,6 +616,26 @@ const PurchaseOrdersPage: React.FC = () => {
         record={approvalRecord}
         onClose={closeApprovalModal}
       />
+
+      {/* 供应商分享弹窗 */}
+      {shareRecord && (
+        <SupplyShareModal
+          open={shareModalVisible}
+          purchaseOrderId={shareRecord.id}
+          orderNumber={shareRecord.orderNumber}
+          onClose={closeShareModal}
+        />
+      )}
+
+      {/* 供货记录管理弹窗 */}
+      {supplyRecordsRecord && (
+        <SupplyRecordsModal
+          open={supplyRecordsModalVisible}
+          purchaseOrderId={supplyRecordsRecord.id}
+          orderNumber={supplyRecordsRecord.orderNumber}
+          onClose={closeSupplyRecordsModal}
+        />
+      )}
     </>
   );
 };

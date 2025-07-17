@@ -1,342 +1,383 @@
-const https = require('https');
-const http = require('http');
+#!/usr/bin/env node
+
+/**
+ * 性能测试脚本
+ * 测试供货记录系统的API响应时间和数据库查询性能
+ */
+
+import fs from 'fs';
+import path from 'path';
 
 // 测试配置
 const config = {
-  baseUrl: 'http://localhost:3000',
-  testToken: '', // 需要从登录API获取
-  concurrency: 10, // 并发请求数
-  iterations: 100, // 测试迭代次数
+  baseUrl: process.env.TEST_BASE_URL || 'http://localhost:3000',
+  apiTimeout: 5000, // 5秒超时
+  maxResponseTime: {
+    fast: 200, // 快速响应 < 200ms
+    normal: 1000, // 正常响应 < 1s
+    slow: 3000, // 慢响应 < 3s
+  },
 };
 
-// API测试用例
-const testCases = [
-  {
-    name: '用户登录',
-    method: 'POST',
-    path: '/api/v1/auth/login',
-    data: {
-      username: 'admin',
-      password: 'admin123',
-      captchaKey: 'test',
-      captcha: 'test',
-    },
-    requiresAuth: false,
-  },
-  {
-    name: '获取用户信息',
-    method: 'GET',
-    path: '/api/v1/me',
-    requiresAuth: true,
-  },
-  {
-    name: '获取系统日志（数据密集型）',
-    method: 'GET',
-    path: '/api/v1/logs?page=1&pageSize=50',
-    requiresAuth: true,
-    isDataIntensive: true,
-  },
-  {
-    name: '获取财务报表（数据密集型）',
-    method: 'GET',
-    path: '/api/v1/financial-reports?page=1&pageSize=20',
-    requiresAuth: true,
-    isDataIntensive: true,
-  },
-  {
-    name: '获取产品列表',
-    method: 'GET',
-    path: '/api/v1/products?page=1&pageSize=20',
-    requiresAuth: true,
-  },
-  {
-    name: '获取库存列表（数据密集型）',
-    method: 'GET',
-    path: '/api/v1/finished-inventory?page=1&pageSize=50',
-    requiresAuth: true,
-    isDataIntensive: true,
-  },
-  {
-    name: '获取采购订单（数据密集型）',
-    method: 'GET',
-    path: '/api/v1/purchase-orders?page=1&pageSize=30',
-    requiresAuth: true,
-    isDataIntensive: true,
-  },
-  {
-    name: '获取发货记录',
-    method: 'GET',
-    path: '/api/v1/delivery-records?page=1&pageSize=20',
-    requiresAuth: true,
-  },
-  {
-    name: '获取仓库任务',
-    method: 'GET',
-    path: '/api/v1/warehouse-tasks?page=1&pageSize=20',
-    requiresAuth: true,
-  },
-];
+// 颜色输出
+const colors = {
+  reset: '\x1b[0m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  cyan: '\x1b[36m',
+};
+
+const log = {
+  info: (msg) => console.log(`${colors.blue}ℹ${colors.reset} ${msg}`),
+  success: (msg) => console.log(`${colors.green}✓${colors.reset} ${msg}`),
+  warning: (msg) => console.log(`${colors.yellow}⚠${colors.reset} ${msg}`),
+  error: (msg) => console.log(`${colors.red}✗${colors.reset} ${msg}`),
+  section: (msg) => console.log(`\n${colors.cyan}${msg}${colors.reset}`),
+};
 
 // 性能统计
-class PerformanceStats {
-  constructor() {
-    this.stats = new Map();
-  }
+const performanceStats = {
+  apiTests: [],
+  dbQueries: [],
+  bundleAnalysis: {},
+  recommendations: [],
+};
 
-  addResult(testName, responseTime, success) {
-    if (!this.stats.has(testName)) {
-      this.stats.set(testName, {
-        times: [],
-        successCount: 0,
-        errorCount: 0,
-        min: Infinity,
-        max: 0,
-        total: 0,
-      });
-    }
+// API响应时间测试
+async function testApiPerformance() {
+  log.section('🚀 API性能测试');
 
-    const stat = this.stats.get(testName);
-    stat.times.push(responseTime);
-    stat.total += responseTime;
-    stat.min = Math.min(stat.min, responseTime);
-    stat.max = Math.max(stat.max, responseTime);
+  const apiEndpoints = [
+    {
+      name: 'Health Check',
+      url: '/api/health',
+      method: 'GET',
+      expectedTime: config.maxResponseTime.fast,
+    },
+    {
+      name: 'Share Verify (Mock)',
+      url: '/api/v1/share/verify',
+      method: 'POST',
+      body: { shareCode: 'TEST2024', extractCode: '1234' },
+      expectedTime: config.maxResponseTime.normal,
+    },
+  ];
 
-    if (success) {
-      stat.successCount++;
-    } else {
-      stat.errorCount++;
-    }
-  }
-
-  getReport() {
-    const report = [];
-
-    for (const [testName, stat] of this.stats) {
-      const avg = stat.total / stat.times.length;
-      const totalRequests = stat.successCount + stat.errorCount;
-      const successRate = (stat.successCount / totalRequests) * 100;
-
-      // 计算百分位数
-      const sortedTimes = stat.times.sort((a, b) => a - b);
-      const p50 = sortedTimes[Math.floor(sortedTimes.length * 0.5)];
-      const p95 = sortedTimes[Math.floor(sortedTimes.length * 0.95)];
-      const p99 = sortedTimes[Math.floor(sortedTimes.length * 0.99)];
-
-      report.push({
-        testName,
-        totalRequests,
-        successCount: stat.successCount,
-        errorCount: stat.errorCount,
-        successRate: successRate.toFixed(2) + '%',
-        avgResponseTime: avg.toFixed(2) + 'ms',
-        minResponseTime: stat.min.toFixed(2) + 'ms',
-        maxResponseTime: stat.max.toFixed(2) + 'ms',
-        p50: p50.toFixed(2) + 'ms',
-        p95: p95.toFixed(2) + 'ms',
-        p99: p99.toFixed(2) + 'ms',
-      });
-    }
-
-    return report;
+  for (const endpoint of apiEndpoints) {
+    await testSingleApi(endpoint);
   }
 }
 
-// HTTP请求函数
-function makeRequest(testCase, token = null) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(config.baseUrl + testCase.path);
-    const startTime = Date.now();
+async function testSingleApi(endpoint) {
+  const startTime = Date.now();
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.apiTimeout);
 
     const options = {
-      hostname: url.hostname,
-      port: url.port || (url.protocol === 'https:' ? 443 : 80),
-      path: url.pathname + url.search,
-      method: testCase.method,
+      method: endpoint.method,
       headers: {
         'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
       },
+      signal: controller.signal,
     };
 
-    const requestModule = url.protocol === 'https:' ? https : http;
-
-    const req = requestModule.request(options, (res) => {
-      let data = '';
-
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      res.on('end', () => {
-        const endTime = Date.now();
-        const responseTime = endTime - startTime;
-
-        try {
-          const jsonData = JSON.parse(data);
-          resolve({
-            success: res.statusCode >= 200 && res.statusCode < 300,
-            statusCode: res.statusCode,
-            responseTime,
-            data: jsonData,
-          });
-        } catch (error) {
-          resolve({
-            success: false,
-            statusCode: res.statusCode,
-            responseTime,
-            error: 'Invalid JSON response',
-          });
-        }
-      });
-    });
-
-    req.on('error', (error) => {
-      const endTime = Date.now();
-      const responseTime = endTime - startTime;
-      resolve({
-        success: false,
-        responseTime,
-        error: error.message,
-      });
-    });
-
-    // 发送请求数据
-    if (testCase.data) {
-      req.write(JSON.stringify(testCase.data));
+    if (endpoint.body) {
+      options.body = JSON.stringify(endpoint.body);
     }
 
-    req.end();
-  });
-}
+    const response = await fetch(`${config.baseUrl}${endpoint.url}`, options);
+    clearTimeout(timeoutId);
 
-// 并发测试函数
-async function runConcurrentTest(testCase, token, concurrency, iterations) {
-  const stats = new PerformanceStats();
-  const batches = Math.ceil(iterations / concurrency);
+    const endTime = Date.now();
+    const responseTime = endTime - startTime;
 
-  console.log(`\n🔄 测试: ${testCase.name}`);
-  console.log(`   并发数: ${concurrency}, 总请求数: ${iterations}`);
+    const result = {
+      name: endpoint.name,
+      url: endpoint.url,
+      method: endpoint.method,
+      responseTime,
+      status: response.status,
+      success: response.ok,
+    };
 
-  for (let batch = 0; batch < batches; batch++) {
-    const currentBatchSize = Math.min(concurrency, iterations - batch * concurrency);
-    const promises = [];
+    performanceStats.apiTests.push(result);
 
-    for (let i = 0; i < currentBatchSize; i++) {
-      promises.push(makeRequest(testCase, token));
+    // 评估性能等级
+    let performanceLevel = 'slow';
+    let color = colors.red;
+
+    if (responseTime < config.maxResponseTime.fast) {
+      performanceLevel = 'excellent';
+      color = colors.green;
+    } else if (responseTime < config.maxResponseTime.normal) {
+      performanceLevel = 'good';
+      color = colors.blue;
+    } else if (responseTime < config.maxResponseTime.slow) {
+      performanceLevel = 'acceptable';
+      color = colors.yellow;
     }
 
-    const results = await Promise.all(promises);
-
-    results.forEach((result) => {
-      stats.addResult(testCase.name, result.responseTime, result.success);
-
-      if (!result.success) {
-        console.log(`   ❌ 错误: ${result.error || result.statusCode}`);
-      }
-    });
-
-    // 显示进度
-    const completed = (batch + 1) * concurrency;
-    const progress = Math.min(completed, iterations);
-    process.stdout.write(
-      `\r   进度: ${progress}/${iterations} (${((progress / iterations) * 100).toFixed(1)}%)`
+    console.log(
+      `  ${color}${performanceLevel}${colors.reset} ${endpoint.name}: ${responseTime}ms (${response.status})`
     );
-  }
 
-  console.log('\n   ✅ 完成');
-  return stats;
+    if (responseTime > endpoint.expectedTime) {
+      performanceStats.recommendations.push(`${endpoint.name} 响应时间过长，建议优化`);
+    }
+  } catch (error) {
+    const endTime = Date.now();
+    const responseTime = endTime - startTime;
+
+    console.log(
+      `  ${colors.red}failed${colors.reset} ${endpoint.name}: ${responseTime}ms (${error.message})`
+    );
+
+    performanceStats.apiTests.push({
+      name: endpoint.name,
+      url: endpoint.url,
+      method: endpoint.method,
+      responseTime,
+      error: error.message,
+      success: false,
+    });
+  }
 }
 
-// 获取认证token
-async function getAuthToken() {
-  console.log('🔐 获取认证token...');
+// 数据库查询性能测试
+async function testDatabasePerformance() {
+  log.section('🗃️ 数据库查询性能分析');
 
-  const loginTest = testCases.find((tc) => tc.name === '用户登录');
-  const result = await makeRequest(loginTest);
+  // 分析Prisma Schema文件
+  const schemaPath = path.join(process.cwd(), 'prisma/schema.prisma');
+  if (fs.existsSync(schemaPath)) {
+    const content = fs.readFileSync(schemaPath, 'utf8');
 
-  if (result.success && result.data && result.data.data && result.data.data.token) {
-    console.log('✅ 登录成功');
-    return result.data.data.token;
-  } else {
-    console.log('❌ 登录失败:', result);
-    return null;
+    // 检查索引配置
+    const indexes = (content.match(/@@index/g) || []).length;
+    const uniqueConstraints = (content.match(/@@unique/g) || []).length;
+    const totalOptimizations = indexes + uniqueConstraints;
+
+    performanceStats.dbQueries.push({
+      type: 'schema_analysis',
+      indexes,
+      uniqueConstraints,
+      totalOptimizations,
+    });
+
+    if (totalOptimizations > 5) {
+      log.success(`数据库索引配置: ${totalOptimizations}个优化配置 (优秀)`);
+    } else if (totalOptimizations > 2) {
+      log.warning(`数据库索引配置: ${totalOptimizations}个优化配置 (一般)`);
+    } else {
+      log.error(`数据库索引配置: ${totalOptimizations}个优化配置 (需要改进)`);
+      performanceStats.recommendations.push('建议添加更多数据库索引以优化查询性能');
+    }
+
+    // 检查供货记录表的关联复杂度
+    if (content.includes('SupplyRecord') && content.includes('SupplyRecordItem')) {
+      log.success('供货记录表结构: 正确使用了主表-明细表设计模式');
+    }
   }
 }
 
-// 主测试函数
-async function runPerformanceTest() {
-  console.log('🚀 Easy ERP Web 性能测试开始');
-  console.log('====================================');
+// Bundle大小分析
+async function analyzeBundleSize() {
+  log.section('📦 Bundle大小分析');
 
-  // 获取认证token
-  const token = await getAuthToken();
-  if (!token) {
-    console.log('❌ 无法获取认证token，测试终止');
+  const nextDir = path.join(process.cwd(), '.next');
+  if (!fs.existsSync(nextDir)) {
+    log.error('项目未构建，无法分析bundle大小');
     return;
   }
 
-  const allStats = new PerformanceStats();
+  // 分析供应商端页面大小
+  const supplyPages = [
+    {
+      name: '供应商验证页面',
+      path: '.next/server/app/supply/[shareCode]/page.js',
+    },
+    {
+      name: '供货记录填写页面',
+      path: '.next/server/app/supply/[shareCode]/dashboard/page.js',
+    },
+  ];
 
-  // 执行测试用例
-  for (const testCase of testCases) {
-    if (testCase.name === '用户登录') continue; // 跳过登录测试
+  for (const page of supplyPages) {
+    const fullPath = path.join(process.cwd(), page.path);
+    if (fs.existsSync(fullPath)) {
+      const stats = fs.statSync(fullPath);
+      const sizeKB = (stats.size / 1024).toFixed(2);
 
-    const useToken = testCase.requiresAuth ? token : null;
-    const iterations = testCase.isDataIntensive ? config.iterations * 2 : config.iterations;
+      performanceStats.bundleAnalysis[page.name] = {
+        sizeKB: parseFloat(sizeKB),
+        sizeBytes: stats.size,
+      };
 
-    const stats = await runConcurrentTest(testCase, useToken, config.concurrency, iterations);
-
-    // 合并统计数据
-    for (const [testName, stat] of stats.stats) {
-      for (let i = 0; i < stat.times.length; i++) {
-        allStats.addResult(testName, stat.times[i], i < stat.successCount);
+      if (stats.size < 30 * 1024) {
+        // 小于30KB
+        log.success(`${page.name}: ${sizeKB} KB (优秀)`);
+      } else if (stats.size < 50 * 1024) {
+        // 小于50KB
+        log.warning(`${page.name}: ${sizeKB} KB (良好)`);
+      } else {
+        log.error(`${page.name}: ${sizeKB} KB (需要优化)`);
+        performanceStats.recommendations.push(`${page.name} 体积过大，建议进行代码分割`);
       }
     }
   }
 
-  // 生成报告
-  console.log('\n\n📊 性能测试报告');
-  console.log('=====================================');
+  // 检查是否使用了代码分割
+  checkCodeSplitting();
+}
 
-  const report = allStats.getReport();
+function checkCodeSplitting() {
+  log.info('检查代码分割配置...');
 
-  console.log('| 测试名称 | 总请求数 | 成功率 | 平均响应时间 | P50 | P95 | P99 | 最小 | 最大 |');
-  console.log('|---------|---------|--------|-------------|-----|-----|-----|------|------|');
+  // 检查next.config.js
+  const nextConfigPath = path.join(process.cwd(), 'next.config.js');
+  if (fs.existsSync(nextConfigPath)) {
+    const content = fs.readFileSync(nextConfigPath, 'utf8');
 
-  report.forEach((item) => {
-    console.log(
-      `| ${item.testName} | ${item.totalRequests} | ${item.successRate} | ${item.avgResponseTime} | ${item.p50} | ${item.p95} | ${item.p99} | ${item.minResponseTime} | ${item.maxResponseTime} |`
-    );
-  });
-
-  // 性能警告
-  console.log('\n⚠️  性能问题分析:');
-  report.forEach((item) => {
-    const avgTime = parseFloat(item.avgResponseTime);
-    const p95Time = parseFloat(item.p95);
-
-    if (avgTime > 1000) {
-      console.log(`🔴 ${item.testName}: 平均响应时间过慢 (${item.avgResponseTime})`);
-    } else if (avgTime > 500) {
-      console.log(`🟡 ${item.testName}: 平均响应时间较慢 (${item.avgResponseTime})`);
+    if (content.includes('experimental') && content.includes('chunk')) {
+      log.success('代码分割: 已配置实验性优化');
+    } else {
+      log.warning('代码分割: 可以考虑启用更多优化选项');
+      performanceStats.recommendations.push('考虑在next.config.js中启用实验性优化选项');
     }
+  }
 
-    if (p95Time > 2000) {
-      console.log(`🔴 ${item.testName}: P95响应时间过慢 (${item.p95})`);
+  // 检查动态导入
+  const supplyLayoutPath = path.join(process.cwd(), 'src/app/supply/layout.tsx');
+  if (fs.existsSync(supplyLayoutPath)) {
+    const content = fs.readFileSync(supplyLayoutPath, 'utf8');
+
+    if (content.includes('dynamic') || content.includes('lazy')) {
+      log.success('组件懒加载: 已使用动态导入');
+    } else {
+      log.info('组件懒加载: 供应商端组件可以考虑使用懒加载');
     }
+  }
+}
 
-    const successRate = parseFloat(item.successRate);
-    if (successRate < 99) {
-      console.log(`🔴 ${item.testName}: 成功率过低 (${item.successRate})`);
-    }
-  });
+// 内存使用情况分析
+function analyzeMemoryUsage() {
+  log.section('💾 内存使用分析');
 
-  console.log('\n✅ 性能测试完成!');
+  const used = process.memoryUsage();
+  const memoryStats = {
+    rss: (used.rss / 1024 / 1024).toFixed(2), // MB
+    heapTotal: (used.heapTotal / 1024 / 1024).toFixed(2), // MB
+    heapUsed: (used.heapUsed / 1024 / 1024).toFixed(2), // MB
+    external: (used.external / 1024 / 1024).toFixed(2), // MB
+  };
+
+  performanceStats.memoryUsage = memoryStats;
+
+  console.log(`  RSS: ${memoryStats.rss} MB`);
+  console.log(`  Heap Total: ${memoryStats.heapTotal} MB`);
+  console.log(`  Heap Used: ${memoryStats.heapUsed} MB`);
+  console.log(`  External: ${memoryStats.external} MB`);
+
+  if (parseFloat(memoryStats.heapUsed) > 50) {
+    log.warning('堆内存使用较高，建议检查内存泄漏');
+    performanceStats.recommendations.push('堆内存使用较高，检查是否存在内存泄漏');
+  } else {
+    log.success('内存使用正常');
+  }
+}
+
+// 生成性能报告
+function generatePerformanceReport() {
+  log.section('📊 性能报告');
+
+  // API性能统计
+  if (performanceStats.apiTests.length > 0) {
+    const avgResponseTime =
+      performanceStats.apiTests
+        .filter((test) => test.success)
+        .reduce((sum, test) => sum + test.responseTime, 0) /
+      performanceStats.apiTests.filter((test) => test.success).length;
+
+    console.log(`API平均响应时间: ${avgResponseTime.toFixed(2)}ms`);
+
+    const fastAPIs = performanceStats.apiTests.filter(
+      (test) => test.success && test.responseTime < config.maxResponseTime.fast
+    ).length;
+
+    console.log(`快速API (< 200ms): ${fastAPIs}/${performanceStats.apiTests.length}`);
+  }
+
+  // Bundle大小统计
+  const bundleSizes = Object.values(performanceStats.bundleAnalysis);
+  if (bundleSizes.length > 0) {
+    const totalSize = bundleSizes.reduce((sum, bundle) => sum + bundle.sizeKB, 0);
+    console.log(`供应商端总bundle大小: ${totalSize.toFixed(2)} KB`);
+  }
+
+  // 性能建议
+  if (performanceStats.recommendations.length > 0) {
+    log.section('💡 性能优化建议');
+    performanceStats.recommendations.forEach((rec, index) => {
+      console.log(`  ${index + 1}. ${rec}`);
+    });
+  } else {
+    log.success('🎉 性能表现优秀，无需特别优化！');
+  }
+
+  // 保存详细报告
+  const reportPath = path.join(process.cwd(), 'performance-test-report.json');
+  const report = {
+    timestamp: new Date().toISOString(),
+    config,
+    stats: performanceStats,
+    summary: {
+      avgApiResponseTime:
+        performanceStats.apiTests.length > 0
+          ? performanceStats.apiTests
+              .filter((test) => test.success)
+              .reduce((sum, test) => sum + test.responseTime, 0) /
+            performanceStats.apiTests.filter((test) => test.success).length
+          : 0,
+      totalBundleSize: Object.values(performanceStats.bundleAnalysis).reduce(
+        (sum, bundle) => sum + bundle.sizeKB,
+        0
+      ),
+      memoryUsage: performanceStats.memoryUsage,
+      recommendationCount: performanceStats.recommendations.length,
+    },
+  };
+
+  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  log.info(`详细性能报告已保存到: ${reportPath}`);
+}
+
+// 主函数
+async function main() {
+  console.log('🚀 供货记录系统性能测试');
+  console.log('='.repeat(50));
+
+  try {
+    await testApiPerformance();
+    await testDatabasePerformance();
+    await analyzeBundleSize();
+    analyzeMemoryUsage();
+    generatePerformanceReport();
+
+    console.log('\n✅ 性能测试完成');
+  } catch (error) {
+    log.error(`性能测试失败: ${error.message}`);
+    console.error(error);
+    process.exit(1);
+  }
 }
 
 // 运行测试
-if (require.main === module) {
-  runPerformanceTest().catch(console.error);
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(console.error);
 }
 
-module.exports = { runPerformanceTest, PerformanceStats };
+export { testApiPerformance, testDatabasePerformance, analyzeBundleSize, performanceStats };

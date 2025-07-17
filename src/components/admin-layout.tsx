@@ -84,6 +84,21 @@ const DynamicProLayout = dynamic(
 
 const routesWithoutLayout = ['/login', '/403'];
 
+// 检查路径是否需要跳过身份验证
+const shouldSkipAuth = (pathname: string): boolean => {
+  // 完全匹配的路由
+  if (routesWithoutLayout.includes(pathname)) {
+    return true;
+  }
+
+  // 供应商端路由前缀匹配
+  if (pathname.startsWith('/supply/')) {
+    return true;
+  }
+
+  return false;
+};
+
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
@@ -197,7 +212,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       pathname,
     },
     logo: '/favicon.svg',
-    pure: routesWithoutLayout.includes(pathname),
+    pure: shouldSkipAuth(pathname),
     route: {
       routes: routes,
     },
@@ -256,7 +271,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     };
 
     // Check if user is authenticated
-    if (!routesWithoutLayout.includes(pathname)) {
+    if (!shouldSkipAuth(pathname)) {
       const token = store2.get('token');
       if (!token) {
         const currentPath = encodeURIComponent(pathname);
@@ -289,7 +304,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   }, [pathname, router]);
 
   // If it's a route that should not have layout, render children directly
-  if (routesWithoutLayout.includes(pathname)) {
+  if (shouldSkipAuth(pathname)) {
     return <>{children}</>;
   }
 

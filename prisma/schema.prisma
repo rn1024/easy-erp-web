@@ -301,6 +301,7 @@ model ProductInfo {
   spareInventory   SpareInventory[]
   productItems       ProductItem[]       // 通用产品明细
   shipmentProductRecords ShipmentProductRecord[]
+  supplyRecordItems SupplyRecordItem[]  // 供货记录明细关联
 
   @@index([shopId])
   @@index([categoryId])
@@ -570,4 +571,72 @@ enum ShipmentRecordStatus {
   IN_TRANSIT
   DELIVERED
   CANCELLED
+}
+
+// ========== 供货记录系统 ==========
+
+// 分享链接表
+model SupplyShareLink {
+  id              String    @id @default(cuid())
+  purchaseOrderId String    @unique
+  shareCode       String    @unique  // 分享码
+  extractCode     String?   // 提取码
+  expiresAt       DateTime  // 过期时间
+  accessLimit     Int?      // 访问人数限制
+  accessCount     Int       @default(0)
+  status          String    @default("active") // active, disabled
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // 关联关系
+  supplyRecords   SupplyRecord[]
+
+  @@index([shareCode])
+  @@index([purchaseOrderId])
+  @@index([expiresAt, status])
+  @@map("supply_share_links")
+}
+
+// 供货记录表
+model SupplyRecord {
+  id              String   @id @default(cuid())
+  purchaseOrderId String   // 关联采购订单ID
+  shareCode       String   // 关联的分享码
+  supplierInfo    Json     // 供应商信息（非登录用户）
+  status          String   @default("active") // active, disabled
+  totalAmount     Decimal  @default(0) @db.Decimal(12, 2)
+  remark          String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联关系
+  shareLink       SupplyShareLink    @relation(fields: [shareCode], references: [shareCode])
+  items          SupplyRecordItem[]
+
+  @@index([purchaseOrderId])
+  @@index([shareCode])
+  @@index([status])
+  @@index([createdAt])
+  @@map("supply_records")
+}
+
+// 供货记录明细表
+model SupplyRecordItem {
+  id             String       @id @default(cuid())
+  supplyRecordId String
+  productId      String
+  quantity       Int
+  unitPrice      Decimal      @db.Decimal(10, 2)
+  totalPrice     Decimal      @db.Decimal(12, 2)
+  remark         String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // 关联关系
+  supplyRecord   SupplyRecord @relation(fields: [supplyRecordId], references: [id], onDelete: Cascade)
+  product        ProductInfo  @relation(fields: [productId], references: [id])
+
+  @@index([supplyRecordId])
+  @@index([productId])
+  @@map("supply_record_items")
 }
