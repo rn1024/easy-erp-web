@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// 获取发货记录列表
+// 获取发货记录列表 (兼容旧API，转换为新的数据结构)
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
@@ -26,49 +26,86 @@ export async function GET(request: NextRequest) {
     // 构建查询条件
     const where: any = {};
     if (shopId) where.shopId = shopId;
-    if (forwarderId) where.forwarderId = forwarderId;
     if (status) where.status = status;
-    if (fbaShipmentCode) {
-      where.fbaShipmentCode = {
-        contains: fbaShipmentCode,
-      };
-    }
     if (country) {
       where.country = {
         contains: country,
       };
     }
 
+    // 如果按货代搜索，需要在产品记录中查找
+    let shipmentRecordIds: string[] | undefined = undefined;
+    if (forwarderId || fbaShipmentCode) {
+      const productWhere: any = {};
+      if (forwarderId) productWhere.forwarderId = forwarderId;
+      if (fbaShipmentCode) {
+        productWhere.fbaShipmentCode = {
+          contains: fbaShipmentCode,
+        };
+      }
+
+      const productRecords = await prisma.shipmentProductRecord.findMany({
+        where: productWhere,
+        select: { shipmentRecordId: true },
+      });
+
+      shipmentRecordIds = [...new Set(productRecords.map((p) => p.shipmentRecordId))];
+
+      if (shipmentRecordIds.length === 0) {
+        // 如果没有匹配的产品记录，返回空结果
+        return NextResponse.json({
+          code: 0,
+          msg: '获取发货记录列表成功',
+          data: {
+            list: [],
+            total: 0,
+            page,
+            pageSize,
+            totalPages: 0,
+          },
+        });
+      }
+
+      where.id = { in: shipmentRecordIds };
+    }
+
     // 获取发货记录列表和总数
     const [records, total] = await Promise.all([
-      prisma.deliveryRecord.findMany({
+      prisma.shipmentRecord.findMany({
         where,
         include: {
           shop: {
             select: {
               id: true,
               nickname: true,
-            },
-          },
-          forwarder: {
-            select: {
-              id: true,
-              nickname: true,
-              contactPerson: true,
-            },
-          },
-          product: {
-            select: {
-              id: true,
-              code: true,
-              specification: true,
-              sku: true,
+              responsiblePerson: true,
             },
           },
           operator: {
             select: {
               id: true,
               name: true,
+              operator: true,
+            },
+          },
+          shipmentProducts: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  code: true,
+                  specification: true,
+                  sku: true,
+                },
+              },
+              forwarder: {
+                select: {
+                  id: true,
+                  nickname: true,
+                  contactPerson: true,
+                  contactPhone: true,
+                },
+              },
             },
           },
         },
@@ -78,18 +115,46 @@ export async function GET(request: NextRequest) {
           createdAt: 'desc',
         },
       }),
-      prisma.deliveryRecord.count({ where }),
+      prisma.shipmentRecord.count({ where }),
     ]);
+
+    // 转换为旧的数据格式以保持兼容性
+    const compatibleRecords = records.flatMap((record) =>
+      record.shipmentProducts.map((product) => ({
+        id: `${record.id}-${product.id}`, // 复合ID
+        shopId: record.shopId,
+        productId: product.productId,
+        totalBoxes: product.totalBoxes,
+        fbaShipmentCode: product.fbaShipmentCode,
+        fbaWarehouseCode: product.fbaWarehouseCode,
+        country: record.country,
+        channel: record.channel,
+        forwarderId: product.forwarderId,
+        shippingChannel: record.shippingChannel,
+        warehouseShippingDeadline: record.warehouseShippingDeadline,
+        warehouseReceiptDeadline: record.warehouseReceiptDeadline,
+        shippingDetails: record.shippingDetails,
+        date: record.date,
+        status: record.status,
+        operatorId: record.operatorId,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        shop: record.shop,
+        product: product.product,
+        forwarder: product.forwarder,
+        operator: record.operator,
+      }))
+    );
 
     return NextResponse.json({
       code: 0,
       msg: '获取发货记录列表成功',
       data: {
-        list: records,
-        total,
+        list: compatibleRecords,
+        total: compatibleRecords.length,
         page,
         pageSize,
-        totalPages: Math.ceil(total / pageSize),
+        totalPages: Math.ceil(compatibleRecords.length / pageSize),
       },
     });
   } catch (error) {
@@ -98,7 +163,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 创建发货记录
+// 创建发货记录 (兼容旧API格式，转换为新的数据结构)
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
@@ -151,64 +216,114 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Forwarder not found' }, { status: 404 });
     }
 
-    // 创建发货记录
-    const deliveryRecord = await prisma.deliveryRecord.create({
-      data: {
-        shopId,
-        productId,
-        totalBoxes: parseInt(totalBoxes),
-        fbaShipmentCode: fbaShipmentCode || null,
-        fbaWarehouseCode: fbaWarehouseCode || null,
-        country: country || null,
-        channel: channel || null,
-        forwarderId,
-        shippingChannel: shippingChannel || null,
-        warehouseShippingDeadline: warehouseShippingDeadline
-          ? new Date(warehouseShippingDeadline)
-          : null,
-        warehouseReceiptDeadline: warehouseReceiptDeadline
-          ? new Date(warehouseReceiptDeadline)
-          : null,
-        shippingDetails: shippingDetails || null,
-        date: new Date(date),
-        status: 'PREPARING',
-        operatorId: user.id,
-      },
+    // 使用事务创建发货记录和产品明细
+    const result = await prisma.$transaction(async (tx) => {
+      // 创建发货记录主表
+      const shipmentRecord = await tx.shipmentRecord.create({
+        data: {
+          shopId,
+          country: country || null,
+          channel: channel || null,
+          shippingChannel: shippingChannel || null,
+          warehouseShippingDeadline: warehouseShippingDeadline
+            ? new Date(warehouseShippingDeadline)
+            : null,
+          warehouseReceiptDeadline: warehouseReceiptDeadline
+            ? new Date(warehouseReceiptDeadline)
+            : null,
+          shippingDetails: shippingDetails || null,
+          date: new Date(date),
+          status: 'PREPARING',
+          operatorId: user.id,
+        },
+      });
+
+      // 创建产品明细记录
+      const shipmentProduct = await tx.shipmentProductRecord.create({
+        data: {
+          shipmentRecordId: shipmentRecord.id,
+          productId,
+          forwarderId,
+          totalBoxes: parseInt(totalBoxes),
+          fbaShipmentCode: fbaShipmentCode || null,
+          fbaWarehouseCode: fbaWarehouseCode || null,
+        },
+      });
+
+      return { shipmentRecord, shipmentProduct };
+    });
+
+    // 获取完整的记录信息并转换为旧格式
+    const fullRecord = await prisma.shipmentRecord.findUnique({
+      where: { id: result.shipmentRecord.id },
       include: {
         shop: {
           select: {
             id: true,
             nickname: true,
-          },
-        },
-        forwarder: {
-          select: {
-            id: true,
-            nickname: true,
-            contactPerson: true,
-          },
-        },
-        product: {
-          select: {
-            id: true,
-            code: true,
-            specification: true,
-            sku: true,
+            responsiblePerson: true,
           },
         },
         operator: {
           select: {
             id: true,
             name: true,
+            operator: true,
+          },
+        },
+        shipmentProducts: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                code: true,
+                specification: true,
+                sku: true,
+              },
+            },
+            forwarder: {
+              select: {
+                id: true,
+                nickname: true,
+                contactPerson: true,
+                contactPhone: true,
+              },
+            },
           },
         },
       },
     });
 
+    // 转换为旧格式
+    const compatibleRecord = {
+      id: `${fullRecord!.id}-${fullRecord!.shipmentProducts[0].id}`,
+      shopId: fullRecord!.shopId,
+      productId: fullRecord!.shipmentProducts[0].productId,
+      totalBoxes: fullRecord!.shipmentProducts[0].totalBoxes,
+      fbaShipmentCode: fullRecord!.shipmentProducts[0].fbaShipmentCode,
+      fbaWarehouseCode: fullRecord!.shipmentProducts[0].fbaWarehouseCode,
+      country: fullRecord!.country,
+      channel: fullRecord!.channel,
+      forwarderId: fullRecord!.shipmentProducts[0].forwarderId,
+      shippingChannel: fullRecord!.shippingChannel,
+      warehouseShippingDeadline: fullRecord!.warehouseShippingDeadline,
+      warehouseReceiptDeadline: fullRecord!.warehouseReceiptDeadline,
+      shippingDetails: fullRecord!.shippingDetails,
+      date: fullRecord!.date,
+      status: fullRecord!.status,
+      operatorId: fullRecord!.operatorId,
+      createdAt: fullRecord!.createdAt,
+      updatedAt: fullRecord!.updatedAt,
+      shop: fullRecord!.shop,
+      product: fullRecord!.shipmentProducts[0].product,
+      forwarder: fullRecord!.shipmentProducts[0].forwarder,
+      operator: fullRecord!.operator,
+    };
+
     return NextResponse.json({
       code: 0,
       msg: '创建发货记录成功',
-      data: deliveryRecord,
+      data: compatibleRecord,
     });
   } catch (error) {
     console.error('Create delivery record error:', error);

@@ -158,7 +158,7 @@ export const DELETE = withAuth(async (request: NextRequest, user: any) => {
     }
 
     // 检查货代是否有关联数据
-    const relatedData = await prisma.deliveryRecord.findFirst({
+    const relatedData = await prisma.shipmentProductRecord.findFirst({
       where: { forwarderId: id },
     });
 

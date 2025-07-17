@@ -35,7 +35,7 @@ model Account {
   operatedProducts      ProductInfo[]      @relation("ProductOperator")
   operatedPurchases     PurchaseOrder[]    @relation("PurchaseOperator")
   operatedWarehouseTasks WarehouseTask[]   @relation("WarehouseTaskOperator")
-  operatedDeliveries    DeliveryRecord[]   @relation("DeliveryOperator")
+  operatedShipments     ShipmentRecord[]   @relation("ShipmentOperator")
 
   // 关联关系 - 审批系统
   approvalRecords       ApprovalRecord[]   @relation("ApprovalRecords")
@@ -198,7 +198,7 @@ model Shop {
   spareInventory    SpareInventory[]
   purchaseOrders    PurchaseOrder[]
   warehouseTasks    WarehouseTask[]
-  deliveryRecords   DeliveryRecord[]
+  shipmentRecords   ShipmentRecord[]
   financialReports  FinancialReport[]
 
   @@map("shops")
@@ -249,7 +249,7 @@ model Forwarder {
 
   // 关联关系
   operator        Account          @relation("ForwarderOperator", fields: [operatorId], references: [id])
-  deliveryRecords DeliveryRecord[]
+  shipmentProductRecords ShipmentProductRecord[]
 
   @@map("forwarders")
 }
@@ -299,7 +299,7 @@ model ProductInfo {
   finishedInventory FinishedInventory[]
   spareInventory   SpareInventory[]
   productItems       ProductItem[]       // 通用产品明细
-  deliveryRecords  DeliveryRecord[]
+  shipmentProductRecords ShipmentProductRecord[]
 
   @@index([shopId])
   @@index([categoryId])
@@ -455,38 +455,54 @@ model WarehouseTask {
   @@map("warehouse_tasks")
 }
 
-// 发货记录表
-model DeliveryRecord {
+// 发货记录表 (主表)
+model ShipmentRecord {
   id                        String              @id @default(cuid())
   shopId                    String
-  productId                 String
-  totalBoxes                Int
-  fbaShipmentCode           String?
-  fbaWarehouseCode          String?
   country                   String?
   channel                   String?
-  forwarderId               String
   shippingChannel           String?
-    warehouseShippingDeadline DateTime?           @db.Date
+  warehouseShippingDeadline DateTime?           @db.Date
   warehouseReceiptDeadline  DateTime?           @db.Date
   shippingDetails           String?  @db.Text
   date                      DateTime            @db.Date
-  status                    DeliveryRecordStatus @default(PREPARING)
+  status                    ShipmentRecordStatus @default(PREPARING)
   operatorId                String
   createdAt                 DateTime            @default(now())
   updatedAt                 DateTime            @updatedAt
 
   // 关联关系
-  shop      Shop      @relation(fields: [shopId], references: [id])
-  product   ProductInfo @relation(fields: [productId], references: [id])
-  forwarder Forwarder @relation(fields: [forwarderId], references: [id])
-  operator  Account   @relation("DeliveryOperator", fields: [operatorId], references: [id])
+  shop               Shop                    @relation(fields: [shopId], references: [id])
+  operator           Account                 @relation("ShipmentOperator", fields: [operatorId], references: [id])
+  shipmentProducts   ShipmentProductRecord[]
 
   @@index([shopId, status])
   @@index([date, status])
-  @@index([fbaShipmentCode])
+  @@map("shipment_records")
+}
+
+// 发货产品记录表 (子表)
+model ShipmentProductRecord {
+  id                String   @id @default(cuid())
+  shipmentRecordId  String
+  productId         String
+  forwarderId       String?  // 货代改为可选
+  totalBoxes        Int
+  fbaShipmentCode   String?
+  fbaWarehouseCode  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // 关联关系
+  shipmentRecord    ShipmentRecord @relation(fields: [shipmentRecordId], references: [id], onDelete: Cascade)
+  product           ProductInfo    @relation(fields: [productId], references: [id])
+  forwarder         Forwarder?     @relation(fields: [forwarderId], references: [id])
+
+  @@index([shipmentRecordId])
+  @@index([productId])
   @@index([forwarderId])
-  @@map("delivery_records")
+  @@index([fbaShipmentCode])
+  @@map("shipment_product_records")
 }
 
 // ========== ERP 业务枚举定义 ==========
@@ -526,7 +542,7 @@ enum WarehouseTaskType {
   SHIPPING
 }
 
-enum DeliveryRecordStatus {
+enum ShipmentRecordStatus {
   PREPARING
   SHIPPED
   IN_TRANSIT

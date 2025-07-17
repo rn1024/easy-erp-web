@@ -116,6 +116,14 @@ jest.mock('../../src/lib/db', () => ({
       delete: jest.fn(),
       count: jest.fn(),
     },
+    shipmentRecord: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
     systemLog: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -195,7 +203,7 @@ describe('API 集成测试', () => {
     mockPrisma.finishedInventory.count.mockResolvedValue(0);
     mockPrisma.purchaseOrder.count.mockResolvedValue(0);
     mockPrisma.warehouseTask.count.mockResolvedValue(0);
-    mockPrisma.deliveryRecord.count.mockResolvedValue(0);
+    mockPrisma.shipmentRecord.count.mockResolvedValue(0);
     mockPrisma.systemLog.count.mockResolvedValue(0);
     mockPrisma.log.count.mockResolvedValue(0);
     mockPrisma.productCategory.count.mockResolvedValue(0);
@@ -401,7 +409,7 @@ describe('API 集成测试', () => {
     });
 
     it('应该获取发货记录列表', async () => {
-      mockPrisma.deliveryRecord.findMany.mockResolvedValue([]);
+      mockPrisma.shipmentRecord.findMany.mockResolvedValue([]);
 
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/delivery-records', {

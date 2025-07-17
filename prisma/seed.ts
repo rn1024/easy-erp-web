@@ -799,6 +799,81 @@ async function main() {
   });
   console.log('✓ 创建仓库任务产品明细');
 
+  // 创建测试发货记录
+  const testShipmentRecords = await prisma.shipmentRecord.createMany({
+    data: [
+      {
+        shopId: testShop.id,
+        country: '美国',
+        channel: 'Amazon FBA',
+        shippingChannel: '海运',
+        warehouseShippingDeadline: new Date('2024-12-30'),
+        warehouseReceiptDeadline: new Date('2025-01-05'),
+        shippingDetails: '美国亚马逊FBA发货，海运渠道，预计15-20天到达',
+        date: new Date('2024-12-25'),
+        status: 'PREPARING',
+        operatorId: adminAccount.id,
+      },
+      {
+        shopId: testShop.id,
+        country: '德国',
+        channel: 'Amazon FBA',
+        shippingChannel: '空运',
+        warehouseShippingDeadline: new Date('2024-12-28'),
+        warehouseReceiptDeadline: new Date('2025-01-03'),
+        shippingDetails: '德国亚马逊FBA发货，空运渠道，预计5-7天到达',
+        date: new Date('2024-12-26'),
+        status: 'SHIPPED',
+        operatorId: adminAccount.id,
+      },
+    ],
+  });
+  console.log('✓ 创建测试发货记录');
+
+  // 获取创建的发货记录
+  const createdShipmentRecords = await prisma.shipmentRecord.findMany({
+    where: {
+      operatorId: adminAccount.id,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  // 为发货记录创建产品明细
+  await prisma.shipmentProductRecord.createMany({
+    data: [
+      // 第一条发货记录的产品明细
+      {
+        shipmentRecordId: createdShipmentRecords[0].id,
+        productId: testProducts[0].id, // 手机保护壳
+        forwarderId: testForwarder.id,
+        totalBoxes: 10,
+        fbaShipmentCode: 'FBA123456789',
+        fbaWarehouseCode: 'US-WEST-1',
+      },
+      {
+        shipmentRecordId: createdShipmentRecords[0].id,
+        productId: testProducts[1].id, // 数据线
+        forwarderId: testForwarder.id,
+        totalBoxes: 5,
+        fbaShipmentCode: 'FBA123456790',
+        fbaWarehouseCode: 'US-WEST-1',
+      },
+
+      // 第二条发货记录的产品明细
+      {
+        shipmentRecordId: createdShipmentRecords[1].id,
+        productId: testProducts[2].id, // 无线充电器
+        forwarderId: testForwarder.id,
+        totalBoxes: 8,
+        fbaShipmentCode: 'FBA123456791',
+        fbaWarehouseCode: 'DE-CENTRAL-1',
+      },
+    ],
+  });
+  console.log('✓ 创建发货记录产品明细');
+
   console.log('\n🎉 ERP数据库初始化完成！');
   console.log('📋 默认管理员账户信息:');
   console.log(`   用户名: admin`);

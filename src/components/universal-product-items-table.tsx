@@ -29,6 +29,14 @@ export interface ProductOption {
   };
 }
 
+// 货代选项类型
+export interface ForwarderOption {
+  id: string;
+  nickname: string;
+  contactPerson?: string;
+  contactPhone?: string;
+}
+
 // 通用产品明细项类型
 export interface UniversalProductItem {
   key?: string;
@@ -45,15 +53,22 @@ export interface UniversalProductItem {
   // 仓库任务专用字段
   completedQuantity?: number;
 
+  // 发货记录专用字段
+  forwarderId?: string;
+  totalBoxes?: number;
+  fbaShipmentCode?: string;
+  fbaWarehouseCode?: string;
+
   // 通用字段
   remark?: string;
 }
 
 interface UniversalProductItemsTableProps {
-  mode: 'purchase' | 'warehouse-packaging' | 'warehouse-shipping';
+  mode: 'purchase' | 'warehouse-packaging' | 'warehouse-shipping' | 'shipment-record';
   items: UniversalProductItem[];
   onChange: (items: UniversalProductItem[]) => void;
   productsData: ProductOption[];
+  forwardersData?: ForwarderOption[];
   disabled?: boolean;
 }
 
@@ -62,6 +77,7 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
   items = [],
   onChange,
   productsData = [],
+  forwardersData = [],
   disabled = false,
 }) => {
   const [dataSource, setDataSource] = useState<UniversalProductItem[]>([]);
@@ -101,6 +117,11 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
       newItem.totalAmount = 0;
     } else if (mode === 'warehouse-packaging') {
       newItem.completedQuantity = 0;
+    } else if (mode === 'shipment-record') {
+      newItem.forwarderId = '';
+      newItem.totalBoxes = 1;
+      newItem.fbaShipmentCode = '';
+      newItem.fbaWarehouseCode = '';
     }
 
     const newData = [...dataSource, newItem];
@@ -208,17 +229,18 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
       },
     },
     {
-      title: '数量',
-      dataIndex: 'quantity',
-      key: 'quantity',
+      title: mode === 'shipment-record' ? '箱数' : '数量',
+      dataIndex: mode === 'shipment-record' ? 'totalBoxes' : 'quantity',
+      key: mode === 'shipment-record' ? 'totalBoxes' : 'quantity',
       width: 100,
       render: (value, record) => {
         const isEditing = editingKey === record.key;
+        const fieldName = mode === 'shipment-record' ? 'totalBoxes' : 'quantity';
         if (isEditing) {
           return (
             <InputNumber
               value={value}
-              onChange={(val) => updateItem(record.key!, 'quantity', val || 0)}
+              onChange={(val) => updateItem(record.key!, fieldName, val || 0)}
               min={0}
               style={{ width: '100%' }}
               disabled={disabled}
@@ -364,6 +386,93 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
         ]
       : [];
 
+  // 发货记录专用列
+  const shipmentColumns: ColumnsType<UniversalProductItem> =
+    mode === 'shipment-record'
+      ? [
+          {
+            title: '货代',
+            dataIndex: 'forwarderId',
+            key: 'forwarderId',
+            width: 150,
+            render: (value, record) => {
+              const isEditing = editingKey === record.key;
+              if (isEditing) {
+                return (
+                  <Select
+                    value={value}
+                    onChange={(val) => updateItem(record.key!, 'forwarderId', val)}
+                    style={{ width: '100%' }}
+                    placeholder="请选择货代（可选）"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    disabled={disabled}
+                  >
+                    {forwardersData.map((forwarder) => (
+                      <Option key={forwarder.id} value={forwarder.id}>
+                        <div>
+                          <div>{forwarder.nickname}</div>
+                          {forwarder.contactPerson && (
+                            <div style={{ fontSize: '12px', color: '#999' }}>
+                              {forwarder.contactPerson}
+                              {forwarder.contactPhone && ` | ${forwarder.contactPhone}`}
+                            </div>
+                          )}
+                        </div>
+                      </Option>
+                    ))}
+                  </Select>
+                );
+              }
+
+              const forwarder = forwardersData.find((f) => f.id === value);
+              return forwarder ? forwarder.nickname : '-';
+            },
+          },
+          {
+            title: 'FBA发货编码',
+            dataIndex: 'fbaShipmentCode',
+            key: 'fbaShipmentCode',
+            width: 150,
+            render: (value, record) => {
+              const isEditing = editingKey === record.key;
+              if (isEditing) {
+                return (
+                  <Input
+                    value={value}
+                    onChange={(e) => updateItem(record.key!, 'fbaShipmentCode', e.target.value)}
+                    placeholder="请输入FBA发货编码"
+                    disabled={disabled}
+                  />
+                );
+              }
+              return value || '-';
+            },
+          },
+          {
+            title: 'FBA仓库编码',
+            dataIndex: 'fbaWarehouseCode',
+            key: 'fbaWarehouseCode',
+            width: 150,
+            render: (value, record) => {
+              const isEditing = editingKey === record.key;
+              if (isEditing) {
+                return (
+                  <Input
+                    value={value}
+                    onChange={(e) => updateItem(record.key!, 'fbaWarehouseCode', e.target.value)}
+                    placeholder="请输入FBA仓库编码"
+                    disabled={disabled}
+                  />
+                );
+              }
+              return value || '-';
+            },
+          },
+        ]
+      : [];
+
   // 操作列
   const actionColumns: ColumnsType<UniversalProductItem> = disabled
     ? []
@@ -407,7 +516,13 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
         },
       ];
 
-  const columns = [...baseColumns, ...purchaseColumns, ...packagingColumns, ...actionColumns];
+  const columns = [
+    ...baseColumns,
+    ...purchaseColumns,
+    ...packagingColumns,
+    ...shipmentColumns,
+    ...actionColumns,
+  ];
 
   // 统计信息
   const getStatistics = () => {
@@ -445,6 +560,22 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
             <Text strong style={{ fontSize: '16px', color: '#1890ff' }}>
               完成率: {completionRate.toFixed(1)}%
             </Text>
+          </Space>
+        </div>
+      );
+    }
+
+    if (mode === 'shipment-record') {
+      const totalBoxes = dataSource.reduce((sum, item) => sum + (item.totalBoxes || 0), 0);
+      const withForwarder = dataSource.filter((item) => item.forwarderId).length;
+      const withoutForwarder = dataSource.length - withForwarder;
+
+      return (
+        <div style={{ textAlign: 'right', marginTop: 16 }}>
+          <Space direction="vertical" size={4}>
+            <Text>总箱数: {totalBoxes}</Text>
+            <Text>已分配货代: {withForwarder} 个产品</Text>
+            <Text>未分配货代: {withoutForwarder} 个产品</Text>
           </Space>
         </div>
       );

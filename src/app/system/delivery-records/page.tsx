@@ -11,12 +11,12 @@ import {
   Tag,
   Row,
   Col,
-  InputNumber,
   Popconfirm,
   message,
   DatePicker,
   Descriptions,
   Flex,
+  Alert,
 } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
@@ -31,22 +31,27 @@ import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import dayjs from 'dayjs';
 import {
-  getDeliveryRecordsApi,
-  createDeliveryRecordApi,
-  updateDeliveryRecordApi,
-  deleteDeliveryRecordApi,
-  getDeliveryRecordApi,
-  type DeliveryRecordInfo,
-  type CreateDeliveryRecordData,
-  type UpdateDeliveryRecordData,
-  type DeliveryRecordQueryParams,
-  DeliveryRecordStatus,
-  deliveryRecordStatusOptions,
-  getDeliveryRecordStatusLabel,
+  getShipmentRecordsApi,
+  createShipmentRecordApi,
+  updateShipmentRecordApi,
+  deleteShipmentRecordApi,
+  getShipmentRecordApi,
+  type ShipmentRecordInfo,
+  type CreateShipmentRecordData,
+  type UpdateShipmentRecordData,
+  type ShipmentRecordQueryParams,
+  ShipmentRecordStatus,
+  shipmentRecordStatusOptions,
+  getShipmentRecordStatusLabel,
 } from '@/services/delivery';
 import { getShops } from '@/services/shops';
 import { getProductsApi } from '@/services/products';
 import { getForwarders } from '@/services/forwarders';
+import UniversalProductItemsTable, {
+  type UniversalProductItem,
+  type ProductOption,
+  type ForwarderOption,
+} from '@/components/universal-product-items-table';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -56,11 +61,12 @@ const DeliveryRecordsPage: React.FC = () => {
   const [searchForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<DeliveryRecordInfo | null>(null);
-  const [selectedRecord, setSelectedRecord] = useState<DeliveryRecordInfo | null>(null);
+  const [editingRecord, setEditingRecord] = useState<ShipmentRecordInfo | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<ShipmentRecordInfo | null>(null);
+  const [productItems, setProductItems] = useState<UniversalProductItem[]>([]);
 
   // 搜索参数
-  const [searchParams, setSearchParams] = useState<DeliveryRecordQueryParams>({
+  const [searchParams, setSearchParams] = useState<ShipmentRecordQueryParams>({
     page: 1,
     pageSize: 10,
   });
@@ -70,7 +76,7 @@ const DeliveryRecordsPage: React.FC = () => {
     data: recordsResponse,
     loading: recordsLoading,
     refresh: refreshRecords,
-  } = useRequest(() => getDeliveryRecordsApi(searchParams), {
+  } = useRequest(() => getShipmentRecordsApi(searchParams), {
     refreshDeps: [searchParams],
   });
 
@@ -92,13 +98,31 @@ const DeliveryRecordsPage: React.FC = () => {
   const productsData = productsResponse?.data?.data?.list || [];
   const forwardersData = forwardersResponse?.data?.list || [];
 
+  // 转换为组件需要的格式
+  const productsOptions: ProductOption[] =
+    productsData?.map((product: any) => ({
+      id: product.id,
+      code: product.code,
+      sku: product.sku,
+      specification: product.specification,
+      category: product.category,
+    })) || [];
+
+  const forwardersOptions: ForwarderOption[] =
+    forwardersData?.map((forwarder: any) => ({
+      id: forwarder.id,
+      nickname: forwarder.nickname,
+      contactPerson: forwarder.contactPerson,
+      contactPhone: forwarder.contactPhone,
+    })) || [];
+
   // 创建/更新发货记录
   const { run: handleSubmit, loading: submitLoading } = useRequest(
-    async (values: CreateDeliveryRecordData | UpdateDeliveryRecordData) => {
+    async (values: CreateShipmentRecordData | UpdateShipmentRecordData) => {
       if (editingRecord) {
-        return updateDeliveryRecordApi(editingRecord.id, values as UpdateDeliveryRecordData);
+        return updateShipmentRecordApi(editingRecord.id, values as UpdateShipmentRecordData);
       } else {
-        return createDeliveryRecordApi(values as CreateDeliveryRecordData);
+        return createShipmentRecordApi(values as CreateShipmentRecordData);
       }
     },
     {
@@ -108,6 +132,7 @@ const DeliveryRecordsPage: React.FC = () => {
         setIsModalVisible(false);
         setEditingRecord(null);
         form.resetFields();
+        setProductItems([]);
         refreshRecords();
       },
       onError: (error) => {
@@ -117,7 +142,7 @@ const DeliveryRecordsPage: React.FC = () => {
   );
 
   // 删除发货记录
-  const { run: handleDelete } = useRequest(deleteDeliveryRecordApi, {
+  const { run: handleDelete } = useRequest(deleteShipmentRecordApi, {
     manual: true,
     onSuccess: () => {
       message.success('删除成功');
@@ -129,7 +154,7 @@ const DeliveryRecordsPage: React.FC = () => {
   });
 
   // 获取发货记录详情
-  const { run: handleGetDetail } = useRequest(getDeliveryRecordApi, {
+  const { run: handleGetDetail } = useRequest(getShipmentRecordApi, {
     manual: true,
     onSuccess: (result) => {
       setSelectedRecord(result.data);
@@ -159,48 +184,78 @@ const DeliveryRecordsPage: React.FC = () => {
     });
   };
 
-  // 打开新增/编辑模态框
-  const handleOpenModal = (record?: DeliveryRecordInfo) => {
+  // 打开模态框
+  const handleOpenModal = (record?: ShipmentRecordInfo) => {
     if (record) {
       setEditingRecord(record);
+      // 填充表单数据
       form.setFieldsValue({
-        ...record,
-        date: record.date ? dayjs(record.date) : null,
+        shopId: record.shopId,
+        country: record.country,
+        channel: record.channel,
+        shippingChannel: record.shippingChannel,
         warehouseShippingDeadline: record.warehouseShippingDeadline
           ? dayjs(record.warehouseShippingDeadline)
           : null,
         warehouseReceiptDeadline: record.warehouseReceiptDeadline
           ? dayjs(record.warehouseReceiptDeadline)
           : null,
+        shippingDetails: record.shippingDetails,
+        date: dayjs(record.date),
+        status: record.status,
       });
+
+      // 转换产品数据
+      const items: UniversalProductItem[] =
+        record.shipmentProducts?.map((product) => ({
+          productId: product.productId,
+          forwarderId: product.forwarderId || '',
+          totalBoxes: product.totalBoxes,
+          fbaShipmentCode: product.fbaShipmentCode || '',
+          fbaWarehouseCode: product.fbaWarehouseCode || '',
+          quantity: product.totalBoxes, // 保持兼容性
+        })) || [];
+      setProductItems(items);
     } else {
       setEditingRecord(null);
       form.resetFields();
+      setProductItems([]);
     }
     setIsModalVisible(true);
   };
 
-  // 表单提交
+  // 提交表单
   const onFinish = (values: any) => {
-    const formData = {
+    // 验证产品明细
+    if (productItems.length === 0) {
+      message.error('请至少添加一个产品明细');
+      return;
+    }
+
+    const submitData = {
       ...values,
-      date: values.date ? values.date.format('YYYY-MM-DD') : undefined,
-      warehouseShippingDeadline: values.warehouseShippingDeadline
-        ? values.warehouseShippingDeadline.format('YYYY-MM-DD')
-        : undefined,
-      warehouseReceiptDeadline: values.warehouseReceiptDeadline
-        ? values.warehouseReceiptDeadline.format('YYYY-MM-DD')
-        : undefined,
+      date: values.date?.format('YYYY-MM-DD'),
+      warehouseShippingDeadline: values.warehouseShippingDeadline?.format('YYYY-MM-DD'),
+      warehouseReceiptDeadline: values.warehouseReceiptDeadline?.format('YYYY-MM-DD'),
+      products: productItems.map((item) => ({
+        productId: item.productId,
+        forwarderId: item.forwarderId || undefined,
+        totalBoxes: item.totalBoxes,
+        fbaShipmentCode: item.fbaShipmentCode || undefined,
+        fbaWarehouseCode: item.fbaWarehouseCode || undefined,
+      })),
     };
-    handleSubmit(formData);
+
+    handleSubmit(submitData);
   };
 
-  const columns: ProColumns<DeliveryRecordInfo>[] = [
+  // 表格列定义
+  const columns: ProColumns<ShipmentRecordInfo>[] = [
     {
-      title: 'FBA编码',
-      dataIndex: 'fbaShipmentCode',
-      width: 150,
-      render: (_, record) => record.fbaShipmentCode || '-',
+      title: '发货ID',
+      dataIndex: 'id',
+      width: 120,
+      render: (_, record) => record.id.slice(-8),
     },
     {
       title: '店铺',
@@ -208,44 +263,48 @@ const DeliveryRecordsPage: React.FC = () => {
       width: 120,
     },
     {
-      title: '产品信息',
-      width: 200,
+      title: '产品概览',
+      width: 250,
       render: (_, record) => (
         <div>
-          <div>{record.product?.code}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.product?.specification}</div>
+          {record.shipmentProducts?.slice(0, 2).map((product, index) => (
+            <div key={index} style={{ fontSize: '12px', marginBottom: '4px' }}>
+              <span style={{ fontWeight: 500 }}>{product.product?.code}</span>
+              <span style={{ color: '#666', marginLeft: '8px' }}>
+                {product.forwarder?.nickname || '无货代'} - {product.totalBoxes}箱
+              </span>
+            </div>
+          ))}
+          {(record.shipmentProducts?.length || 0) > 2 && (
+            <div style={{ fontSize: '12px', color: '#1890ff' }}>
+              +{(record.shipmentProducts?.length || 0) - 2} 个产品
+            </div>
+          )}
         </div>
       ),
     },
     {
-      title: '货代',
-      dataIndex: ['forwarder', 'nickname'],
+      title: '国家/渠道',
       width: 120,
+      render: (_, record) => (
+        <div>
+          <div>{record.country || '-'}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{record.channel || '-'}</div>
+        </div>
+      ),
     },
     {
-      title: '箱数',
-      dataIndex: 'totalBoxes',
-      width: 80,
-      render: (_, record) => `${record.totalBoxes}箱`,
-    },
-    {
-      title: '国家',
-      dataIndex: 'country',
+      title: '运输渠道',
+      dataIndex: 'shippingChannel',
       width: 100,
-      render: (_, record) => record.country || '-',
-    },
-    {
-      title: '渠道',
-      dataIndex: 'channel',
-      width: 100,
-      render: (_, record) => record.channel || '-',
+      render: (_, record) => record.shippingChannel || '-',
     },
     {
       title: '状态',
       dataIndex: 'status',
       width: 100,
       render: (_, record) => {
-        const statusConfig = getDeliveryRecordStatusLabel(record.status);
+        const statusConfig = getShipmentRecordStatusLabel(record.status);
         return <Tag color={statusConfig.color}>{statusConfig.label}</Tag>;
       },
     },
@@ -299,7 +358,7 @@ const DeliveryRecordsPage: React.FC = () => {
   ];
 
   // ProTable 配置
-  const proTableProps: ProTableProps<DeliveryRecordInfo, any> = {
+  const proTableProps: ProTableProps<ShipmentRecordInfo, any> = {
     columns,
     dataSource: recordsData?.list || [],
     loading: recordsLoading,
@@ -327,7 +386,7 @@ const DeliveryRecordsPage: React.FC = () => {
         刷新
       </Button>,
     ],
-    scroll: { x: 1500 },
+    scroll: { x: 1200 },
   };
 
   return (
@@ -345,26 +404,20 @@ const DeliveryRecordsPage: React.FC = () => {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item name="forwarderId" style={{ marginRight: 0 }}>
-              <Select style={{ width: 150 }} placeholder="选择货代" allowClear>
-                {forwardersData?.map((forwarder: any) => (
-                  <Option key={forwarder.id} value={forwarder.id}>
-                    {forwarder.nickname}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
             <Form.Item name="status" style={{ marginRight: 0 }}>
               <Select style={{ width: 120 }} placeholder="选择状态" allowClear>
-                {deliveryRecordStatusOptions.map((option) => (
+                {shipmentRecordStatusOptions.map((option) => (
                   <Option key={option.value} value={option.value}>
                     {option.label}
                   </Option>
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item name="fbaShipmentCode" style={{ marginRight: 0 }}>
-              <Input style={{ width: 150 }} placeholder="输入FBA编码" />
+            <Form.Item name="country" style={{ marginRight: 0 }}>
+              <Input style={{ width: 120 }} placeholder="输入国家" />
+            </Form.Item>
+            <Form.Item name="channel" style={{ marginRight: 0 }}>
+              <Input style={{ width: 120 }} placeholder="输入渠道" />
             </Form.Item>
             <Button
               type="primary"
@@ -392,9 +445,12 @@ const DeliveryRecordsPage: React.FC = () => {
           setIsModalVisible(false);
           setEditingRecord(null);
           form.resetFields();
+          setProductItems([]);
         }}
-        footer={null}
-        width={800}
+        onOk={() => form.submit()}
+        confirmLoading={submitLoading}
+        width={1200}
+        destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={onFinish}>
           <Row gutter={16}>
@@ -415,87 +471,29 @@ const DeliveryRecordsPage: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="productId"
-                label="产品"
-                rules={[{ required: true, message: '请选择产品' }]}
-              >
-                <Select placeholder="选择产品">
-                  {productsData?.map((product: any) => (
-                    <Option key={product.id} value={product.id}>
-                      {product.code} - {product.specification}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="forwarderId"
-                label="货代"
-                rules={[{ required: true, message: '请选择货代' }]}
-              >
-                <Select placeholder="选择货代">
-                  {forwardersData?.map((forwarder: any) => (
-                    <Option key={forwarder.id} value={forwarder.id}>
-                      {forwarder.nickname}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="totalBoxes"
-                label="箱数"
-                rules={[{ required: true, message: '请输入箱数' }]}
-              >
-                <InputNumber min={1} style={{ width: '100%' }} placeholder="输入箱数" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="fbaShipmentCode" label="FBA发货编码">
-                <Input placeholder="输入FBA发货编码" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="fbaWarehouseCode" label="FBA仓库编码">
-                <Input placeholder="输入FBA仓库编码" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="country" label="国家">
-                <Input placeholder="输入国家" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="channel" label="渠道">
-                <Input placeholder="输入渠道" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="shippingChannel" label="运输渠道">
-                <Input placeholder="输入运输渠道" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
                 name="date"
                 label="发货日期"
                 rules={[{ required: true, message: '请选择发货日期' }]}
               >
                 <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="country" label="国家">
+                <Input placeholder="输入国家" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="channel" label="渠道">
+                <Input placeholder="输入渠道" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="shippingChannel" label="运输渠道">
+                <Input placeholder="输入运输渠道" />
               </Form.Item>
             </Col>
           </Row>
@@ -518,7 +516,7 @@ const DeliveryRecordsPage: React.FC = () => {
               <Col span={12}>
                 <Form.Item name="status" label="状态">
                   <Select placeholder="选择状态">
-                    {deliveryRecordStatusOptions.map((option) => (
+                    {shipmentRecordStatusOptions.map((option) => (
                       <Option key={option.value} value={option.value}>
                         {option.label}
                       </Option>
@@ -530,25 +528,25 @@ const DeliveryRecordsPage: React.FC = () => {
           )}
 
           <Form.Item name="shippingDetails" label="运输详情">
-            <TextArea rows={4} placeholder="输入运输详情" />
+            <TextArea rows={3} placeholder="输入运输详情" />
           </Form.Item>
 
-          <Form.Item style={{ textAlign: 'right' }}>
-            <Space>
-              <Button
-                onClick={() => {
-                  setIsModalVisible(false);
-                  setEditingRecord(null);
-                  form.resetFields();
-                }}
-              >
-                取消
-              </Button>
-              <Button type="primary" htmlType="submit" loading={submitLoading}>
-                {editingRecord ? '更新' : '创建'}
-              </Button>
-            </Space>
-          </Form.Item>
+          <div style={{ marginBottom: 16 }}>
+            <Alert
+              message="发货记录：管理发货产品的详细信息，货代为可选字段，支持FBA发货编码管理"
+              type="info"
+              showIcon
+            />
+          </div>
+
+          <UniversalProductItemsTable
+            mode="shipment-record"
+            items={productItems}
+            onChange={setProductItems}
+            productsData={productsOptions}
+            forwardersData={forwardersOptions}
+            disabled={false}
+          />
         </Form>
       </Modal>
 
@@ -560,57 +558,79 @@ const DeliveryRecordsPage: React.FC = () => {
           setIsDetailModalVisible(false);
           setSelectedRecord(null);
         }}
-        footer={null}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setIsDetailModalVisible(false);
+              setSelectedRecord(null);
+            }}
+          >
+            关闭
+          </Button>,
+        ]}
         width={800}
       >
         {selectedRecord && (
-          <Descriptions column={2} bordered>
-            <Descriptions.Item label="FBA发货编码">
-              {selectedRecord.fbaShipmentCode || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="FBA仓库编码">
-              {selectedRecord.fbaWarehouseCode || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="店铺">{selectedRecord.shop?.nickname}</Descriptions.Item>
-            <Descriptions.Item label="产品">
-              {selectedRecord.product?.code} - {selectedRecord.product?.specification}
-            </Descriptions.Item>
-            <Descriptions.Item label="货代">{selectedRecord.forwarder?.nickname}</Descriptions.Item>
-            <Descriptions.Item label="箱数">{selectedRecord.totalBoxes}箱</Descriptions.Item>
-            <Descriptions.Item label="国家">{selectedRecord.country || '-'}</Descriptions.Item>
-            <Descriptions.Item label="渠道">{selectedRecord.channel || '-'}</Descriptions.Item>
-            <Descriptions.Item label="运输渠道">
-              {selectedRecord.shippingChannel || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <Tag color={getDeliveryRecordStatusLabel(selectedRecord.status).color}>
-                {getDeliveryRecordStatusLabel(selectedRecord.status).label}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="发货日期">
-              {dayjs(selectedRecord.date).format('YYYY-MM-DD')}
-            </Descriptions.Item>
-            <Descriptions.Item label="仓库发货截止日期">
-              {selectedRecord.warehouseShippingDeadline
-                ? dayjs(selectedRecord.warehouseShippingDeadline).format('YYYY-MM-DD')
-                : '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="仓库收货截止日期">
-              {selectedRecord.warehouseReceiptDeadline
-                ? dayjs(selectedRecord.warehouseReceiptDeadline).format('YYYY-MM-DD')
-                : '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="操作员">{selectedRecord.operator?.name}</Descriptions.Item>
-            <Descriptions.Item label="运输详情" span={2}>
-              {selectedRecord.shippingDetails || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="创建时间">
-              {dayjs(selectedRecord.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-            </Descriptions.Item>
-            <Descriptions.Item label="更新时间">
-              {dayjs(selectedRecord.updatedAt).format('YYYY-MM-DD HH:mm:ss')}
-            </Descriptions.Item>
-          </Descriptions>
+          <>
+            <Descriptions column={2} bordered style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="发货ID">{selectedRecord.id}</Descriptions.Item>
+              <Descriptions.Item label="店铺">{selectedRecord.shop?.nickname}</Descriptions.Item>
+              <Descriptions.Item label="国家">{selectedRecord.country || '-'}</Descriptions.Item>
+              <Descriptions.Item label="渠道">{selectedRecord.channel || '-'}</Descriptions.Item>
+              <Descriptions.Item label="运输渠道">
+                {selectedRecord.shippingChannel || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="状态">
+                <Tag color={getShipmentRecordStatusLabel(selectedRecord.status).color}>
+                  {getShipmentRecordStatusLabel(selectedRecord.status).label}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="发货日期">
+                {dayjs(selectedRecord.date).format('YYYY-MM-DD')}
+              </Descriptions.Item>
+              <Descriptions.Item label="仓库发货截止日期">
+                {selectedRecord.warehouseShippingDeadline
+                  ? dayjs(selectedRecord.warehouseShippingDeadline).format('YYYY-MM-DD')
+                  : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="仓库收货截止日期">
+                {selectedRecord.warehouseReceiptDeadline
+                  ? dayjs(selectedRecord.warehouseReceiptDeadline).format('YYYY-MM-DD')
+                  : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="操作员">{selectedRecord.operator?.name}</Descriptions.Item>
+            </Descriptions>
+
+            {selectedRecord.shippingDetails && (
+              <div style={{ marginBottom: 16 }}>
+                <strong>运输详情：</strong>
+                <div
+                  style={{ marginTop: 8, padding: 8, backgroundColor: '#f5f5f5', borderRadius: 4 }}
+                >
+                  {selectedRecord.shippingDetails}
+                </div>
+              </div>
+            )}
+
+            <UniversalProductItemsTable
+              mode="shipment-record"
+              items={
+                selectedRecord.shipmentProducts?.map((product) => ({
+                  productId: product.productId,
+                  forwarderId: product.forwarderId || '',
+                  totalBoxes: product.totalBoxes,
+                  fbaShipmentCode: product.fbaShipmentCode || '',
+                  fbaWarehouseCode: product.fbaWarehouseCode || '',
+                  quantity: product.totalBoxes,
+                })) || []
+              }
+              onChange={() => {}} // 详情模式不允许编辑
+              productsData={productsOptions}
+              forwardersData={forwardersOptions}
+              disabled={true}
+            />
+          </>
         )}
       </Modal>
     </>
