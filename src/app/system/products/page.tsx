@@ -133,6 +133,7 @@ const ProductManagement: React.FC = () => {
       shopId: values.shopId,
       code: values.code?.trim(),
       sku: values.sku?.trim(),
+      asin: values.asin?.trim(),
     });
   };
 
@@ -203,6 +204,17 @@ const ProductManagement: React.FC = () => {
       render: (_, record: ProductInfo) => (
         <Tooltip title={record.sku}>
           <span>{record.sku}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: 'ASIN',
+      dataIndex: 'asin',
+      width: 120,
+      ellipsis: true,
+      render: (_, record: ProductInfo) => (
+        <Tooltip title={record.asin}>
+          <span>{record.asin || '-'}</span>
         </Tooltip>
       ),
     },
@@ -338,6 +350,9 @@ const ProductManagement: React.FC = () => {
             </Form.Item>
             <Form.Item name="sku" style={{ marginRight: 0 }}>
               <Input placeholder="SKU" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="asin" style={{ marginRight: 0 }}>
+              <Input placeholder="ASIN" style={{ width: 150 }} />
             </Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} icon={<SearchOutlined />}>
               搜索

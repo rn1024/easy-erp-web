@@ -35,6 +35,7 @@ export interface ProductInfo {
   externalSize?: string;
   weight?: number;
   sku: string;
+  asin?: string;
   label?: string;
   codeFileUrl?: string;
   imageUrl?: string;
@@ -72,6 +73,7 @@ export interface ProductsParams {
   categoryId?: string;
   code?: string;
   sku?: string;
+  asin?: string;
 }
 
 export interface ProductFormData {
@@ -85,6 +87,7 @@ export interface ProductFormData {
   externalSize?: string;
   weight?: number;
   sku: string;
+  asin?: string;
   label?: string;
   codeFileUrl?: string;
   imageUrl?: string;
@@ -180,4 +183,3 @@ export const deleteProductApi = (id: string) => {
     method: 'delete',
   });
 };
-

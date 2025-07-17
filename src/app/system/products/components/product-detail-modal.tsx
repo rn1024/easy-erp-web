@@ -49,7 +49,7 @@ const ProductDetailModal: React.FC<Props> = ({ open, entity, closeModal }) => {
         关闭
       </Button>
     ),
-    width: 800,
+    width: 1200,
     centered: true,
     bodyStyle: { maxHeight: '70vh', overflowY: 'auto' },
   };
@@ -64,6 +64,7 @@ const ProductDetailModal: React.FC<Props> = ({ open, entity, closeModal }) => {
         <Descriptions bordered column={2} size="small">
           <Descriptions.Item label="产品编码">{entity.code}</Descriptions.Item>
           <Descriptions.Item label="SKU">{entity.sku}</Descriptions.Item>
+          <Descriptions.Item label="ASIN">{entity.asin || '-'}</Descriptions.Item>
           <Descriptions.Item label="所属店铺">
             <Tag icon={<ShopOutlined />} color="blue">
               {entity.shop?.nickname || '未知店铺'}

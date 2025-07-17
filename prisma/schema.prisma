@@ -282,6 +282,7 @@ model ProductInfo {
   externalSize  String?
   weight        Decimal? @db.Decimal(10, 2)
   sku           String   @unique
+  asin          String?  // Amazon Standard Identification Number
   label         String?
   codeFileUrl   String?
   imageUrl      String?

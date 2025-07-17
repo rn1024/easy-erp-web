@@ -123,9 +123,14 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
     confirmLoading: submitting,
     destroyOnClose: true,
     maskClosable: false,
-    width: 800,
+    width: 1200,
     centered: true,
-    bodyStyle: { maxHeight: '70vh', overflowY: 'auto' },
+    bodyStyle: {
+      maxHeight: '70vh',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      padding: '24px',
+    },
   };
 
   /**
@@ -136,119 +141,127 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
     layout: 'vertical',
     validateTrigger: 'onBlur',
     preserve: false,
+    style: { maxWidth: '100%' },
   };
 
   return (
     <Modal {...modalProps}>
-      <Form {...formProps}>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="shopId"
-              label="所属店铺"
-              rules={[{ required: true, message: '请选择店铺' }]}
-            >
-              <Select placeholder="选择店铺">
-                <Option value="test-shop-1">测试店铺1</Option>
-                <Option value="test-shop-2">测试店铺2</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="categoryId"
-              label="产品分类"
-              rules={[{ required: true, message: '请选择分类' }]}
-            >
-              <Select placeholder="选择分类">
-                {categoriesList.map((category: any) => (
-                  <Option key={category.id} value={category.id}>
-                    {category.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
+      <div style={{ width: '100%', overflowX: 'hidden' }}>
+        <Form {...formProps}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="shopId"
+                label="所属店铺"
+                rules={[{ required: true, message: '请选择店铺' }]}
+              >
+                <Select placeholder="选择店铺">
+                  <Option value="test-shop-1">测试店铺1</Option>
+                  <Option value="test-shop-2">测试店铺2</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="categoryId"
+                label="产品分类"
+                rules={[{ required: true, message: '请选择分类' }]}
+              >
+                <Select placeholder="选择分类">
+                  {categoriesList.map((category: any) => (
+                    <Option key={category.id} value={category.id}>
+                      {category.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="code"
-              label="产品编码"
-              rules={[{ required: true, message: '请输入产品编码' }]}
-            >
-              <Input placeholder="产品编码" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="sku" label="SKU" rules={[{ required: true, message: '请输入SKU' }]}>
-              <Input placeholder="SKU" />
-            </Form.Item>
-          </Col>
-        </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="code"
+                label="产品编码"
+                rules={[{ required: true, message: '请输入产品编码' }]}
+              >
+                <Input placeholder="产品编码" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="sku" label="SKU" rules={[{ required: true, message: '请输入SKU' }]}>
+                <Input placeholder="SKU" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="asin" label="ASIN">
+                <Input placeholder="Amazon ASIN" maxLength={20} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item name="specification" label="规格">
-              <Input placeholder="规格" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="color" label="颜色">
-              <Input placeholder="颜色" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="setQuantity" label="套装数量">
-              <InputNumber min={1} placeholder="套装数量" style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-        </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="specification" label="规格">
+                <Input placeholder="规格" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="color" label="颜色">
+                <Input placeholder="颜色" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="setQuantity" label="套装数量">
+                <InputNumber min={1} placeholder="套装数量" style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item name="internalSize" label="内部尺寸">
-              <Input placeholder="内部尺寸" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="externalSize" label="外部尺寸">
-              <Input placeholder="外部尺寸" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="weight" label="重量(g)">
-              <InputNumber min={0} placeholder="重量" style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-        </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="internalSize" label="内部尺寸">
+                <Input placeholder="内部尺寸" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="externalSize" label="外部尺寸">
+                <Input placeholder="外部尺寸" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="weight" label="重量(g)">
+                <InputNumber min={0} placeholder="重量" style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="label" label="标签">
-              <Input placeholder="标签" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="imageUrl" label="产品图片">
-              <Input placeholder="图片URL" />
-            </Form.Item>
-          </Col>
-        </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="label" label="标签">
+                <Input placeholder="标签" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="imageUrl" label="产品图片">
+                <Input placeholder="图片URL" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Form.Item name="styleInfo" label="款式信息">
-          <TextArea rows={3} placeholder="款式信息" />
-        </Form.Item>
+          <Form.Item name="styleInfo" label="款式信息">
+            <TextArea rows={3} placeholder="款式信息" />
+          </Form.Item>
 
-        <Form.Item name="accessoryInfo" label="配件信息">
-          <TextArea rows={3} placeholder="配件信息" />
-        </Form.Item>
+          <Form.Item name="accessoryInfo" label="配件信息">
+            <TextArea rows={3} placeholder="配件信息" />
+          </Form.Item>
 
-        <Form.Item name="remark" label="备注">
-          <TextArea rows={3} placeholder="备注" />
-        </Form.Item>
-      </Form>
+          <Form.Item name="remark" label="备注">
+            <TextArea rows={3} placeholder="备注" />
+          </Form.Item>
+        </Form>
+      </div>
     </Modal>
   );
 };

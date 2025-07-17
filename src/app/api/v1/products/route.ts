@@ -14,6 +14,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     const categoryId = searchParams.get('categoryId');
     const code = searchParams.get('code');
     const sku = searchParams.get('sku');
+    const asin = searchParams.get('asin');
 
     const skip = (page - 1) * pageSize;
 
@@ -29,6 +30,11 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     if (sku) {
       where.sku = {
         contains: sku,
+      };
+    }
+    if (asin) {
+      where.asin = {
+        contains: asin,
       };
     }
 
