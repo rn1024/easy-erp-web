@@ -12,8 +12,21 @@ export async function POST(request: NextRequest) {
       return ApiResponseHelper.validationError({}, '请提供分享码');
     }
 
+    // 获取用户IP和UserAgent
+    const ipAddress =
+      request.headers.get('x-forwarded-for') ||
+      request.headers.get('x-real-ip') ||
+      request.ip ||
+      'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
     // 验证分享链接
-    const verifyResult = await SupplyShareManager.verifyShareAccess(shareCode, extractCode);
+    const verifyResult = await SupplyShareManager.verifyShareAccess(
+      shareCode,
+      extractCode,
+      ipAddress,
+      userAgent
+    );
 
     if (!verifyResult.success) {
       return ApiResponseHelper.error(verifyResult.message || '验证失败');
@@ -23,6 +36,7 @@ export async function POST(request: NextRequest) {
       message: '验证成功',
       shareInfo: verifyResult.shareInfo,
       purchaseOrderId: verifyResult.purchaseOrderId,
+      userToken: verifyResult.userToken, // 返回用户token
     });
   } catch (error) {
     console.error('Verify share link error:', error);

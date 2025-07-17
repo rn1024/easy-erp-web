@@ -14,6 +14,20 @@ export interface ShareLinkInfo {
   accessLimit?: number;
 }
 
+export interface ShareHistoryItem {
+  id: string;
+  shareCode: string;
+  purchaseOrderId: string;
+  orderNumber?: string;
+  createdBy?: string;
+  expiresAt: string;
+  status: string;
+  accessCount: number;
+  uniqueUserCount: number;
+  accessLimit?: number;
+  createdAt: string;
+}
+
 export interface SupplyStatistics {
   totalRecords: number;
   activeRecords: number;
@@ -117,6 +131,32 @@ export const disableSupplyRecordApi = async (recordId: string) => {
   } catch (error: any) {
     console.error('失效供货记录失败:', error);
     throw new Error(error?.response?.data?.msg || '失效供货记录失败，请重试');
+  }
+};
+
+// 获取分享历史
+export const getShareHistoryApi = async (params: {
+  purchaseOrderId?: string;
+  page?: number;
+  pageSize?: number;
+}) => {
+  try {
+    const response = await request.get('/share/history', { params });
+    return response;
+  } catch (error: any) {
+    console.error('获取分享历史失败:', error);
+    throw new Error(error?.response?.data?.msg || '获取分享历史失败');
+  }
+};
+
+// 获取分享链接详细统计
+export const getShareStatisticsApi = async (shareCode: string) => {
+  try {
+    const response = await request.post('/share/history', { shareCode });
+    return response;
+  } catch (error: any) {
+    console.error('获取分享统计失败:', error);
+    throw new Error(error?.response?.data?.msg || '获取分享统计失败');
   }
 };
 

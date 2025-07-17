@@ -133,13 +133,13 @@ model Log {
   category          String
   module            String
   operation         String
-  operatorAccountId String
+  operatorAccountId String?  // 改为可选，支持系统操作
   status            String   @default("SUCCESS")
   details           Json?
   createdAt         DateTime @default(now())
 
-  // 关联关系
-  operator          Account  @relation(fields: [operatorAccountId], references: [id])
+  // 关联关系 (可选)
+  operator          Account? @relation(fields: [operatorAccountId], references: [id])
 
   @@map("logs")
 }
@@ -578,23 +578,48 @@ enum ShipmentRecordStatus {
 // 分享链接表
 model SupplyShareLink {
   id              String    @id @default(cuid())
-  purchaseOrderId String    @unique
+  purchaseOrderId String    // 移除unique约束，支持一个采购订单多个分享码
   shareCode       String    @unique  // 分享码
   extractCode     String?   // 提取码
   expiresAt       DateTime  // 过期时间
   accessLimit     Int?      // 访问人数限制
   accessCount     Int       @default(0)
+  uniqueUserCount Int       @default(0) // 唯一用户计数
   status          String    @default("active") // active, disabled
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // 关联关系
   supplyRecords   SupplyRecord[]
+  accessRecords   SupplyShareAccess[]
 
   @@index([shareCode])
   @@index([purchaseOrderId])
   @@index([expiresAt, status])
   @@map("supply_share_links")
+}
+
+// 分享链接访问记录表
+model SupplyShareAccess {
+  id              String    @id @default(cuid())
+  shareCode       String    // 关联分享码
+  userToken       String    // 用户标识token
+  userFingerprint String    // 用户指纹（IP+UserAgent的hash）
+  ipAddress       String    // IP地址
+  userAgent       String    @db.Text // 用户代理
+  firstAccessAt   DateTime  // 首次访问时间
+  lastAccessAt    DateTime  // 最后访问时间
+  accessCount     Int       @default(1) // 该用户的访问次数
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // 关联关系
+  shareLink       SupplyShareLink @relation(fields: [shareCode], references: [shareCode])
+
+  @@index([shareCode])
+  @@index([userFingerprint, shareCode])
+  @@index([userToken, shareCode])
+  @@map("supply_share_access")
 }
 
 // 供货记录表

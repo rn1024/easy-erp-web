@@ -10,6 +10,20 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     const pathParts = url.pathname.split('/');
     const purchaseOrderId = pathParts[pathParts.length - 2]; // [id]在share前一个位置
 
+    // 检查是否查询分享历史
+    const action = url.searchParams.get('action');
+
+    if (action === 'history') {
+      // 返回分享历史列表
+      const shareHistory = await SupplyShareManager.getShareHistory();
+      return ApiResponseHelper.success({
+        shareHistory: shareHistory.filter(
+          (item) => !purchaseOrderId || item.purchaseOrderId === purchaseOrderId
+        ),
+        totalCount: shareHistory.length,
+      });
+    }
+
     // 验证采购订单是否存在
     const purchaseOrder = await prisma.purchaseOrder.findUnique({
       where: { id: purchaseOrderId },
@@ -19,12 +33,13 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
       return ApiResponseHelper.notFound('采购订单不存在');
     }
 
-    // 获取分享链接信息
+    // 获取最新的有效分享链接信息
     const shareInfo = await SupplyShareManager.getShareInfo(purchaseOrderId);
 
     return ApiResponseHelper.success({
       shareInfo,
       orderNumber: purchaseOrder.orderNumber,
+      hasActiveShare: !!shareInfo,
     });
   } catch (error) {
     console.error('Get share link error:', error);
@@ -64,7 +79,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       accessLimit,
     };
 
-    // 生成分享链接
+    // 生成新的分享链接（每次都创建新的）
     const shareInfo = await SupplyShareManager.generateShareLink(purchaseOrderId, shareConfig);
 
     // 生成分享文案
@@ -74,6 +89,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       shareInfo,
       shareText,
       orderNumber: purchaseOrder.orderNumber,
+      message: '分享链接创建成功',
     });
   } catch (error) {
     console.error('Create share link error:', error);
@@ -95,21 +111,23 @@ export const PUT = withAuth(async (request: NextRequest, user: any) => {
       return ApiResponseHelper.validationError({}, '有效期必须在1小时到365天之间');
     }
 
-    // 检查分享链接是否存在
+    // 检查是否有现有的分享链接
     const existingShare = await SupplyShareManager.getShareInfo(purchaseOrderId);
     if (!existingShare) {
-      return ApiResponseHelper.notFound('分享链接不存在');
+      return ApiResponseHelper.notFound('分享链接不存在，请先创建分享链接');
     }
 
-    // 更新分享配置
+    // 创建新的分享配置（更新实际上是创建新的分享链接）
     const shareConfig: ShareConfig = {
-      expiresIn:
-        expiresIn || Math.ceil((existingShare.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60)),
-      extractCode: extractCode !== undefined ? extractCode : existingShare.extractCode,
-      accessLimit: accessLimit !== undefined ? accessLimit : existingShare.accessLimit,
+      expiresIn: expiresIn || 7 * 24,
+      extractCode: extractCode !== undefined ? extractCode : undefined,
+      accessLimit: accessLimit !== undefined ? accessLimit : undefined,
     };
 
-    // 重新生成分享链接
+    // 禁用旧的分享链接
+    await SupplyShareManager.disableShareLink(purchaseOrderId);
+
+    // 生成新的分享链接
     const shareInfo = await SupplyShareManager.generateShareLink(purchaseOrderId, shareConfig);
 
     const purchaseOrder = await prisma.purchaseOrder.findUnique({
@@ -125,6 +143,7 @@ export const PUT = withAuth(async (request: NextRequest, user: any) => {
       shareInfo,
       shareText,
       orderNumber: purchaseOrder?.orderNumber,
+      message: '分享链接更新成功',
     });
   } catch (error) {
     console.error('Update share link error:', error);

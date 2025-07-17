@@ -69,6 +69,19 @@ const getPurchaseOrderInfo = async (shareCode: string, extractCode?: string) => 
   return response.json();
 };
 
+// 获取实时可选产品列表API
+const getAvailableProducts = async (shareCode: string, extractCode?: string) => {
+  const url = `/api/v1/share/${shareCode}/products${extractCode ? `?extractCode=${extractCode}` : ''}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.msg || '获取产品列表失败');
+  }
+
+  return response.json();
+};
+
 // 提交供货记录API
 const submitSupplyRecord = async (
   shareCode: string,
@@ -108,6 +121,7 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
   const [supplyItems, setSupplyItems] = useState<SupplyItem[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
   const [submitModalVisible, setSubmitModalVisible] = useState(false);
+  const [refreshingProducts, setRefreshingProducts] = useState(false);
 
   const shareCode = params.shareCode;
   const extractCode = searchParams.get('extractCode');
@@ -142,6 +156,60 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
     },
   });
 
+  // 刷新产品列表
+  const { run: refreshProducts } = useRequest(getAvailableProducts, {
+    manual: true,
+    onBefore: () => {
+      setRefreshingProducts(true);
+    },
+    onSuccess: (response) => {
+      const availableProducts = response.data.products || [];
+
+      // 更新products状态
+      setProducts((prevProducts) =>
+        prevProducts.map((product) => {
+          const updated = availableProducts.find((p: any) => p.productId === product.product.id);
+          if (updated) {
+            return {
+              ...product,
+              suppliedQuantity: updated.suppliedQuantity,
+              availableQuantity: updated.availableQuantity,
+            };
+          }
+          return product;
+        })
+      );
+
+      // 重置已填写但现在不可选的产品数量
+      setSupplyItems((prevItems) =>
+        prevItems.map((item) => {
+          const productInfo = availableProducts.find((p: any) => p.productId === item.productId);
+          if (!productInfo || productInfo.availableQuantity === 0) {
+            return { ...item, quantity: 0, totalPrice: 0 };
+          }
+          // 如果填写的数量超过了现在的可用数量，调整为最大可用数量
+          if (item.quantity > productInfo.availableQuantity) {
+            const newQuantity = productInfo.availableQuantity;
+            return {
+              ...item,
+              quantity: newQuantity,
+              totalPrice: newQuantity * item.unitPrice,
+            };
+          }
+          return item;
+        })
+      );
+
+      message.success('产品列表已刷新');
+    },
+    onError: (error: any) => {
+      message.error('刷新产品列表失败：' + error.message);
+    },
+    onFinally: () => {
+      setRefreshingProducts(false);
+    },
+  });
+
   // 提交供货记录
   const { run: submitRecord, loading: submitLoading } = useRequest(submitSupplyRecord, {
     manual: true,
@@ -152,7 +220,28 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
       window.location.reload();
     },
     onError: (error: any) => {
-      message.error(error.message || '提交失败');
+      // 检查是否是产品冲突错误
+      if (error.message.includes('数量超限') || error.message.includes('不符合要求')) {
+        Modal.confirm({
+          title: '产品供货冲突',
+          content: (
+            <div>
+              <p style={{ color: '#ff4d4f', marginBottom: 16 }}>{error.message}</p>
+              <p>部分产品的可供货数量已发生变化，是否刷新产品列表？</p>
+            </div>
+          ),
+          okText: '刷新产品列表',
+          cancelText: '稍后重试',
+          onOk: () => {
+            refreshProducts(shareCode, extractCode || '');
+          },
+          onCancel: () => {
+            setSubmitModalVisible(false);
+          },
+        });
+      } else {
+        message.error(error.message || '提交失败');
+      }
     },
   });
 
@@ -452,13 +541,31 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
 
       {/* 供货记录填写区域 */}
       <Card className="supply-card">
-        <Title level={4} style={{ marginBottom: 16 }}>
-          填写供货记录
-        </Title>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+          }}
+        >
+          <Title level={4} style={{ margin: 0 }}>
+            填写供货记录
+          </Title>
+          <Button
+            type="default"
+            icon={<CheckCircleOutlined />}
+            loading={refreshingProducts}
+            onClick={() => refreshProducts(shareCode, extractCode || '')}
+            size="small"
+          >
+            刷新产品列表
+          </Button>
+        </div>
 
         <Alert
           message="填写说明"
-          description="请根据实际供货情况填写产品数量和单价。系统会自动校验数量，确保不超出可供货余量。"
+          description="请根据实际供货情况填写产品数量和单价。系统会自动校验数量，确保不超出可供货余量。如遇到数量冲突，请点击右上角刷新按钮。"
           type="info"
           showIcon
           style={{ marginBottom: 24 }}

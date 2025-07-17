@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, Form, Input, Button, Typography, Space, Alert, message, Spin } from 'antd';
+import { Form, Input, Button, Typography, Space, Alert, message, Spin, Row, Col } from 'antd';
 import {
   SafetyOutlined,
   KeyOutlined,
@@ -10,6 +10,7 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
+import '../styles.css';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -55,6 +56,12 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
     onSuccess: (response) => {
       const data = response.data;
       setShareInfo(data.shareInfo);
+
+      // 保存用户token到localStorage，用于后续API调用
+      if (data.userToken) {
+        localStorage.setItem(`supply_token_${shareCode}`, data.userToken);
+      }
+
       message.success('验证成功，正在跳转...');
 
       // 延迟跳转以显示成功消息
@@ -73,16 +80,14 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
     },
   });
 
-  // 自动验证（如果有预设的提取码）
+  // 检查是否需要显示提取码输入框
   useEffect(() => {
-    if (shareCode) {
-      if (presetExtractCode) {
-        // 有预设提取码，直接验证
-        verify(shareCode, presetExtractCode);
-      } else {
-        // 没有提取码，先尝试无提取码验证
-        verify(shareCode);
-      }
+    if (shareCode && !presetExtractCode) {
+      // 没有预设提取码，显示提取码输入框
+      setNeedsExtractCode(true);
+    } else if (shareCode && presetExtractCode) {
+      // 有预设提取码，自动验证
+      verify(shareCode, presetExtractCode);
     }
   }, [shareCode, presetExtractCode]);
 
@@ -95,9 +100,9 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
     verify(shareCode, extractCode);
   };
 
-  // 处理提取码输入
+  // 处理提取码输入 - 移除自动大写限制
   const handleExtractCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase().slice(0, 4);
+    const value = e.target.value.slice(0, 4);
     setExtractCode(value);
   };
 
@@ -109,141 +114,149 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
   };
 
   return (
-    <div className="verify-form">
-      <Card className="supply-card">
-        <div className="supply-card-header">
-          <Space direction="vertical" align="center" size="large">
-            <div style={{ fontSize: '48px', color: '#1890ff' }}>
-              <FileTextOutlined />
+    <div className="business-verify-page">
+      {/* 页面头部 */}
+      <div className="business-header">
+        <div className="business-header-content">
+          <Space align="center">
+            <FileTextOutlined className="business-icon" />
+            <div>
+              <Title level={3} className="business-title">
+                供货记录分享验证
+              </Title>
+              <Text className="business-subtitle">ERP系统 - 采购订单供货记录访问</Text>
             </div>
-            <Title level={2} style={{ margin: 0 }}>
-              供货记录分享
-            </Title>
-            <Text type="secondary">通过ERP系统分享的采购订单供货记录</Text>
           </Space>
         </div>
+      </div>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Spin size="large" />
-            <Paragraph style={{ marginTop: 16, color: '#666' }}>正在验证分享链接...</Paragraph>
-            <Paragraph style={{ fontSize: '12px', color: '#999', marginTop: 8 }}>
-              请耐心等待，通常需要1-3秒
-            </Paragraph>
-          </div>
-        ) : (
-          <>
-            {/* 安全提示 */}
-            <Alert
-              className="security-tips"
-              message={
-                <Space>
-                  <SafetyOutlined />
-                  <Text>安全访问提示</Text>
-                </Space>
-              }
-              description="此页面采用加密分享技术，确保数据安全。请输入正确的提取码以访问供货记录填写页面。"
-              type="success"
-              showIcon={false}
-              style={{ marginBottom: 24 }}
-            />
-
-            {/* 分享信息展示 */}
-            <div style={{ marginBottom: 24, textAlign: 'center' }}>
-              <Space direction="vertical" size="small">
-                <Text strong>分享码: </Text>
-                <Text code style={{ fontSize: '16px', padding: '4px 8px' }}>
-                  {shareCode}
-                </Text>
-              </Space>
-            </div>
-
-            {/* 提取码输入区域 */}
-            {needsExtractCode && (
-              <Form form={form} layout="vertical">
-                <Form.Item
-                  label={
-                    <Space>
-                      <KeyOutlined />
-                      <Text strong>请输入提取码</Text>
-                    </Space>
-                  }
-                  required
-                >
-                  <Input
-                    className="verify-input"
-                    placeholder="请输入4位提取码"
-                    value={extractCode}
-                    onChange={handleExtractCodeChange}
-                    onKeyPress={handleKeyPress}
-                    maxLength={4}
-                    style={{ textAlign: 'center', fontSize: '18px' }}
-                    autoComplete="off"
-                    autoFocus
+      {/* 主要内容区域 */}
+      <div className="business-content">
+        <Row gutter={[32, 32]} justify="center">
+          <Col xs={24} sm={15} md={15} lg={15} xl={15}>
+            <div className="business-card">
+              {loading ? (
+                <div className="loading-section">
+                  <Spin size="large" />
+                  <Paragraph className="loading-text">正在验证分享链接...</Paragraph>
+                  <Paragraph className="loading-hint">请耐心等待，通常需要1-3秒</Paragraph>
+                </div>
+              ) : (
+                <>
+                  {/* 安全提示 */}
+                  <Alert
+                    className="business-alert"
+                    message={
+                      <Space>
+                        <SafetyOutlined />
+                        <Text strong>安全访问提示</Text>
+                      </Space>
+                    }
+                    description="此页面采用加密分享技术，确保数据安全。请输入正确的提取码以访问供货记录填写页面。"
+                    type="info"
+                    showIcon={false}
                   />
-                  <div style={{ textAlign: 'center', marginTop: 8 }}>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                      提取码由分享者提供，区分大小写
-                    </Text>
+
+                  {/* 分享信息展示 */}
+                  <div className="share-info-section">
+                    <Space direction="vertical" align="center" size="small">
+                      <Text className="share-label">分享码</Text>
+                      <Text className="share-code">{shareCode}</Text>
+                    </Space>
                   </div>
-                </Form.Item>
 
-                <Form.Item style={{ marginBottom: 0, textAlign: 'center' }}>
-                  <Button
-                    type="primary"
-                    size="large"
-                    className="supply-btn supply-btn-primary"
-                    onClick={handleVerify}
-                    loading={loading}
-                    disabled={!extractCode}
-                    icon={<CheckCircleOutlined />}
-                    style={{ width: '200px' }}
-                  >
-                    验证并进入
-                  </Button>
-                </Form.Item>
-              </Form>
-            )}
+                  {/* 提取码输入区域 */}
+                  {needsExtractCode && (
+                    <Form form={form} layout="vertical" className="business-form">
+                      <Form.Item
+                        label={
+                          <Space>
+                            <KeyOutlined />
+                            <Text strong>提取码</Text>
+                          </Space>
+                        }
+                        required
+                      >
+                        <Input
+                          className="business-input"
+                          placeholder="请输入4位提取码"
+                          value={extractCode}
+                          onChange={handleExtractCodeChange}
+                          onKeyPress={handleKeyPress}
+                          maxLength={4}
+                          autoComplete="off"
+                          autoFocus
+                        />
+                        <div className="input-hint">
+                          <Text type="secondary">提取码由分享者提供，区分大小写</Text>
+                        </div>
+                      </Form.Item>
 
-            {/* 验证成功状态 */}
-            {shareInfo && (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <Space direction="vertical" align="center" size="large">
-                  <CheckCircleOutlined style={{ fontSize: '48px', color: '#52c41a' }} />
-                  <Title level={3} style={{ color: '#52c41a', margin: 0 }}>
-                    验证成功！
-                  </Title>
-                  <Text>正在跳转到供货记录填写页面...</Text>
-                </Space>
+                      <Form.Item className="button-section">
+                        <Button
+                          type="primary"
+                          size="large"
+                          className="business-button"
+                          onClick={handleVerify}
+                          loading={loading}
+                          disabled={!extractCode}
+                          icon={<CheckCircleOutlined />}
+                          block
+                        >
+                          验证并进入
+                        </Button>
+                      </Form.Item>
+                    </Form>
+                  )}
+
+                  {/* 验证成功状态 */}
+                  {shareInfo && (
+                    <div className="success-section">
+                      <Space direction="vertical" align="center" size="large">
+                        <CheckCircleOutlined className="success-icon" />
+                        <Title level={4} className="success-title">
+                          验证成功！
+                        </Title>
+                        <Text className="success-text">正在跳转到供货记录填写页面...</Text>
+                      </Space>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </Col>
+
+          <Col xs={24} sm={9} md={9} lg={9} xl={9}>
+            <div className="business-card">
+              {/* 使用说明 */}
+              <div className="help-section">
+                <Title level={5} className="help-title">
+                  <SafetyOutlined />
+                  使用说明
+                </Title>
+                <ul className="help-list">
+                  <li>此链接由ERP系统管理员分享，用于填写供货记录</li>
+                  <li>验证成功后，您可以查看采购订单详情并填写供货信息</li>
+                  <li>所有操作都会被安全记录，请确保信息准确</li>
+                  <li>如有疑问，请联系分享此链接的工作人员</li>
+                </ul>
               </div>
-            )}
 
-            {/* 使用说明 */}
-            <div
-              style={{ marginTop: 32, padding: '16px', background: '#fafafa', borderRadius: '6px' }}
-            >
-              <Title level={5} style={{ marginBottom: 12 }}>
-                <SafetyOutlined style={{ marginRight: 8 }} />
-                使用说明
-              </Title>
-              <ul style={{ margin: 0, paddingLeft: 16 }}>
-                <li>此链接由ERP系统管理员分享，用于填写供货记录</li>
-                <li>验证成功后，您可以查看采购订单详情并填写供货信息</li>
-                <li>所有操作都会被安全记录，请确保信息准确</li>
-                <li>如有疑问，请联系分享此链接的工作人员</li>
-              </ul>
+              {/* 常见问题 */}
+              <div className="faq-section">
+                <Title level={5} className="faq-title">
+                  常见问题
+                </Title>
+                <div className="faq-content">
+                  <Text type="secondary">• 提取码错误？请检查分享信息中的提取码是否正确</Text>
+                  <br />
+                  <Text type="secondary">• 链接过期？请联系管理员重新获取分享链接</Text>
+                </div>
+              </div>
             </div>
-
-            {/* 常见问题 */}
-            <div style={{ marginTop: 16, textAlign: 'center' }}>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                提取码错误？请检查分享信息中的提取码是否正确 |
-                链接过期？请联系管理员重新获取分享链接
-              </Text>
-            </div>
-          </>
-        )}
-      </Card>
+          </Col>
+        </Row>
+      </div>
     </div>
   );
 };

@@ -1,13 +1,13 @@
 /* 供应商端整体布局样式 */
 .supply-layout {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f5f5f5;
 }
 
 /* Header 样式 */
 .supply-header {
-  background: linear-gradient(90deg, #1890ff 0%, #096dd9 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   padding: 0;
   height: 64px;
 }
@@ -25,27 +25,26 @@
 /* Content 样式 */
 .supply-content {
   padding: 24px;
-  min-height: calc(100vh - 64px - 64px); /* 减去header和footer高度 */
+  min-height: calc(100vh - 64px - 64px);
   background: transparent;
 }
 
 .supply-container {
   max-width: 800px;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e8e8e8;
   overflow: hidden;
 }
 
 /* Footer 样式 */
 .supply-footer {
-  background: rgba(0, 0, 0, 0.8);
+  background: #fff;
+  border-top: 1px solid #e8e8e8;
   text-align: center;
   padding: 16px 24px;
-  backdrop-filter: blur(10px);
 }
 
 /* 卡片样式 */
@@ -164,13 +163,216 @@
   margin-top: 4px;
 }
 
+/* 商务验证页面样式 */
+.business-verify-page {
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+/* 商务头部样式 */
+.business-header {
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  padding: 24px 0;
+}
+
+.business-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.business-icon {
+  font-size: 32px;
+  color: #1890ff;
+  margin-right: 16px;
+}
+
+.business-title {
+  margin: 0 !important;
+  color: #262626;
+  font-weight: 600;
+}
+
+.business-subtitle {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+/* 商务内容区域 */
+.business-content {
+  padding: 48px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* 商务卡片样式 */
+.business-card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  padding: 32px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* 加载状态 */
+.loading-section {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.loading-text {
+  margin-top: 16px;
+  color: #666;
+  font-size: 16px;
+}
+
+.loading-hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}
+
+/* 商务提示框 */
+.business-alert {
+  background: #f6f9ff;
+  border: 1px solid #d6e4ff;
+  border-radius: 6px;
+  margin-bottom: 32px;
+}
+
+/* 分享信息区域 */
+.share-info-section {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.share-label {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.share-code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1890ff;
+  background: #f0f2f5;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid #d9d9d9;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+/* 商务表单 */
+.business-form {
+  margin-bottom: 32px;
+}
+
+.business-input {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  height: 48px;
+  border-radius: 6px;
+}
+
+.input-hint {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.button-section {
+  margin-bottom: 0;
+  text-align: center;
+}
+
+.business-button {
+  height: 48px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+/* 成功状态 */
+.success-section {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.success-icon {
+  font-size: 48px;
+  color: #52c41a;
+}
+
+.success-title {
+  color: #52c41a;
+  margin: 16px 0 8px 0 !important;
+}
+
+.success-text {
+  color: #666;
+  font-size: 16px;
+}
+
+/* 帮助区域 */
+.help-section {
+  margin-bottom: 32px;
+}
+
+.help-title {
+  color: #262626;
+  margin-bottom: 16px !important;
+  font-weight: 600;
+}
+
+.help-title .anticon {
+  margin-right: 8px;
+  color: #1890ff;
+}
+
+.help-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #595959;
+  line-height: 1.6;
+}
+
+.help-list li {
+  margin-bottom: 8px;
+}
+
+/* FAQ区域 */
+.faq-section {
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.faq-title {
+  color: #262626;
+  margin-bottom: 16px !important;
+  font-weight: 600;
+}
+
+.faq-content {
+  color: #8c8c8c;
+  line-height: 1.6;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .supply-header-content {
+  .supply-header-content,
+  .business-header-content {
     padding: 0 16px;
   }
 
-  .supply-content {
+  .supply-content,
+  .business-content {
     padding: 16px;
   }
 
@@ -179,9 +381,11 @@
     border-radius: 0;
   }
 
-  .supply-card {
+  .supply-card,
+  .business-card {
     margin: 0;
     border-radius: 0;
+    padding: 24px 16px;
   }
 
   .verify-form {
@@ -195,25 +399,27 @@
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-}
 
-/* 动画效果 */
-.supply-container {
-  animation: slideUp 0.5s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+  .business-header {
+    padding: 16px 0;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .business-icon {
+    font-size: 24px;
+    margin-right: 12px;
   }
 }
 
-/* 按钮样式增强 */
+/* 动画效果 - 简化版本 */
+.business-card {
+  transition: box-shadow 0.3s ease;
+}
+
+.business-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* 按钮样式 - 简化版本 */
 .supply-btn {
   height: 40px;
   border-radius: 6px;
@@ -221,27 +427,11 @@
 }
 
 .supply-btn-primary {
-  background: linear-gradient(90deg, #1890ff 0%, #096dd9 100%);
-  border: none;
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+  background: #1890ff;
+  border-color: #1890ff;
 }
 
 .supply-btn-primary:hover {
-  background: linear-gradient(90deg, #096dd9 0%, #0050b3 100%);
-  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.4);
-  transform: translateY(-1px);
-}
-
-/* 安全提示样式 */
-.security-tips {
-  background: linear-gradient(90deg, #f6ffed 0%, #f0f9ff 100%);
-  border: 1px solid #b7eb8f;
-  border-radius: 6px;
-  padding: 12px 16px;
-  margin-bottom: 24px;
-}
-
-.security-tips .anticon {
-  color: #52c41a;
-  margin-right: 8px;
+  background: #40a9ff;
+  border-color: #40a9ff;
 }

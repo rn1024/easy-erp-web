@@ -36,15 +36,23 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
       return ApiResponseHelper.validationError({}, '请至少填写一个产品的供货数量');
     }
 
-    // 验证数量是否超限
-    const validationResult = await SupplyQuantityValidator.validateSupplyQuantity(
+    // 实时验证数量是否超限（并发控制）
+    const validationResult = await SupplyQuantityValidator.validateSupplyQuantityRealtime(
       purchaseOrderId,
       validItems
     );
 
     if (!validationResult.valid) {
+      // 获取最新的可选产品列表
+      const availableProducts =
+        await SupplyQuantityValidator.getAvailableProductsList(purchaseOrderId);
+
       return ApiResponseHelper.validationError(
-        { errors: validationResult.errors },
+        {
+          errors: validationResult.errors,
+          availableProducts: availableProducts,
+          needRefresh: true,
+        },
         validationResult.message || '供货数量验证失败'
       );
     }
@@ -105,7 +113,7 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
         category: 'SUPPLY_RECORD',
         module: '供货管理',
         operation: '创建供货记录',
-        operatorAccountId: 'SYSTEM', // 使用系统标识
+        operatorAccountId: null, // 系统操作，明确设置为null
         status: 'SUCCESS',
         details: {
           purchaseOrderId,
@@ -131,7 +139,14 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
     });
   } catch (error) {
     console.error('Submit supply record error:', error);
-    return ApiResponseHelper.serverError('提交供货记录失败');
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      shareCode: params.shareCode,
+    });
+    return ApiResponseHelper.serverError(
+      `提交供货记录失败: ${error instanceof Error ? error.message : '未知错误'}`
+    );
   }
 }
 
@@ -286,16 +301,24 @@ export async function PUT(request: NextRequest, { params }: { params: { shareCod
       return ApiResponseHelper.validationError({}, '请至少填写一个产品的供货数量');
     }
 
-    // 验证数量是否超限（排除当前编辑的记录）
-    const validationResult = await SupplyQuantityValidator.validateSupplyQuantity(
+    // 实时验证数量是否超限（排除当前编辑的记录）
+    const validationResult = await SupplyQuantityValidator.validateSupplyQuantityRealtime(
       purchaseOrderId,
       validItems,
       recordId
     );
 
     if (!validationResult.valid) {
+      // 获取最新的可选产品列表
+      const availableProducts =
+        await SupplyQuantityValidator.getAvailableProductsList(purchaseOrderId);
+
       return ApiResponseHelper.validationError(
-        { errors: validationResult.errors },
+        {
+          errors: validationResult.errors,
+          availableProducts: availableProducts,
+          needRefresh: true,
+        },
         validationResult.message || '供货数量验证失败'
       );
     }
@@ -351,7 +374,7 @@ export async function PUT(request: NextRequest, { params }: { params: { shareCod
         category: 'SUPPLY_RECORD',
         module: '供货管理',
         operation: '更新供货记录',
-        operatorAccountId: 'SYSTEM',
+        operatorAccountId: null, // 系统操作，明确设置为null
         status: 'SUCCESS',
         details: {
           purchaseOrderId,
