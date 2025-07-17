@@ -18,16 +18,24 @@ import {
   Tag,
   Tooltip,
   Alert,
+  Table,
+  Drawer,
 } from 'antd';
-import { CopyOutlined, ShareAltOutlined, QrcodeOutlined } from '@ant-design/icons';
+import {
+  CopyOutlined,
+  ShareAltOutlined,
+  QrcodeOutlined,
+  HistoryOutlined,
+  EyeOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import {
   createShareLinkApi,
-  getShareLinkApi,
-  updateShareLinkApi,
-  disableShareLinkApi,
+  getShareHistoryApi,
   ShareConfig,
   ShareLinkInfo,
+  ShareHistoryItem,
 } from '@/services/supply';
 
 const { TextArea } = Input;
@@ -50,45 +58,37 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
   const [form] = Form.useForm();
   const [shareInfo, setShareInfo] = useState<ShareLinkInfo | null>(null);
   const [shareText, setShareText] = useState<string>('');
-  const [hasExistingShare, setHasExistingShare] = useState(false);
+  const [hasShareHistory, setHasShareHistory] = useState(false);
+  const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false);
 
-  // 获取现有分享信息
-  const { data: existingShareData, loading: getShareLoading } = useRequest(
-    () => getShareLinkApi(purchaseOrderId),
-    {
-      ready: open && !!purchaseOrderId,
-      refreshDeps: [open, purchaseOrderId],
-      onSuccess: (response) => {
-        const data = response.data?.data;
-        if (data?.shareInfo) {
-          setShareInfo(data.shareInfo);
-          setHasExistingShare(true);
-          // 设置表单初始值
-          form.setFieldsValue({
-            expiresIn: calculateHoursFromExpiration(data.shareInfo.expiresAt),
-            extractCode: data.shareInfo.extractCode,
-            accessLimit: data.shareInfo.accessLimit,
-          });
-        } else {
-          setHasExistingShare(false);
-          // 设置默认值
-          form.setFieldsValue({
-            expiresIn: 7 * 24, // 默认7天
-            extractCode: '',
-            accessLimit: undefined,
-          });
-        }
-      },
-      onError: () => {
-        setHasExistingShare(false);
-        form.setFieldsValue({
-          expiresIn: 7 * 24,
-          extractCode: '',
-          accessLimit: undefined,
-        });
-      },
+  // 弹层打开时设置默认值和检查分享历史
+  useEffect(() => {
+    if (open) {
+      // 重置为默认状态
+      setShareInfo(null);
+      setShareText('');
+      // 设置表单默认值
+      form.setFieldsValue({
+        expiresIn: 7 * 24, // 默认7天
+        extractCode: '',
+        accessLimit: undefined,
+      });
+
+      // 检查是否有分享历史
+      checkShareHistory();
     }
-  );
+  }, [open, form]);
+
+  // 检查分享历史
+  const checkShareHistory = async () => {
+    try {
+      const response = await getShareHistoryApi({ purchaseOrderId, page: 1, pageSize: 1 });
+      const shareHistory = response.data?.data?.shareHistory || [];
+      setHasShareHistory(shareHistory.length > 0);
+    } catch (error) {
+      setHasShareHistory(false);
+    }
+  };
 
   // 创建分享链接
   const { run: createShare, loading: createLoading } = useRequest(createShareLinkApi, {
@@ -97,7 +97,7 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
       const data = response.data?.data;
       setShareInfo(data.shareInfo);
       setShareText(data.shareText);
-      setHasExistingShare(true);
+      setHasShareHistory(true);
       message.success('分享链接创建成功');
     },
     onError: (error: any) => {
@@ -105,50 +105,22 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
     },
   });
 
-  // 更新分享链接
-  const { run: updateShare, loading: updateLoading } = useRequest(updateShareLinkApi, {
+  // 获取分享历史
+  const {
+    data: shareHistoryData,
+    loading: historyLoading,
+    refresh: refreshHistory,
+  } = useRequest(() => getShareHistoryApi({ purchaseOrderId, page: 1, pageSize: 50 }), {
     manual: true,
-    onSuccess: (response) => {
-      const data = response.data?.data;
-      setShareInfo(data.shareInfo);
-      setShareText(data.shareText);
-      message.success('分享链接更新成功');
-    },
     onError: (error: any) => {
-      message.error(error.response?.data?.msg || '更新分享链接失败');
+      message.error(error.response?.data?.msg || '获取分享历史失败');
     },
   });
 
-  // 禁用分享链接
-  const { run: disableShare, loading: disableLoading } = useRequest(disableShareLinkApi, {
-    manual: true,
-    onSuccess: () => {
-      setShareInfo(null);
-      setShareText('');
-      setHasExistingShare(false);
-      message.success('分享链接已禁用');
-    },
-    onError: (error: any) => {
-      message.error(error.response?.data?.msg || '禁用分享链接失败');
-    },
-  });
-
-  // 计算过期时间到现在的小时数
-  const calculateHoursFromExpiration = (expiresAt: string) => {
-    const expireTime = new Date(expiresAt).getTime();
-    const now = Date.now();
-    const diffHours = Math.ceil((expireTime - now) / (1000 * 60 * 60));
-    return Math.max(1, diffHours);
-  };
-
-  // 处理创建/更新分享
-  const handleCreateOrUpdate = () => {
+  // 处理创建分享
+  const handleCreateShare = () => {
     form.validateFields().then((values: ShareConfig) => {
-      if (hasExistingShare) {
-        updateShare(purchaseOrderId, values);
-      } else {
-        createShare(purchaseOrderId, values);
-      }
+      createShare(purchaseOrderId, values);
     });
   };
 
@@ -171,13 +143,101 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
     setShareText('');
   };
 
+  // 打开分享历史抽屉
+  const handleOpenHistory = () => {
+    setHistoryDrawerVisible(true);
+    refreshHistory();
+  };
+
+  // 关闭分享历史抽屉
+  const handleCloseHistory = () => {
+    setHistoryDrawerVisible(false);
+  };
+
   // 关闭弹窗
   const handleClose = () => {
     handleReset();
+    setHistoryDrawerVisible(false);
     onClose();
   };
 
-  const loading = getShareLoading || createLoading || updateLoading || disableLoading;
+  const loading = createLoading;
+
+  // 分享历史表格列定义
+  const historyColumns = [
+    {
+      title: '分享码',
+      dataIndex: 'shareCode',
+      key: 'shareCode',
+      width: 120,
+      render: (code: string) => (
+        <Text code style={{ fontSize: '12px' }}>
+          {code}
+        </Text>
+      ),
+    },
+    {
+      title: '采购订单',
+      dataIndex: 'orderNumber',
+      key: 'orderNumber',
+      width: 140,
+    },
+    {
+      title: '创建人',
+      dataIndex: 'createdBy',
+      key: 'createdBy',
+      width: 100,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 80,
+      render: (status: string) => (
+        <Tag color={status === 'active' ? 'green' : 'red'}>
+          {status === 'active' ? '有效' : '已失效'}
+        </Tag>
+      ),
+    },
+    {
+      title: '访问统计',
+      key: 'access',
+      width: 120,
+      render: (record: ShareHistoryItem) => (
+        <Space direction="vertical" size="small">
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            总访问: {record.accessCount}
+          </Text>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            独立用户: {record.uniqueUserCount}
+          </Text>
+        </Space>
+      ),
+    },
+    {
+      title: '访问限制',
+      dataIndex: 'accessLimit',
+      key: 'accessLimit',
+      width: 80,
+      render: (limit: number) => (limit ? `${limit}人` : '无限制'),
+    },
+    {
+      title: '过期时间',
+      dataIndex: 'expiresAt',
+      key: 'expiresAt',
+      width: 150,
+      render: (date: string) => new Date(date).toLocaleString(),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 150,
+      render: (date: string) => new Date(date).toLocaleString(),
+    },
+  ];
+
+  const shareHistoryList: ShareHistoryItem[] = shareHistoryData?.data?.data?.shareHistory || [];
 
   return (
     <Modal
@@ -209,7 +269,7 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
             </Col>
             <Col span={12}>
               <Text strong>分享状态：</Text>
-              {hasExistingShare ? <Tag color="green">已分享</Tag> : <Tag>未分享</Tag>}
+              {hasShareHistory ? <Tag color="green">已分享</Tag> : <Tag>未分享</Tag>}
             </Col>
           </Row>
         </Card>
@@ -316,16 +376,57 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
       <div style={{ textAlign: 'center', marginTop: 24 }}>
         <Space>
           <Button onClick={handleClose}>取消</Button>
-          <Button type="primary" loading={loading} onClick={handleCreateOrUpdate}>
-            {hasExistingShare ? '更新分享' : '创建分享'}
+          <Button icon={<HistoryOutlined />} onClick={handleOpenHistory} style={{ marginRight: 8 }}>
+            查看分享历史
           </Button>
-          {hasExistingShare && (
-            <Button danger loading={loading} onClick={() => disableShare(purchaseOrderId)}>
-              禁用分享
-            </Button>
-          )}
+          <Button type="primary" loading={loading} onClick={handleCreateShare}>
+            创建分享
+          </Button>
         </Space>
       </div>
+
+      {/* 分享历史抽屉 */}
+      <Drawer
+        title={
+          <Space>
+            <HistoryOutlined />
+            分享历史
+          </Space>
+        }
+        open={historyDrawerVisible}
+        onClose={handleCloseHistory}
+        width={1200}
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={refreshHistory} loading={historyLoading}>
+            刷新
+          </Button>
+        }
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Alert
+            message={`采购订单 ${orderNumber} 的所有分享记录`}
+            description="显示该采购订单的历史分享记录和访问统计，每次创建分享都会生成新的分享码"
+            type="info"
+            showIcon
+          />
+        </div>
+
+        <Table
+          columns={historyColumns}
+          dataSource={shareHistoryList}
+          rowKey="id"
+          loading={historyLoading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条记录`,
+          }}
+          scroll={{ x: 1000 }}
+          size="small"
+          bordered
+        />
+      </Drawer>
     </Modal>
   );
 };
