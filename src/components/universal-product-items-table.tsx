@@ -21,8 +21,8 @@ const { Text } = Typography;
 // 产品选项类型
 export interface ProductOption {
   id: string;
-  code: string;
-  sku: string;
+  code?: string;
+  sku?: string;
   specification?: string;
   category?: {
     name: string;
@@ -204,10 +204,10 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
                 <Option key={product.id} value={product.id}>
                   <div>
                     <div>
-                      {product.code} - {product.specification}
+                      {product.code || '无编码'} - {product.specification}
                     </div>
                     <div style={{ fontSize: '12px', color: '#999' }}>
-                      SKU: {product.sku}
+                      SKU: {product.sku || '无SKU'}
                       {product.category && ` | ${product.category.name}`}
                     </div>
                   </div>
@@ -220,7 +220,7 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
         const product = productsData.find((p) => p.id === value);
         return product ? (
           <div>
-            <div>{product.code}</div>
+            <div>{product.code || '无编码'}</div>
             <div style={{ fontSize: '12px', color: '#666' }}>{product.specification}</div>
           </div>
         ) : (

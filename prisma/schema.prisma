@@ -274,14 +274,14 @@ model ProductInfo {
   id            String   @id @default(cuid())
   shopId        String
   categoryId    String
-  code          String
+  code          String?
   specification String?
   color         String?
   setQuantity   Int      @default(1)
   internalSize  String?
   externalSize  String?
   weight        Decimal? @db.Decimal(10, 2)
-  sku           String   @unique
+  sku           String?  @unique
   asin          String?  // Amazon Standard Identification Number
   label         String?
   codeFileUrl   String?

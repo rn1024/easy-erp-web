@@ -181,16 +181,12 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item
-                name="code"
-                label="产品编码"
-                rules={[{ required: true, message: '请输入产品编码' }]}
-              >
+              <Form.Item name="code" label="产品编码">
                 <Input placeholder="产品编码" />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="sku" label="SKU" rules={[{ required: true, message: '请输入SKU' }]}>
+              <Form.Item name="sku" label="SKU">
                 <Input placeholder="SKU" />
               </Form.Item>
             </Col>

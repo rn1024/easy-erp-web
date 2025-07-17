@@ -126,7 +126,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     } = body;
 
     // 验证必填字段
-    if (!shopId || !categoryId || !code || !sku) {
+    if (!shopId || !categoryId) {
       return NextResponse.json({ code: 400, msg: '缺少必要参数' }, { status: 400 });
     }
 
@@ -144,13 +144,15 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       return NextResponse.json({ code: 400, msg: '产品分类不存在' }, { status: 400 });
     }
 
-    // 检查SKU是否已存在
-    const existingProduct = await prisma.productInfo.findUnique({
-      where: { sku },
-    });
+    // 检查SKU是否已存在（仅当SKU不为空时）
+    if (sku) {
+      const existingProduct = await prisma.productInfo.findUnique({
+        where: { sku },
+      });
 
-    if (existingProduct) {
-      return NextResponse.json({ code: 400, msg: 'SKU已存在' }, { status: 400 });
+      if (existingProduct) {
+        return NextResponse.json({ code: 400, msg: 'SKU已存在' }, { status: 400 });
+      }
     }
 
     // 创建产品信息

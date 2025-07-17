@@ -447,7 +447,7 @@ describe('/api/v1/products', () => {
     it('应该验证必填字段', async () => {
       const productData = {
         shopId: 'shop-1',
-        // 缺少 categoryId, code, sku
+        // 缺少 categoryId (code和sku现在是可选的)
       };
 
       const token = getAuthToken('admin');

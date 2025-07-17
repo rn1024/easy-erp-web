@@ -53,14 +53,14 @@ export interface ProductInfo {
   id: string;
   shopId: string;
   categoryId: string;
-  code: string;
+  code?: string;
   specification?: string;
   color?: string;
   setQuantity: number;
   internalSize?: string;
   externalSize?: string;
   weight?: number;
-  sku: string;
+  sku?: string;
   asin?: string;
   label?: string;
   codeFileUrl?: string;
@@ -105,14 +105,14 @@ export interface ProductsParams {
 export interface ProductFormData {
   shopId: string;
   categoryId: string;
-  code: string;
+  code?: string;
   specification?: string;
   color?: string;
   setQuantity?: number;
   internalSize?: string;
   externalSize?: string;
   weight?: number;
-  sku: string;
+  sku?: string;
   asin?: string;
   label?: string;
   codeFileUrl?: string;

@@ -24,8 +24,8 @@ export interface PurchaseOrderItem {
 // 产品选项类型
 export interface ProductOption {
   id: string;
-  code: string;
-  sku: string;
+  code?: string;
+  sku?: string;
   specification?: string;
   category?: {
     name: string;
@@ -158,7 +158,9 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
       render: (value, record) => {
         if (disabled) {
           const product = productsData.find((p) => p.id === value);
-          return product ? `${product.code} - ${product.specification || product.sku}` : value;
+          return product
+            ? `${product.code || '无编码'} - ${product.specification || product.sku || '无SKU'}`
+            : value;
         }
 
         return (
@@ -177,7 +179,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
           >
             {productsData.map((product) => (
               <Option key={product.id} value={product.id}>
-                {product.code} - {product.specification || product.sku}
+                {product.code || '无编码'} - {product.specification || product.sku || '无SKU'}
               </Option>
             ))}
           </Select>
