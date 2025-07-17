@@ -197,7 +197,7 @@ async function seedProductionEssentials() {
 
     // 3. 创建/更新admin账户
     console.log('👤 确保admin账户存在...');
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123456';
+    const adminPassword = process.env.ADMIN_PASSWORD || '123456';
     const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
     let adminAccount = await prisma.account.findFirst({

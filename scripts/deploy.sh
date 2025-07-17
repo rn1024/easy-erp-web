@@ -768,7 +768,7 @@ main() {
         source "$PROJECT_DIR/.env"
         log "默认管理员账户:"
         log "用户名: admin"
-        log "密码: admin123"
+        log "密码: 123456"
         log "⚠️ 请立即登录并修改默认密码！"
     fi
 }
