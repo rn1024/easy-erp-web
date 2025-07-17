@@ -175,6 +175,38 @@ test_database_connection() {
     return 0
 }
 
+# 验证种子数据是否存在
+verify_seed_data_exists() {
+    log "验证种子数据..."
+    
+    # 检查admin用户是否存在
+    local admin_exists=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "SELECT COUNT(*) FROM accounts WHERE name='admin'" 2>/dev/null || echo "0")
+    
+    if [ "$admin_exists" -eq 0 ]; then
+        log "admin用户不存在，需要执行种子数据"
+        return 1
+    fi
+    
+    # 检查角色是否存在
+    local role_count=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "SELECT COUNT(*) FROM roles" 2>/dev/null || echo "0")
+    
+    if [ "$role_count" -eq 0 ]; then
+        log "角色数据不存在，需要执行种子数据"
+        return 1
+    fi
+    
+    # 检查权限是否存在
+    local permission_count=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "SELECT COUNT(*) FROM permissions" 2>/dev/null || echo "0")
+    
+    if [ "$permission_count" -eq 0 ]; then
+        log "权限数据不存在，需要执行种子数据"
+        return 1
+    fi
+    
+    log "种子数据已存在"
+    return 0
+}
+
 # 备份数据库
 backup_database() {
     log "备份数据库..."
@@ -463,68 +495,14 @@ init_database() {
         return 1
     fi
 
-    # 安全的数据库迁移处理
-    log "检查数据库迁移状态..."
-    local migration_status=$(npx prisma migrate status 2>&1 || echo "pending")
+    # 使用智能同步系统（包含迁移、种子数据等完整流程）
+    log "使用智能数据库同步系统..."
+    if ! npm run db:smart-sync; then
+        error "智能数据库同步失败"
+        return 1
+    fi
     
-    if [[ $migration_status == *"pending"* ]] || [[ $migration_status == *"drift"* ]]; then
-        log "发现待应用的迁移..."
-        
-        # 生产环境额外安全检查
-        if [[ "$NODE_ENV" == "production" ]]; then
-            log "⚠️ 生产环境迁移 - 确保已备份数据库"
-            
-            # 显示待应用的迁移
-            log "待应用的迁移:"
-            npx prisma migrate status || true
-            
-            # 应用迁移
-            log "应用数据库迁移..."
-            if ! npx prisma migrate deploy; then
-                error "数据库迁移失败，可能需要手动回滚"
-                return 1
-            fi
-            
-            log "✅ 生产环境数据库迁移完成"
-        else
-            # 开发环境可以使用更灵活的方式
-            log "开发环境 - 应用数据库迁移..."
-            if ! npx prisma migrate deploy; then
-                error "数据库迁移失败"
-                return 1
-            fi
-        fi
-    else
-        log "数据库已是最新版本"
-    fi
-
-    # 验证种子数据是否存在
-    if ! verify_seed_data; then
-        log "执行种子数据..."
-        
-        # 根据环境选择不同的种子数据脚本
-        if [[ "$NODE_ENV" == "production" ]]; then
-            log "使用生产环境种子数据脚本..."
-            if ! npm run db:seed:production; then
-                error "生产环境种子数据执行失败"
-                return 1
-            fi
-        else
-            log "使用开发环境种子数据脚本..."
-            if ! npm run db:seed; then
-                error "开发环境种子数据执行失败"
-                return 1
-            fi
-        fi
-        
-        # 再次验证种子数据
-        if ! verify_seed_data; then
-            error "种子数据验证失败"
-            return 1
-        fi
-    else
-        log "种子数据已存在，跳过执行"
-    fi
+    log "✅ 数据库智能同步完成"
 
     # 最终验证数据库状态
     log "验证数据库最终状态..."

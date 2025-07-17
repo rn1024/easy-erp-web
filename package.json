@@ -34,6 +34,10 @@
     "health:check:quiet": "bash scripts/health-check.sh --quiet",
     "db:status": "npx prisma migrate status",
     "db:validate": "npx prisma validate",
+    "admin:fix": "tsx scripts/smart-admin-fix.ts",
+    "admin:verify": "tsx scripts/smart-admin-fix.ts --verify-only",
+    "db:smart-sync": "tsx scripts/smart-db-sync.ts",
+    "db:sync:check": "tsx scripts/smart-db-sync.ts --check-only",
     "prepare": "husky"
   },
   "dependencies": {
