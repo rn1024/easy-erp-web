@@ -1,7 +1,7 @@
 /**
  * Menu
  */
-export default {
+const enUSMenu = {
   m: {
     /**
      * Home
@@ -65,3 +65,5 @@ export default {
     'Financial-Management_Reports': 'Financial Reports',
   },
 };
+
+export default enUSMenu;

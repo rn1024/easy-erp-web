@@ -1,4 +1,4 @@
-export default {
+const zhCNCommon = {
   /**
    * Button
    */
@@ -122,3 +122,5 @@ export default {
     exportTips: '导出中，稍后请至"系统管理-下载管理"查看',
   },
 };
+
+export default zhCNCommon;

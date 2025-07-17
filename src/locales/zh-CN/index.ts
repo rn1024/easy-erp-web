@@ -12,7 +12,7 @@ import menu from './menu';
 // Permission
 import permission from './permission';
 
-export default {
+const zhCNIndex = {
   // Common
   ...flattenObject(common),
 
@@ -22,3 +22,5 @@ export default {
   // Permission
   ...flattenObject(permission),
 };
+
+export default zhCNIndex;

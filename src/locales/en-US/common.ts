@@ -1,4 +1,4 @@
-export default {
+const enUSCommon = {
   /**
    * Button
    */
@@ -133,3 +133,5 @@ export default {
     exportTips: `Exporting. Please check 'System Management - Downloads' later`,
   },
 };
+
+export default enUSCommon;

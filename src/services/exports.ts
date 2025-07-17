@@ -32,7 +32,7 @@ export type ExportResponse = {
     id: string;
     name: string;
   };
-  detail: Record<string, any>;
+  detail: Record<string, unknown>;
   download_url?: string;
   status: 'pending' | 'completed' | 'failed';
   created_at: string;

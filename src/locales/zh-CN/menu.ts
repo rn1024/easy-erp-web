@@ -1,7 +1,7 @@
 /**
  * Menu
  */
-export default {
+const zhCNMenu = {
   m: {
     /**
      * Home
@@ -65,3 +65,5 @@ export default {
     'Financial-Management_Reports': '财务报表',
   },
 };
+
+export default zhCNMenu;

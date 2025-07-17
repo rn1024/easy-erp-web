@@ -6,14 +6,13 @@ import store from 'store2';
 axios.defaults.baseURL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 // 用于跟踪重试的请求
-const isRefreshing = false;
 let failedQueue: Array<{
-  resolve: (value?: any) => void;
-  reject: (reason?: any) => void;
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
 }> = [];
 
 // 处理队列中的请求
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) {
       reject(error);
@@ -47,6 +46,7 @@ axios.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to get token in request interceptor:', error);
     }
 
@@ -65,6 +65,7 @@ axios.interceptors.response.use(
   async (error) => {
     // 如果是401错误，直接跳转到登录页面
     if (error.response?.status === 401) {
+      // eslint-disable-next-line no-console
       console.log('401 Unauthorized - redirecting to login');
 
       // 清除所有token
@@ -83,6 +84,7 @@ axios.interceptors.response.use(
       // 立即跳转到登录页面
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
         const currentPath = window.location.pathname;
+        // eslint-disable-next-line no-console
         console.log(`Redirecting to login from ${currentPath}`);
         window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
       }

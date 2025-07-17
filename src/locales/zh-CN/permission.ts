@@ -1,7 +1,7 @@
 /**
  * Permission
  */
-export default {
+const zhCNPermission = {
   // 系统管理
   System: '系统管理',
   System_Admin: '系统管理',
@@ -28,3 +28,5 @@ export default {
   Logs: '日志管理',
   Logs_Read: '查看日志',
 };
+
+export default zhCNPermission;

@@ -1,7 +1,7 @@
 /**
  * Permission
  */
-export default {
+const enUSPermission = {
   // System Management
   System: 'System Management',
   System_Admin: 'System Admin',
@@ -138,3 +138,5 @@ export default {
     'System-Management_Exports_Exports_Personal-Data': 'Personal Data',
   },
 };
+
+export default enUSPermission;
