@@ -38,6 +38,8 @@
     "admin:verify": "tsx scripts/smart-admin-fix.ts --verify-only",
     "db:smart-sync": "tsx scripts/smart-db-sync.ts",
     "db:sync:check": "tsx scripts/smart-db-sync.ts --check-only",
+    "feature:apply": "tsx scripts/feature-iteration-sync.ts",
+    "feature:check": "tsx scripts/feature-iteration-sync.ts --check-only",
     "prepare": "husky"
   },
   "dependencies": {
