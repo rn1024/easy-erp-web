@@ -5,8 +5,8 @@ module.exports = {
       script: 'npm',
       args: 'start',
       cwd: '/www/wwwroot/easy-erp-web',
-      instances: 1,
-      exec_mode: 'fork',
+      instances: 2,
+      exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
         PORT: 3008,
@@ -25,9 +25,9 @@ module.exports = {
       log_file: './logs/combined.log',
       time: true,
 
-      // 内存和性能配置
-      max_memory_restart: '1G',
-      node_args: '--max-old-space-size=1024',
+      // 内存和性能配置 - 恢复到8GB环境的设置
+      max_memory_restart: '4G',
+      node_args: '--max-old-space-size=4096',
 
       // 监控配置
       watch: false,
@@ -53,8 +53,8 @@ module.exports = {
       // 日志轮转
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
 
-      // 启动脚本 - 移除构建步骤，因为已在CI中完成
-      post_update: ['npm install --production', 'npm run db:sync-migrate'],
+      // 启动脚本
+      post_update: ['npm install --omit=dev', 'npm run db:sync-migrate'],
     },
   ],
 };

@@ -336,7 +336,7 @@ install_dependencies() {
     log "安装项目依赖..."
 
     cd "$PROJECT_DIR"
-    npm install --production
+    npm install --omit=dev
 
     log "依赖安装完成"
 }
@@ -347,24 +347,10 @@ build_project() {
 
     cd "$PROJECT_DIR"
 
-        # 清理旧的构建文件以确保使用最新代码
+    # 清理旧的构建文件以确保使用最新代码
     if [ -d ".next" ]; then
         log "清理旧的构建文件..."
         rm -rf .next
-    fi
-
-    # 创建临时交换空间以增加可用内存
-    log "设置临时交换空间..."
-    if [ ! -f /tmp/swapfile ]; then
-        log "创建2GB交换文件..."
-        dd if=/dev/zero of=/tmp/swapfile bs=1M count=2048 2>/dev/null
-        chmod 600 /tmp/swapfile
-        mkswap /tmp/swapfile
-        swapon /tmp/swapfile
-        log "交换空间创建完成"
-    else
-        log "交换空间已存在，启用中..."
-        swapon /tmp/swapfile 2>/dev/null || true
     fi
 
     # 清理系统内存缓存
@@ -372,9 +358,9 @@ build_project() {
     sync
     echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
-    # 设置Node.js内存限制以防止构建时内存不足
-    log "设置Node.js内存限制: 3584MB (包含交换空间)"
-    export NODE_OPTIONS="--max-old-space-size=3584"
+    # 设置Node.js内存限制
+    log "设置Node.js内存限制: 4096MB"
+    export NODE_OPTIONS="--max-old-space-size=4096"
 
     # 显示当前内存状态
     log "当前内存状态:"
@@ -382,11 +368,6 @@ build_project() {
 
     log "开始构建项目..."
     npm run build
-
-    # 构建完成后清理交换空间
-    log "清理临时交换空间..."
-    swapoff /tmp/swapfile 2>/dev/null || true
-    rm -f /tmp/swapfile
 
     log "项目构建完成"
 }

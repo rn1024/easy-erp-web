@@ -5,15 +5,13 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'https://erp.samuelcn.com',
   },
 
-  // 在开发环境中禁用 React.StrictMode 以避免双重渲染导致的重复请求
-  reactStrictMode: process.env.NODE_ENV === 'production',
+  // 启用React.StrictMode
+  reactStrictMode: true,
 
-  // 内存优化配置
+  // 恢复正常的实验性功能
   experimental: {
-    // 禁用 worker threads 以减少内存使用
-    workerThreads: false,
-    // 限制并发处理
-    cpus: 1,
+    // 启用 worker threads 以提高构建性能
+    workerThreads: true,
   },
 
   // 构建优化
@@ -25,15 +23,14 @@ const nextConfig = {
   // 优化构建输出
   output: 'standalone',
 
-  // 减少打包体积
+  // 启用压缩
   swcMinify: true,
 
   // Webpack配置
   webpack: (config, { isServer }) => {
-    // 内存优化
+    // 恢复正常的代码分割策略
     config.optimization = {
       ...config.optimization,
-      // 减少内存使用
       splitChunks: {
         chunks: 'all',
         cacheGroups: {
@@ -41,7 +38,8 @@ const nextConfig = {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
-            maxSize: 244000, // 限制chunk大小
+            // 恢复正常的chunk大小限制
+            maxSize: 500000,
           },
         },
       },
