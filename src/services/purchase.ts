@@ -199,3 +199,26 @@ export const getPurchaseOrderStatusColor = (status: PurchaseOrderStatus) => {
   const option = purchaseOrderStatusOptions.find((item) => item.value === status);
   return option ? option.color : 'default';
 };
+
+// 获取审批历史
+export const getApprovalHistoryApi = (params: { entityType: string; entityId: string }) => {
+  return axios<ResType<any[]>>('/approvals/history', {
+    method: 'get',
+    params,
+  });
+};
+
+// 提交采购订单审批
+export const approvePurchaseOrderApi = (
+  id: string,
+  data: {
+    toStatus: string;
+    reason: string;
+    remark?: string;
+  }
+) => {
+  return axios<ResType<any>>(`/purchase-orders/${id}/approve`, {
+    method: 'post',
+    data,
+  });
+};

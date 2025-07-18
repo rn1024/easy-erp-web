@@ -24,6 +24,7 @@ import {
   PurchaseOrderStatus,
 } from '@/const/approval';
 import type { PurchaseOrderInfo } from '@/services/purchase';
+import { getApprovalHistoryApi, approvePurchaseOrderApi } from '@/services/purchase';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -68,15 +69,15 @@ const PurchaseOrderApprovalModal: React.FC<ApprovalModalProps> = ({ open, record
   const fetchApprovalHistory = async (orderId: string) => {
     setHistoryLoading(true);
     try {
-      const response = await fetch(
-        `/api/v1/approvals/history?entityType=PURCHASE_ORDER&entityId=${orderId}`
-      );
-      const result = await response.json();
+      const response = await getApprovalHistoryApi({
+        entityType: 'PURCHASE_ORDER',
+        entityId: orderId,
+      });
 
-      if (result.code === 0) {
-        setApprovalHistory(result.data || []);
+      if (response.data.code === 0) {
+        setApprovalHistory(response.data.data || []);
       } else {
-        message.error(result.msg || '获取审批历史失败');
+        message.error(response.data.msg || '获取审批历史失败');
       }
     } catch (error) {
       message.error('获取审批历史失败');
@@ -98,22 +99,14 @@ const PurchaseOrderApprovalModal: React.FC<ApprovalModalProps> = ({ open, record
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/v1/purchase-orders/${record.id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
+      const response = await approvePurchaseOrderApi(record.id, values);
 
-      const result = await response.json();
-
-      if (result.code === 0) {
+      if (response.data.code === 0) {
         message.success('审批成功');
         form.resetFields();
         onClose(true); // 刷新列表
       } else {
-        message.error(result.msg || '审批失败');
+        message.error(response.data.msg || '审批失败');
       }
     } catch (error) {
       message.error('审批失败');
