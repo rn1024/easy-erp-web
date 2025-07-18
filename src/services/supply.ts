@@ -160,6 +160,36 @@ export const getShareStatisticsApi = async (shareCode: string) => {
   }
 };
 
+// 验证分享链接
+export const verifyShareLinkApi = (shareCode: string, extractCode?: string) => {
+  return request.post('/share/verify', {
+    shareCode,
+    extractCode,
+  });
+};
+
+// 获取分享的采购订单信息
+export const getSharedPurchaseOrderApi = (shareCode: string, extractCode?: string) => {
+  return request.get(`/share/${shareCode}/info`, {
+    params: extractCode ? { extractCode } : {},
+  });
+};
+
+// 获取分享的可选产品列表
+export const getSharedProductsApi = (shareCode: string, extractCode?: string) => {
+  return request.get(`/share/${shareCode}/products`, {
+    params: extractCode ? { extractCode } : {},
+  });
+};
+
+// 提交供货清单
+export const submitSupplyListApi = (shareCode: string, data: any, extractCode?: string) => {
+  return request.post(`/share/${shareCode}/supply`, {
+    ...data,
+    ...(extractCode ? { extractCode } : {}),
+  });
+};
+
 // 获取采购订单的供货统计（用于列表显示）
 export const getSupplyStatsApi = async (purchaseOrderIds: string[]) => {
   try {

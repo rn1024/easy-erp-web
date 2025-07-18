@@ -13,6 +13,7 @@ import { apiErrorMsg } from '@/utils/apiErrorMsg';
 /**
  * APIs
  */
+import { uploadFile } from '@/services/common';
 import { createShop, updateShop, type Shop, type ShopFormData } from '@/services/shops';
 
 /**
@@ -41,24 +42,16 @@ const checkImageRatio = (file: File): Promise<boolean> => {
 
 // 自定义上传函数
 const customUpload = async (file: File): Promise<string> => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('type', 'avatar');
+  try {
+    const response = await uploadFile(file, 'avatar');
 
-  const response = await fetch('/api/v1/upload', {
-    method: 'POST',
-    body: formData,
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-
-  const result = await response.json();
-
-  if (result.code === 0) {
-    return result.data.fileUrl;
-  } else {
-    throw new Error(result.msg || '上传失败');
+    if (response.data.code === 0) {
+      return response.data.data.fileUrl;
+    } else {
+      throw new Error(response.data.msg || '上传失败');
+    }
+  } catch (error: any) {
+    throw new Error(error.message || '上传失败');
   }
 };
 

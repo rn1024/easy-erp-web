@@ -10,6 +10,7 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
+import { verifyShareLinkApi } from '@/services/supply';
 import '../styles.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -18,25 +19,14 @@ interface VerifyPageProps {
   params: { shareCode: string };
 }
 
-// 模拟验证API调用
+// 验证分享链接
 const verifyShareLink = async (shareCode: string, extractCode?: string) => {
-  const response = await fetch('/api/v1/share/verify', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      shareCode,
-      extractCode,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.msg || '验证失败');
+  try {
+    const response = await verifyShareLinkApi(shareCode, extractCode);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.msg || error.message || '验证失败');
   }
-
-  return response.json();
 };
 
 const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {

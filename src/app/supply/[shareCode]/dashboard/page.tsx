@@ -33,6 +33,11 @@ import {
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import { ColumnsType } from 'antd/es/table';
+import {
+  getSharedPurchaseOrderApi,
+  getSharedProductsApi,
+  submitSupplyListApi,
+} from '@/services/supply';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -58,28 +63,22 @@ interface SupplierInfo {
 
 // 获取采购订单信息API
 const getPurchaseOrderInfo = async (shareCode: string, extractCode?: string) => {
-  const url = `/api/v1/share/${shareCode}/info${extractCode ? `?extractCode=${extractCode}` : ''}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.msg || '获取订单信息失败');
+  try {
+    const response = await getSharedPurchaseOrderApi(shareCode, extractCode);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.msg || error.message || '获取订单信息失败');
   }
-
-  return response.json();
 };
 
 // 获取实时可选产品列表API
 const getAvailableProducts = async (shareCode: string, extractCode?: string) => {
-  const url = `/api/v1/share/${shareCode}/products${extractCode ? `?extractCode=${extractCode}` : ''}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.msg || '获取产品列表失败');
+  try {
+    const response = await getSharedProductsApi(shareCode, extractCode);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.msg || error.message || '获取产品列表失败');
   }
-
-  return response.json();
 };
 
 // 提交供货记录API
@@ -93,20 +92,12 @@ const submitSupplyRecord = async (
     extractCode?: string;
   }
 ) => {
-  const response = await fetch(`/api/v1/share/${shareCode}/supply`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.msg || '提交失败');
+  try {
+    const response = await submitSupplyListApi(shareCode, data, data.extractCode);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.msg || error.message || '提交失败');
   }
-
-  return response.json();
 };
 
 const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {

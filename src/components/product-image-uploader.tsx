@@ -10,6 +10,7 @@ import {
   DragOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
+import { uploadBatchFiles } from '@/services/common';
 import { DndContext, closestCenter, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -225,27 +226,17 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
     try {
       setUploading(true);
 
-      // 构建FormData
-      const formData = new FormData();
-      formData.append('files', file);
-      formData.append('type', 'image');
-
       // 调用批量上传API
-      const uploadResponse = await fetch('/api/v1/upload/batch', {
-        method: 'POST',
-        body: formData,
-      });
+      const uploadResponse = await uploadBatchFiles([file], 'image');
 
-      const uploadResult = await uploadResponse.json();
-
-      if (uploadResult.code === 0 && uploadResult.data.length > 0) {
-        const uploadedFile = uploadResult.data[0];
+      if (uploadResponse.data.code === 0 && uploadResponse.data.data.length > 0) {
+        const uploadedFile = uploadResponse.data.data[0];
 
         // 添加到产品图片
         const imageData = {
-          imageUrl: uploadedFile.url,
-          fileName: uploadedFile.originalName,
-          fileSize: uploadedFile.size,
+          imageUrl: uploadedFile.fileUrl,
+          fileName: uploadedFile.fileName,
+          fileSize: file.size, // 使用原始文件的大小
           sortOrder: images.length + 1,
           isCover: images.length === 0, // 第一张自动设为封面
         };
@@ -263,7 +254,7 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
           throw new Error(response.data.msg || '上传失败');
         }
       } else {
-        throw new Error(uploadResult.msg || '上传失败');
+        throw new Error(uploadResponse.data.msg || '上传失败');
       }
     } catch (error: any) {
       console.error('上传失败:', error);

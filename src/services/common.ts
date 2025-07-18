@@ -39,6 +39,42 @@ export const uploadImage = (data: UploadImageData) => {
   });
 };
 
+// 单文件上传（通用）
+export const uploadFile = (file: File, type?: string) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (type) {
+    formData.append('type', type);
+  }
+
+  return axios<ResType<{ fileUrl: string }>>('/upload', {
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    method: 'post',
+  });
+};
+
+// 批量文件上传
+export const uploadBatchFiles = (files: File[], type?: string) => {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+  if (type) {
+    formData.append('type', type);
+  }
+
+  return axios<ResType<Array<{ fileUrl: string; fileName: string }>>>('/upload/batch', {
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    method: 'post',
+  });
+};
+
 // upload video
 export const uploadVideo = (data: UploadVideoData) => {
   const formData = new FormData();
