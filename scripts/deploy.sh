@@ -346,6 +346,13 @@ build_project() {
     log "构建项目..."
 
     cd "$PROJECT_DIR"
+    
+    # 清理旧的构建文件以确保使用最新代码
+    if [ -d ".next" ]; then
+        log "清理旧的构建文件..."
+        rm -rf .next
+    fi
+    
     npm run build
 
     log "项目构建完成"
@@ -645,7 +652,6 @@ cleanup() {
     
     # 清理临时文件
     find "$PROJECT_DIR" -name "*.tmp" -delete 2>/dev/null || true
-    find "$PROJECT_DIR" -name ".next" -type d -exec rm -rf {} + 2>/dev/null || true
     
     # 清理旧的日志文件（保留最近7天）
     find "$PROJECT_DIR/logs" -name "*.log" -mtime +7 -delete 2>/dev/null || true
