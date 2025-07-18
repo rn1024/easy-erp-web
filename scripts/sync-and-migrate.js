@@ -25,9 +25,22 @@ class SyncAndMigrate {
       console.log('🔧 生成Prisma客户端...');
       execSync('npx prisma generate', { stdio: 'inherit' });
 
-      // 4. 执行标准迁移
+      // 4. 执行标准迁移（带基线处理）
       console.log('📦 执行数据库迁移...');
-      execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+      try {
+        execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+      } catch (error) {
+        // 如果是基线错误，尝试设置基线
+        if (
+          error.message.includes('P3005') ||
+          error.message.includes('database schema is not empty')
+        ) {
+          console.log('⚠️  检测到基线问题，尝试设置迁移基线...');
+          await this.handleBaseline();
+        } else {
+          throw error;
+        }
+      }
 
       // 5. 验证最终状态
       await this.verifyStatus();
@@ -97,6 +110,45 @@ class SyncAndMigrate {
       console.log('✅ 迁移记录同步完成');
     } catch (error) {
       throw new Error(`迁移记录同步失败: ${error.message}`);
+    }
+  }
+
+  async handleBaseline() {
+    console.log('🔧 处理迁移基线...');
+
+    try {
+      // 获取所有迁移文件
+      const migrationsDir = 'prisma/migrations';
+      const migrationFolders = fs
+        .readdirSync(migrationsDir)
+        .filter((name) => fs.statSync(`${migrationsDir}/${name}`).isDirectory())
+        .sort();
+
+      if (migrationFolders.length === 0) {
+        console.log('ℹ️  没有找到迁移文件');
+        return;
+      }
+
+      console.log(`📋 找到 ${migrationFolders.length} 个迁移文件`);
+
+      // 为每个迁移设置基线
+      for (const folder of migrationFolders) {
+        const migrationName = folder;
+        console.log(`🔧 设置基线: ${migrationName}`);
+
+        try {
+          execSync(`npx prisma migrate resolve --applied ${migrationName}`, {
+            stdio: 'inherit',
+          });
+          console.log(`✅ 基线设置成功: ${migrationName}`);
+        } catch (baselineError) {
+          console.warn(`⚠️  基线设置失败: ${migrationName}`, baselineError.message);
+        }
+      }
+
+      console.log('✅ 基线处理完成');
+    } catch (error) {
+      console.warn('⚠️  基线处理失败:', error.message);
     }
   }
 
