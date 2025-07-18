@@ -105,7 +105,6 @@ jobs:
             # 5. 设置npm淘宝源
             echo "🔧 配置npm淘宝源..."
             npm config set registry https://registry.npmmirror.com
-            npm config set disturl https://npmmirror.com/dist
             npm config set electron_mirror https://npmmirror.com/mirrors/electron/
             npm config set sass_binary_site https://npmmirror.com/mirrors/node-sass/
             npm config set phantomjs_cdnurl https://npmmirror.com/mirrors/phantomjs/
