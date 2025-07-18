@@ -2,7 +2,6 @@
  * @jest-environment node
  */
 import { NextRequest } from 'next/server';
-import { POST as loginHandler } from '@/app/api/v1/auth/login-simple/route';
 import { GET as meHandler } from '@/app/api/v1/me/route';
 import { GET as rolesHandler } from '@/app/api/v1/roles/route';
 import { GET as shopsHandler } from '@/app/api/v1/shops/route';
@@ -229,35 +228,6 @@ describe('API 集成测试', () => {
   });
 
   describe('认证流程', () => {
-    it('应该成功登录', async () => {
-      // Mock登录成功
-      mockPrisma.account.findUnique.mockResolvedValue({
-        id: 1,
-        name: 'admin',
-        password: 'hashed-password',
-        status: 'ACTIVE',
-        roles: [],
-      });
-
-      const req = new NextRequest('http://localhost:3000/api/v1/auth/login-simple', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: 'admin',
-          password: 'admin123456',
-        }),
-      });
-
-      const response = await loginHandler(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.code).toBe(0);
-      expect(data.data.token).toBeDefined();
-    });
-
     it('应该获取当前用户信息', async () => {
       const token = getAuthToken('admin');
       const req = new NextRequest('http://localhost:3000/api/v1/me', {

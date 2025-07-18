@@ -152,9 +152,11 @@ const customJestConfig = {
 ```javascript
 // 登录测试
 it('应该成功登录', async () => {
-  const response = await httpClient.post('/auth/login-simple', {
+  const response = await httpClient.post('/auth/login', {
     username: 'admin',
     password: 'admin123456',
+    captcha: 'test_captcha',
+    key: 'test_key',
   });
 
   expect(response.status).toBe(200);

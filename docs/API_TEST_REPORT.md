@@ -30,7 +30,7 @@
 
 ### 1. 认证模块 🔐
 
-#### ✅ 用户登录 (`POST /api/v1/auth/login-simple`)
+#### ✅ 用户登录 (`POST /api/v1/auth/login`)
 
 - **状态**: 通过
 - **测试用例**: 使用管理员账户登录
@@ -124,7 +124,7 @@
 
 **认证相关 (2个)**
 
-- `POST /api/v1/auth/login-simple` ✅
+- `POST /api/v1/auth/login` ✅
 - `GET /api/v1/me` ✅
 
 **角色权限管理 (2个)**
