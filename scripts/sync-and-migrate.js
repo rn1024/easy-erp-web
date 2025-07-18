@@ -30,13 +30,26 @@ class SyncAndMigrate {
       try {
         execSync('npx prisma migrate deploy', { stdio: 'inherit' });
       } catch (error) {
+        console.log('⚠️  迁移失败，错误信息:', error.message);
+
         // 如果是基线错误，尝试设置基线
         if (
           error.message.includes('P3005') ||
-          error.message.includes('database schema is not empty')
+          error.message.includes('database schema is not empty') ||
+          error.message.includes('The database schema is not empty')
         ) {
           console.log('⚠️  检测到基线问题，尝试设置迁移基线...');
           await this.handleBaseline();
+
+          // 基线设置后，再次尝试迁移
+          console.log('🔄 基线设置完成，重新尝试迁移...');
+          try {
+            execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+            console.log('✅ 迁移成功完成');
+          } catch (retryError) {
+            console.error('❌ 重试迁移仍然失败:', retryError.message);
+            throw retryError;
+          }
         } else {
           throw error;
         }
