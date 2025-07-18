@@ -89,6 +89,14 @@ jobs:
               echo "🔄 更新现有仓库..."
               git fetch origin
               git reset --hard origin/main
+              
+              # 处理.user.ini文件权限问题
+              if [ -f ".user.ini" ]; then
+                echo "🔧 处理.user.ini文件权限..."
+                chattr -i .user.ini 2>/dev/null || true
+                echo "✅ .user.ini权限已处理"
+              fi
+              
               git clean -fd
             fi
 
