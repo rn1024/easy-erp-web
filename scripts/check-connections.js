@@ -1,8 +1,16 @@
 #!/usr/bin/env node
 
-const { PrismaClient } = require('@prisma/client');
 const Redis = require('redis');
 require('dotenv').config();
+
+// 动态导入 PrismaClient，避免在客户端未生成时出错
+let PrismaClient;
+try {
+  PrismaClient = require('@prisma/client').PrismaClient;
+} catch (error) {
+  console.log('⚠️  Prisma客户端未生成，跳过数据库检查');
+  PrismaClient = null;
+}
 
 async function checkConnections() {
   console.log('🔍 开始检查服务连接...\n');
@@ -11,19 +19,23 @@ async function checkConnections() {
 
   // 检查MySQL连接
   console.log('📊 检查MySQL连接...');
-  try {
-    const prisma = new PrismaClient();
-    await prisma.$connect();
-    console.log('✅ MySQL连接成功');
+  if (PrismaClient) {
+    try {
+      const prisma = new PrismaClient();
+      await prisma.$connect();
+      console.log('✅ MySQL连接成功');
 
-    // 执行简单查询验证
-    const result = await prisma.$queryRaw`SELECT 1 as test`;
-    console.log('✅ MySQL查询测试成功');
+      // 执行简单查询验证
+      const result = await prisma.$queryRaw`SELECT 1 as test`;
+      console.log('✅ MySQL查询测试成功');
 
-    await prisma.$disconnect();
-  } catch (error) {
-    console.error('❌ MySQL连接失败:', error.message);
-    allConnected = false;
+      await prisma.$disconnect();
+    } catch (error) {
+      console.error('❌ MySQL连接失败:', error.message);
+      allConnected = false;
+    }
+  } else {
+    console.log('⚠️  跳过MySQL检查（Prisma客户端未生成）');
   }
 
   console.log('');
