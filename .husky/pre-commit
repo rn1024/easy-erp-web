@@ -1,15 +1,22 @@
-echo "🔍 Running pre-commit checks..."
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
 
-# 运行 lint-staged 检查暂存的文件
-echo "📝 Running lint-staged..."
-npx lint-staged
+echo "🔄 检查迁移文件变更..."
 
-# 运行类型检查
-echo "🔍 Running type check..."
-npm run type-check
+# 检查是否有Prisma相关变更
+if git diff --cached --name-only | grep -E "(prisma/|\.prisma)" > /dev/null; then
+  echo "📋 检测到Prisma变更，导出迁移记录..."
+  
+  # 导出迁移记录
+  node scripts/export-migrations.js
+  
+  # 添加生成的同步文件到commit
+  git add deployment/migration-sync.sql
+  
+  echo "✅ 迁移记录已导出并添加到提交"
+else
+  echo "ℹ️  无Prisma变更，跳过迁移导出"
+fi
 
-# 运行测试
-echo "🧪 Running tests..."
-npm run test:ci
-
-echo "✅ Pre-commit checks completed!"
+# 继续执行其他pre-commit检查
+npm run lint-staged

@@ -367,8 +367,7 @@ jobs:
 
             # 数据库迁移
             echo "🗄️  开始数据库迁移..."
-            npx prisma generate
-            npx prisma migrate deploy
+            npm run db:sync-migrate
 
             # 检查端口是否被占用，如果被占用则释放
             PORT_IN_USE=$(netstat -tlnp 2>/dev/null | grep ":3008 " | wc -l)

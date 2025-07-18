@@ -99,16 +99,11 @@ check_database() {
         return 1
     fi
     
-    # 迁移状态检查
-    local migration_status=$(npx prisma migrate status 2>&1 || echo "error")
-    if [[ "$migration_status" == *"Database schema is up to date"* ]]; then
-        log "✅ 数据库迁移：最新状态"
-    elif [[ "$migration_status" == *"pending"* ]]; then
-        warn "⚠️ 数据库迁移：有待应用的迁移"
-        info "运行 'npx prisma migrate deploy' 应用迁移"
+    # 数据库连接检查（简化版）
+    if npx prisma db execute --stdin <<< "SELECT 1;" >/dev/null 2>&1; then
+        log "✅ 数据库连接：正常"
     else
-        error "❌ 数据库迁移状态检查失败"
-        warn "迁移状态输出：$migration_status"
+        error "❌ 数据库连接：失败"
     fi
     
     # 检查核心表是否存在

@@ -495,14 +495,14 @@ init_database() {
         return 1
     fi
 
-    # 使用标准Prisma迁移系统
-    log "执行数据库迁移..."
-    if ! npm run db:migrate:deploy; then
-        error "数据库迁移失败"
+    # 使用智能迁移同步系统
+    log "执行数据库同步和迁移..."
+    if ! npm run db:sync-migrate; then
+        error "数据库操作失败"
         return 1
     fi
     
-    log "✅ 数据库迁移完成"
+    log "✅ 数据库操作完成"
 
     # 最终验证数据库状态
     log "验证数据库最终状态..."

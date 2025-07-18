@@ -54,7 +54,7 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
 
       // 启动脚本 - 移除构建步骤，因为已在CI中完成
-      post_update: ['npm install --production', 'npm run db:generate', 'npm run db:migrate:deploy'],
+      post_update: ['npm install --production', 'npm run db:sync-migrate'],
     },
   ],
 };
