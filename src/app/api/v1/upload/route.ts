@@ -2,9 +2,9 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { ApiResponse, withAuth } from '@/lib/middleware';
-import { OSSService } from '@/lib/oss';
-import { redisService, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 
 // 文件类型配置
 const FILE_CONFIG = {
@@ -34,6 +34,28 @@ const FILE_CONFIG = {
     maxSize: 5 * 1024 * 1024, // 5MB
     folder: 'avatars',
   },
+};
+
+// 确保上传目录存在
+const ensureUploadDir = (dirPath: string) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+// 本地文件上传函数
+const uploadToLocal = async (fileBuffer: Buffer, filePath: string): Promise<string> => {
+  const fullPath = path.join(process.cwd(), 'public', 'uploads', filePath);
+  const dir = path.dirname(fullPath);
+
+  // 确保目录存在
+  ensureUploadDir(dir);
+
+  // 写入文件
+  await fs.promises.writeFile(fullPath, fileBuffer);
+
+  // 返回访问URL
+  return `/uploads/${filePath}`;
 };
 
 // POST /api/v1/upload - 文件上传
@@ -76,32 +98,13 @@ async function uploadHandler(request: NextRequest) {
     // 将文件转换为Buffer
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    // 上传到OSS
-    const ossService = new OSSService();
-    let uploadResult: any;
-
+    // 上传到本地
+    let fileUrl: string;
     try {
-      switch (type) {
-        case 'image':
-        case 'avatar':
-          uploadResult = await ossService.uploadImage(fileBuffer, file.name, file.type);
-          break;
-        case 'video':
-          uploadResult = await ossService.uploadVideo(fileBuffer, file.name, file.type);
-          break;
-        case 'document':
-          uploadResult = await ossService.uploadDocument(fileBuffer, file.name, file.type);
-          break;
-        default:
-          uploadResult = await ossService.uploadBuffer(
-            fileBuffer,
-            file.name,
-            file.type,
-            config.folder
-          );
-      }
+      fileUrl = await uploadToLocal(fileBuffer, filePath);
     } catch (error) {
-      return ApiResponse.serverError(error instanceof Error ? error.message : '文件上传失败');
+      console.error('Local upload error:', error);
+      return ApiResponse.serverError('文件保存失败');
     }
 
     // 生成文件信息
@@ -110,30 +113,20 @@ async function uploadHandler(request: NextRequest) {
       originalName: file.name,
       fileName,
       filePath,
-      fileUrl: uploadResult.url,
+      fileUrl,
       fileSize: file.size,
       fileType: file.type,
       category: type,
-      uploader: currentUser.username,
-      uploaderId: currentUser.accountId,
+      uploader: currentUser?.username || 'unknown',
+      uploaderId: currentUser?.accountId || 'unknown',
       uploadTime: new Date().toISOString(),
     };
-
-    // 缓存文件信息
-    const cacheKey = CACHE_KEYS.UPLOAD_TEMP(fileInfo.id);
-    await redisService.set(cacheKey, fileInfo, CACHE_TTL.UPLOAD_TEMP);
 
     return ApiResponse.success(fileInfo, '文件上传成功');
   } catch (error) {
     console.error('Upload error:', error);
     return ApiResponse.serverError('文件上传失败');
   }
-}
-
-// 上传参数接口
-interface BatchUploadParams {
-  type: string;
-  files: File[];
 }
 
 // POST /api/v1/upload/batch - 批量文件上传
@@ -189,29 +182,10 @@ async function batchUploadHandler(request: NextRequest) {
 
         // 上传文件
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const ossService = new OSSService();
-        let uploadResult: any;
+        let fileUrl: string;
 
         try {
-          switch (type) {
-            case 'image':
-            case 'avatar':
-              uploadResult = await ossService.uploadImage(fileBuffer, file.name, file.type);
-              break;
-            case 'video':
-              uploadResult = await ossService.uploadVideo(fileBuffer, file.name, file.type);
-              break;
-            case 'document':
-              uploadResult = await ossService.uploadDocument(fileBuffer, file.name, file.type);
-              break;
-            default:
-              uploadResult = await ossService.uploadBuffer(
-                fileBuffer,
-                file.name,
-                file.type,
-                config.folder
-              );
-          }
+          fileUrl = await uploadToLocal(fileBuffer, filePath);
         } catch (uploadError) {
           throw new Error(uploadError instanceof Error ? uploadError.message : '上传失败');
         }
@@ -222,19 +196,15 @@ async function batchUploadHandler(request: NextRequest) {
           originalName: file.name,
           fileName,
           filePath,
-          fileUrl: uploadResult.url,
+          fileUrl,
           fileSize: file.size,
           fileType: file.type,
           category: type,
-          uploader: currentUser.username,
-          uploaderId: currentUser.accountId,
+          uploader: currentUser?.username || 'unknown',
+          uploaderId: currentUser?.accountId || 'unknown',
           uploadTime: new Date().toISOString(),
           index,
         };
-
-        // 缓存文件信息
-        const cacheKey = CACHE_KEYS.UPLOAD_TEMP(fileInfo.id);
-        await redisService.set(cacheKey, fileInfo, CACHE_TTL.UPLOAD_TEMP);
 
         return { success: true, data: fileInfo };
       } catch (error) {
@@ -286,7 +256,7 @@ async function batchUploadHandler(request: NextRequest) {
   }
 }
 
-// GET /api/v1/upload/[id] - 获取上传文件信息
+// GET /api/v1/upload/[id] - 简化版文件信息获取
 async function getUploadInfoHandler(request: NextRequest) {
   try {
     const url = new URL(request.url);
@@ -297,15 +267,8 @@ async function getUploadInfoHandler(request: NextRequest) {
       return ApiResponse.validationError({ id: ['文件ID不能为空'] }, '参数错误');
     }
 
-    // 从缓存获取文件信息
-    const cacheKey = CACHE_KEYS.UPLOAD_TEMP(fileId);
-    const fileInfo = await redisService.get(cacheKey);
-
-    if (!fileInfo) {
-      return ApiResponse.notFound('文件信息不存在或已过期');
-    }
-
-    return ApiResponse.success(fileInfo, '获取文件信息成功');
+    // 简化实现：直接返回错误，因为我们移除了缓存
+    return ApiResponse.notFound('文件信息不存在或已过期');
   } catch (error) {
     console.error('Get upload info error:', error);
     return ApiResponse.serverError('获取文件信息失败');
