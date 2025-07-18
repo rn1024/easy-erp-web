@@ -24,10 +24,10 @@
     "test:auto:api": "node scripts/run-tests.js api",
     "test:auto:integration": "node scripts/run-tests.js integration",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:production": "NODE_ENV=production tsx prisma/seed-production.ts",
     "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:production": "prisma migrate deploy && npm run db:seed:production",
     "db:reset": "prisma migrate reset --force",
     "health:check": "bash scripts/health-check.sh",
@@ -36,10 +36,6 @@
     "db:validate": "npx prisma validate",
     "admin:fix": "tsx scripts/smart-admin-fix.ts",
     "admin:verify": "tsx scripts/smart-admin-fix.ts --verify-only",
-    "db:smart-sync": "tsx scripts/smart-db-sync.ts",
-    "db:sync:check": "tsx scripts/smart-db-sync.ts --check-only",
-    "feature:apply": "tsx scripts/feature-iteration-sync.ts",
-    "feature:check": "tsx scripts/feature-iteration-sync.ts --check-only",
     "prepare": "husky"
   },
   "dependencies": {
