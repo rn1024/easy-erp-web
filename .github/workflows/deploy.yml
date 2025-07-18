@@ -84,9 +84,18 @@ jobs:
             echo "📥 拉取最新代码..."
             if [ ! -d ".git" ]; then
               echo "🔗 初始化Git仓库..."
-              git clone https://github.com/rn1024/easy-erp-web.git .
+              git clone git@github.com:rn1024/easy-erp-web.git .
             else
               echo "🔄 更新现有仓库..."
+              
+              # 确保使用SSH远程URL
+              current_url=$(git remote get-url origin)
+              if [[ "$current_url" == https://github.com/* ]]; then
+                echo "🔧 更改远程URL为SSH方式..."
+                git remote set-url origin git@github.com:rn1024/easy-erp-web.git
+                echo "✅ 远程URL已更新为SSH"
+              fi
+              
               git fetch origin
               git reset --hard origin/main
               
