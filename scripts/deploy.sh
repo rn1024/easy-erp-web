@@ -4,7 +4,7 @@
 # Easy ERP Web 自动化部署脚本 v2.0
 # ===========================================
 # 用于在宝塔面板环境中安全部署 Easy ERP Web 应用
-# 
+#
 # 特性:
 # - 完整的错误处理和回滚机制
 # - 数据库迁移和种子数据自动化
@@ -178,31 +178,31 @@ test_database_connection() {
 # 验证种子数据是否存在
 verify_seed_data_exists() {
     log "验证种子数据..."
-    
+
     # 检查admin用户是否存在
     local admin_exists=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "SELECT COUNT(*) FROM accounts WHERE name='admin'" 2>/dev/null || echo "0")
-    
+
     if [ "$admin_exists" -eq 0 ]; then
         log "admin用户不存在，需要执行种子数据"
         return 1
     fi
-    
+
     # 检查角色是否存在
     local role_count=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "SELECT COUNT(*) FROM roles" 2>/dev/null || echo "0")
-    
+
     if [ "$role_count" -eq 0 ]; then
         log "角色数据不存在，需要执行种子数据"
         return 1
     fi
-    
+
     # 检查权限是否存在
     local permission_count=$(mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -se "SELECT COUNT(*) FROM permissions" 2>/dev/null || echo "0")
-    
+
     if [ "$permission_count" -eq 0 ]; then
         log "权限数据不存在，需要执行种子数据"
         return 1
     fi
-    
+
     log "种子数据已存在"
     return 0
 }
@@ -227,7 +227,7 @@ backup_database() {
 
     if [ "$table_count" -gt 0 ]; then
         local backup_file="$BACKUP_DIR/database/backup_$(date +%Y%m%d_%H%M%S).sql"
-        
+
         # 执行备份
         if mysqldump -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pass" \
             --single-transaction \
@@ -235,7 +235,7 @@ backup_database() {
             --triggers \
             "$db_name" > "$backup_file" 2>/dev/null; then
             log "数据库备份完成: $backup_file"
-            
+
             # 压缩备份文件
             gzip "$backup_file"
             log "备份文件已压缩: ${backup_file}.gz"
@@ -269,7 +269,7 @@ verify_seed_data() {
 
     for table in "${required_tables[@]}"; do
         local table_exists=$(mysql -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pass" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$db_name' AND table_name='$table';" -s -N 2>/dev/null || echo "0")
-        
+
         if [ "$table_exists" -eq 0 ]; then
             missing_tables+=("$table")
         fi
@@ -282,7 +282,7 @@ verify_seed_data() {
 
     # 检查是否有管理员账户
     local admin_count=$(mysql -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pass" -e "SELECT COUNT(*) FROM $db_name.accounts WHERE name='admin';" -s -N 2>/dev/null || echo "0")
-    
+
     if [ "$admin_count" -eq 0 ]; then
         warn "未找到管理员账户，需要执行种子数据"
         return 1
@@ -346,13 +346,17 @@ build_project() {
     log "构建项目..."
 
     cd "$PROJECT_DIR"
-    
+
     # 清理旧的构建文件以确保使用最新代码
     if [ -d ".next" ]; then
         log "清理旧的构建文件..."
         rm -rf .next
     fi
-    
+
+    # 设置Node.js内存限制以防止构建时内存不足
+    log "设置Node.js内存限制: 3072MB"
+    export NODE_OPTIONS="--max-old-space-size=3072"
+
     npm run build
 
     log "项目构建完成"
@@ -366,7 +370,7 @@ configure_env() {
         # 生成安全的随机密钥
         local jwt_secret=$(openssl rand -base64 48)
         local random_db_password=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
-        
+
         cat > "$PROJECT_DIR/.env" << EOF
 # ===========================================
 # Easy ERP Web 生产环境配置文件
@@ -416,7 +420,7 @@ EOF
 
         # 设置安全的文件权限
         chmod 600 "$PROJECT_DIR/.env"
-        
+
         # 创建配置检查清单
         cat > "$PROJECT_DIR/.env.checklist" << EOF
 # 环境变量配置检查清单
@@ -424,9 +428,9 @@ EOF
 
 1. DATABASE_URL - 修改数据库用户名、密码和连接信息
    当前生成的随机密码: ${random_db_password}
-   
+
 2. OSS_ACCESS_KEY_ID - 填入您的阿里云AccessKeyId
-3. OSS_ACCESS_KEY_SECRET - 填入您的阿里云AccessKeySecret  
+3. OSS_ACCESS_KEY_SECRET - 填入您的阿里云AccessKeySecret
 4. OSS_BUCKET - 填入您的OSS存储桶名称
 5. NEXT_PUBLIC_APP_URL - 修改为您的实际域名
 
@@ -443,25 +447,25 @@ EOF
         warn "重要：请立即编辑 .env 文件并填入正确的配置信息"
         warn "数据库随机密码已生成，请记录并更新MySQL用户密码"
         warn "==============================================="
-        
+
         # 暂停执行，等待用户配置
         read -p "请编辑 .env 文件完成配置后按 Enter 继续..."
-        
+
         # 验证配置是否完成
         if grep -q "请填入" "$PROJECT_DIR/.env"; then
             error "检测到未完成的配置项，请完成所有必要配置"
             return 1
         fi
-        
+
     else
         log "环境变量文件已存在，验证配置..."
-        
+
         # 验证现有配置
         if ! validate_env_vars; then
             error "现有环境变量配置不正确"
             return 1
         fi
-        
+
         # 检查文件权限
         local file_perms=$(stat -c "%a" "$PROJECT_DIR/.env" 2>/dev/null || stat -f "%A" "$PROJECT_DIR/.env" 2>/dev/null || echo "unknown")
         if [ "$file_perms" != "600" ]; then
@@ -469,7 +473,7 @@ EOF
             chmod 600 "$PROJECT_DIR/.env"
         fi
     fi
-    
+
     log "环境变量配置完成"
     return 0
 }
@@ -508,7 +512,7 @@ init_database() {
         error "数据库操作失败"
         return 1
     fi
-    
+
     log "✅ 数据库操作完成"
 
     # 最终验证数据库状态
@@ -574,19 +578,19 @@ check_deployment() {
 rollback_on_failure() {
     local step="$1"
     local backup_name="$2"
-    
+
     error "部署在 $step 步骤失败，开始回滚..."
-    
+
     # 停止应用
     pm2 stop easy-erp-web 2>/dev/null || true
-    
+
     # 如果有备份，恢复代码
     if [ -n "$backup_name" ] && [ -d "$BACKUP_DIR/$backup_name" ]; then
         log "恢复代码备份..."
         rm -rf "$PROJECT_DIR"
         mv "$BACKUP_DIR/$backup_name" "$PROJECT_DIR"
     fi
-    
+
     # 如果有数据库备份，提供恢复选项
     local latest_db_backup=$(ls -t "$BACKUP_DIR/database/"*.sql.gz 2>/dev/null | head -1)
     if [ -n "$latest_db_backup" ]; then
@@ -598,7 +602,7 @@ rollback_on_failure() {
             gunzip -c "$latest_db_backup" | mysql -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pass" "$db_name"
         fi
     fi
-    
+
     error "回滚完成，请检查问题后重新部署"
     exit 1
 }
@@ -606,16 +610,16 @@ rollback_on_failure() {
 # 检查部署前置条件
 check_prerequisites() {
     log "检查部署前置条件..."
-    
+
     # 检查磁盘空间
     local available_space=$(df "$PROJECT_DIR" | awk 'NR==2 {print $4}')
     local required_space=1048576  # 1GB in KB
-    
+
     if [ "$available_space" -lt "$required_space" ]; then
         error "磁盘空间不足，至少需要 1GB 可用空间"
         return 1
     fi
-    
+
     # 检查端口是否被占用
     if netstat -tlnp | grep -q ":3008"; then
         warn "端口 3008 已被占用，将尝试停止现有进程"
@@ -626,22 +630,22 @@ check_prerequisites() {
             return 1
         fi
     fi
-    
+
     # 检查必要的系统工具
     local required_tools=("git" "node" "npm" "mysql" "mysqldump" "gzip")
     local missing_tools=()
-    
+
     for tool in "${required_tools[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
             missing_tools+=("$tool")
         fi
     done
-    
+
     if [ ${#missing_tools[@]} -ne 0 ]; then
         error "缺少必要的系统工具: ${missing_tools[*]}"
         return 1
     fi
-    
+
     log "前置条件检查通过"
     return 0
 }
@@ -649,23 +653,23 @@ check_prerequisites() {
 # 清理函数
 cleanup() {
     log "清理临时文件..."
-    
+
     # 清理临时文件
     find "$PROJECT_DIR" -name "*.tmp" -delete 2>/dev/null || true
-    
+
     # 清理旧的日志文件（保留最近7天）
     find "$PROJECT_DIR/logs" -name "*.log" -mtime +7 -delete 2>/dev/null || true
-    
+
     # 清理旧的备份文件（保留最近30天）
     find "$BACKUP_DIR" -name "backup_*" -mtime +30 -exec rm -rf {} + 2>/dev/null || true
-    
+
     log "清理完成"
 }
 
 # 主函数
 main() {
     log "开始部署 Easy ERP Web..."
-    
+
     local backup_name=""
     local current_step=""
 
@@ -746,7 +750,7 @@ main() {
     log "3. 定期备份数据库和配置文件"
     log "4. 监控应用运行状态和日志"
     log "==============================================="
-    
+
     # 显示管理员账户信息
     if [ -f "$PROJECT_DIR/.env" ]; then
         source "$PROJECT_DIR/.env"
