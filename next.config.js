@@ -10,7 +10,7 @@ const nextConfig = {
 
   // Webpack配置
   webpack: (config, { isServer }) => {
-    // 只在客户端构建时排除这些Node.js专用模块
+    // 只在客户端构建时排除Node.js专用模块
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -25,18 +25,7 @@ const nextConfig = {
         https: false,
         zlib: false,
         url: false,
-        // 排除urllib和相关依赖
-        urllib: false,
-        'proxy-agent': false,
       };
-
-      // 排除服务器端模块不被打包到客户端
-      config.externals = config.externals || [];
-      config.externals.push({
-        'ali-oss': 'ali-oss',
-        urllib: 'urllib',
-        'proxy-agent': 'proxy-agent',
-      });
     }
 
     return config;
