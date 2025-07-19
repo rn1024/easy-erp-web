@@ -77,7 +77,7 @@ jobs:
               git clone git@github.com:rn1024/easy-erp-web.git .
             else
               echo "🔄 更新现有仓库..."
-              
+
               # 确保使用SSH远程URL
               current_url=$(git remote get-url origin)
               if [[ "$current_url" == https://github.com/* ]]; then
@@ -85,17 +85,17 @@ jobs:
                 git remote set-url origin git@github.com:rn1024/easy-erp-web.git
                 echo "✅ 远程URL已更新为SSH"
               fi
-              
+
               git fetch origin
               git reset --hard origin/main
-              
+
               # 处理.user.ini文件权限问题
               if [ -f ".user.ini" ]; then
                 echo "🔧 处理.user.ini文件权限..."
                 chattr -i .user.ini 2>/dev/null || true
                 echo "✅ .user.ini权限已处理"
               fi
-              
+
               git clean -fd
             fi
 
@@ -153,11 +153,11 @@ jobs:
             npm run db:sync-migrate
             echo "✅ 数据库迁移完成"
 
-            # 9. 构建应用
+            # 9. 构建应用（使用standalone模式）
             echo "🔨 开始构建应用..."
-            npm run build
+            npm run build:standalone
 
-            # 10. 验证构建产物
+            # 10. 验证构建产物（增强standalone验证）
             echo "✅ 验证构建产物..."
             if [ ! -d ".next" ]; then
               echo "❌ .next目录不存在，构建失败"
@@ -169,19 +169,32 @@ jobs:
               exit 1
             fi
 
-            if [ ! -d ".next/server" ]; then
-              echo "❌ server目录不存在，构建失败"
+            # Standalone模式特有验证
+            if [ ! -f ".next/standalone/server.js" ]; then
+              echo "❌ standalone/server.js不存在，构建失败"
               exit 1
             fi
 
-            if [ ! -d ".next/static" ]; then
-              echo "❌ static目录不存在，构建失败"
+            if [ ! -d ".next/standalone/.next/static" ]; then
+              echo "❌ standalone静态资源目录不存在，构建失败"
+              exit 1
+            fi
+
+            if [ ! -d ".next/standalone/public" ]; then
+              echo "❌ standalone public目录不存在，构建失败"
+              exit 1
+            fi
+
+            if [ ! -f ".next/standalone/public/favicon.ico" ]; then
+              echo "❌ favicon.ico不存在，构建失败"
               exit 1
             fi
 
             BUILD_SIZE=$(du -sh .next | cut -f1)
+            STANDALONE_SIZE=$(du -sh .next/standalone | cut -f1)
             echo "✅ 构建产物大小: $BUILD_SIZE"
-            echo "✅ 构建完成，验证通过"
+            echo "✅ Standalone大小: $STANDALONE_SIZE"
+            echo "✅ Standalone模式构建验证通过"
 
             # 11. 检查端口并释放
             echo "🔍 检查端口3008状态..."
@@ -194,14 +207,14 @@ jobs:
               echo "✅ 端口3008空闲"
             fi
 
-            # 12. 配置Nginx（如果配置文件存在）
+                        # 12. 配置Nginx（如果配置文件存在）
             if [ -f "nginx/erp.samuelcn.com.conf" ]; then
               echo "🌐 配置Nginx..."
               mkdir -p /etc/nginx/sites-available
               mkdir -p /etc/nginx/sites-enabled
               cp nginx/erp.samuelcn.com.conf /etc/nginx/sites-available/
               ln -sf /etc/nginx/sites-available/erp.samuelcn.com.conf /etc/nginx/sites-enabled/
-              
+
               # 测试nginx配置
               if nginx -t; then
                 nginx -s reload
@@ -212,6 +225,67 @@ jobs:
             else
               echo "ℹ️  未找到Nginx配置文件，跳过配置"
             fi
+
+            # 12.5. 修复nginx代理缓存问题
+            echo "🔧 检查nginx代理缓存配置..."
+            PROXY_CONF_DIR="/www/server/panel/vhost/nginx/proxy/erp.samuelcn.com"
+            if [ -d "$PROXY_CONF_DIR" ]; then
+              for conf_file in "$PROXY_CONF_DIR"/*.conf; do
+                if [ -f "$conf_file" ]; then
+                  if ! grep -q "proxy_cache off" "$conf_file"; then
+                    echo "🔧 添加nginx代理缓存禁用配置到 $conf_file..."
+                    sed -i '/proxy_http_version 1.1;/a\    proxy_cache off;' "$conf_file"
+                    echo "✅ nginx代理缓存配置已更新"
+                  else
+                    echo "✅ nginx代理缓存配置已存在"
+                  fi
+                fi
+              done
+
+              # 清理现有代理缓存
+              if [ -d "/www/server/nginx/proxy_cache_dir" ]; then
+                echo "🗑️  清理nginx代理缓存..."
+                rm -rf /www/server/nginx/proxy_cache_dir/*
+                echo "✅ nginx代理缓存已清理"
+              fi
+
+              # 重载nginx配置以应用更改
+              if nginx -t; then
+                nginx -s reload
+                echo "✅ nginx代理配置已重载"
+              fi
+            else
+              echo "⚠️  nginx代理配置目录不存在，跳过配置"
+            fi
+
+            # 12.8. 验证PM2配置
+            echo "🔧 验证PM2配置..."
+            if [ ! -f "ecosystem.config.js" ]; then
+              echo "❌ ecosystem.config.js 缺失"
+              exit 1
+            fi
+
+            # 检查PM2配置是否使用standalone模式
+            if grep -q "\.next/standalone/server\.js" ecosystem.config.js; then
+              echo "✅ PM2配置使用standalone模式"
+            else
+              echo "❌ PM2配置未使用standalone模式"
+              exit 1
+            fi
+
+            # 12.9. 启动前最终检查
+            echo "🔍 启动前最终检查..."
+            if [ ! -f ".next/standalone/server.js" ]; then
+              echo "❌ standalone/server.js缺失，无法启动"
+              exit 1
+            fi
+
+            if [ ! -d ".next/standalone/.next/static" ]; then
+              echo "❌ 静态资源缺失，无法启动"
+              exit 1
+            fi
+
+            echo "✅ 启动前检查通过"
 
             # 13. 启动应用
             echo "🚀 启动应用..."
@@ -297,14 +371,14 @@ jobs:
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "🔍 健康检查尝试 $(($RETRY_COUNT + 1))/$MAX_RETRIES..."
-            
+
             response=$(curl -s -o /dev/null -w "%{http_code}" \
               --max-time 15 \
               --connect-timeout 5 \
               "https://erp.samuelcn.com/api/health" 2>/dev/null || echo "000")
-            
+
             echo "📡 健康检查响应码: $response"
-            
+
             if [ "$response" = "200" ]; then
               echo "✅ 远程健康检查成功！"
               SUCCESS=true
@@ -337,7 +411,7 @@ jobs:
               --max-time 10 \
               --connect-timeout 5 \
               "$endpoint" 2>/dev/null || echo "000")
-              
+
             if [ "$status" = "200" ]; then
               echo "✅ $endpoint 正常 (HTTP $status)"
             else
