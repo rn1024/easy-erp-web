@@ -19,11 +19,18 @@ else
     exit 1
 fi
 
-# 3. 复制public目录（如果需要）
-if [ -d "public" ] && [ ! -d ".next/standalone/public" ]; then
-    echo "📁 复制public目录..."
-    cp -r public .next/standalone/
+# 3. 复制public目录（确保完整复制）
+echo "📁 复制public目录..."
+if [ -d "public" ]; then
+    cp -r public/* .next/standalone/public/
+    # 创建favicon.ico（浏览器默认请求）
+    if [ -f ".next/standalone/public/favicon.svg" ]; then
+        cp .next/standalone/public/favicon.svg .next/standalone/public/favicon.ico
+    fi
     echo "✅ public目录复制完成"
+else
+    echo "❌ 错误：public目录不存在"
+    exit 1
 fi
 
 # 4. 验证关键文件存在
