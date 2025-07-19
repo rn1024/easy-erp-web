@@ -1,3 +1,11 @@
+/*
+ * @Author: Samuel Chen samuelcoding@qq.com
+ * @Date: 2025-07-19 12:45:18
+ * @LastEditors: Samuel Chen samuelcoding@qq.com
+ * @LastEditTime: 2025-07-19 15:07:38
+ * @FilePath: /easy-erp-web/next.config.js
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // 环境变量配置
@@ -7,12 +15,6 @@ const nextConfig = {
 
   // 启用React.StrictMode
   reactStrictMode: true,
-
-  // 恢复正常的实验性功能
-  experimental: {
-    // 启用 worker threads 以提高构建性能
-    workerThreads: true,
-  },
 
   // 构建优化
   compiler: {
