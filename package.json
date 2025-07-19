@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:standalone": "bash scripts/deploy-standalone.sh",
     "start": "next start -H 0.0.0.0 -p 3008",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
