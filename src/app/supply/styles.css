@@ -364,7 +364,166 @@
   line-height: 1.6;
 }
 
+/* 产品供货卡片样式 */
+.supply-product-card {
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.supply-product-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.supply-product-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.supply-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.supply-stat-item {
+  text-align: center;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.supply-stat-item.active {
+  background: #fff2e8;
+}
+
+.supply-stat-value {
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.supply-stat-label {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.supply-input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.supply-input-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.supply-input-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.supply-summary-card {
+  background: #fafafa;
+  margin-bottom: 24px;
+}
+
+.supply-summary-grid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
 /* 响应式设计 */
+@media (max-width: 768px) {
+  .supply-container {
+    margin: 0 8px;
+    border-radius: 0;
+  }
+
+  .supply-card {
+    margin: 8px 0;
+    padding: 16px;
+  }
+
+  .supply-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .supply-stat-item {
+    padding: 6px;
+  }
+
+  .supply-stat-value {
+    font-size: 13px;
+  }
+
+  .supply-stat-label {
+    font-size: 10px;
+  }
+
+  .supply-input-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .supply-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .supply-summary-card .ant-card-body {
+    padding: 12px !important;
+  }
+
+  .business-content {
+    padding: 24px 12px;
+  }
+
+  .business-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .supply-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+  }
+
+  .supply-stat-item {
+    padding: 4px;
+  }
+
+  .supply-stat-value {
+    font-size: 12px;
+  }
+
+  .supply-stat-label {
+    font-size: 9px;
+  }
+
+  .supply-card {
+    padding: 12px;
+  }
+
+  .business-card {
+    padding: 16px;
+  }
+
+  .business-content {
+    padding: 16px 8px;
+  }
+}
 @media (max-width: 768px) {
   .supply-header-content,
   .business-header-content {

@@ -14,7 +14,6 @@ import {
   message,
   Spin,
   Descriptions,
-  Table,
   Tag,
   Divider,
   Progress,
@@ -32,7 +31,6 @@ import {
   CalculatorOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import { ColumnsType } from 'antd/es/table';
 import {
   getSharedPurchaseOrderApi,
   getSharedProductsApi,
@@ -307,115 +305,173 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
     });
   };
 
-  // 产品表格列定义
-  const columns: ColumnsType<any> = [
-    {
-      title: '产品信息',
-      width: 200,
-      render: (_, record) => {
-        const productInfo = getProductInfo(record.productId);
-        if (!productInfo) return null;
+  // 渲染产品供货卡片
+  const renderProductCard = (item: SupplyItem) => {
+    const productInfo = getProductInfo(item.productId);
+    if (!productInfo) return null;
 
-        return (
-          <div>
-            <Text strong style={{ color: '#1890ff' }}>
-              {productInfo.product.code}
-            </Text>
-            {productInfo.product.specification && (
-              <div style={{ color: '#666', fontSize: '12px' }}>
-                {productInfo.product.specification}
+    const supplied = productInfo.suppliedQuantity || 0;
+    const available = productInfo.availableQuantity || 0;
+
+    return (
+      <Card
+        key={item.productId}
+        size="small"
+        style={{ marginBottom: 16 }}
+        bodyStyle={{ padding: '16px' }}
+      >
+        {/* 产品信息头部 */}
+        <div style={{ marginBottom: 16 }}>
+          <Text strong style={{ color: '#1890ff', fontSize: '16px' }}>
+            {productInfo.product.code}
+          </Text>
+          {productInfo.product.specification && (
+            <div style={{ color: '#666', fontSize: '12px', marginTop: 4 }}>
+              {productInfo.product.specification}
+            </div>
+          )}
+          {productInfo.product.sku && (
+            <div style={{ color: '#999', fontSize: '11px', marginTop: 2 }}>
+              SKU: {productInfo.product.sku}
+            </div>
+          )}
+        </div>
+
+        {/* 数量统计信息 */}
+        <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
+          <Col xs={6} sm={6}>
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '8px',
+                background: '#f5f5f5',
+                borderRadius: '4px',
+              }}
+            >
+              <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                {productInfo.purchaseQuantity || 0}
               </div>
-            )}
-            {productInfo.product.sku && (
-              <div style={{ color: '#999', fontSize: '11px' }}>SKU: {productInfo.product.sku}</div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '采购数量',
-      width: 100,
-      align: 'center',
-      render: (_, record) => {
-        const productInfo = getProductInfo(record.productId);
-        return productInfo?.purchaseQuantity || 0;
-      },
-    },
-    {
-      title: '已供货',
-      width: 100,
-      align: 'center',
-      render: (_, record) => {
-        const productInfo = getProductInfo(record.productId);
-        const supplied = productInfo?.suppliedQuantity || 0;
-        return <Text style={{ color: supplied > 0 ? '#1890ff' : '#999' }}>{supplied}</Text>;
-      },
-    },
-    {
-      title: '可供货',
-      width: 100,
-      align: 'center',
-      render: (_, record) => {
-        const productInfo = getProductInfo(record.productId);
-        const available = productInfo?.availableQuantity || 0;
-        return <Text style={{ color: available > 0 ? '#52c41a' : '#ff4d4f' }}>{available}</Text>;
-      },
-    },
-    {
-      title: '本次供货',
-      width: 120,
-      align: 'center',
-      render: (_, record) => (
-        <InputNumber
-          min={0}
-          max={getProductInfo(record.productId)?.availableQuantity || 0}
-          value={record.quantity}
-          onChange={(value) => updateSupplyItem(record.productId, 'quantity', value || 0)}
-          style={{ width: '100%' }}
-          placeholder="0"
-        />
-      ),
-    },
-    {
-      title: '单价',
-      width: 120,
-      align: 'center',
-      render: (_, record) => (
-        <InputNumber
-          min={0}
-          precision={2}
-          value={record.unitPrice}
-          onChange={(value) => updateSupplyItem(record.productId, 'unitPrice', value || 0)}
-          style={{ width: '100%' }}
-          placeholder="0.00"
-          addonBefore="¥"
-        />
-      ),
-    },
-    {
-      title: '小计',
-      width: 120,
-      align: 'right',
-      render: (_, record) => (
-        <Text strong style={{ color: record.totalPrice > 0 ? '#f50' : '#999' }}>
-          ¥{Number(record.totalPrice || 0).toFixed(2)}
-        </Text>
-      ),
-    },
-    {
-      title: '备注',
-      width: 150,
-      render: (_, record) => (
-        <Input
-          placeholder="备注"
-          value={record.remark}
-          onChange={(e) => updateSupplyItem(record.productId, 'remark', e.target.value)}
-          style={{ width: '100%' }}
-        />
-      ),
-    },
-  ];
+              <div style={{ fontSize: '11px', color: '#666' }}>采购数量</div>
+            </div>
+          </Col>
+          <Col xs={6} sm={6}>
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '8px',
+                background: '#f5f5f5',
+                borderRadius: '4px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: supplied > 0 ? '#1890ff' : '#999',
+                }}
+              >
+                {supplied}
+              </div>
+              <div style={{ fontSize: '11px', color: '#666' }}>已供货</div>
+            </div>
+          </Col>
+          <Col xs={6} sm={6}>
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '8px',
+                background: '#f5f5f5',
+                borderRadius: '4px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: available > 0 ? '#52c41a' : '#ff4d4f',
+                }}
+              >
+                {available}
+              </div>
+              <div style={{ fontSize: '11px', color: '#666' }}>可供货</div>
+            </div>
+          </Col>
+          <Col xs={6} sm={6}>
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '8px',
+                background: item.totalPrice > 0 ? '#fff2e8' : '#f5f5f5',
+                borderRadius: '4px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: item.totalPrice > 0 ? '#f50' : '#999',
+                }}
+              >
+                ¥{Number(item.totalPrice || 0).toFixed(2)}
+              </div>
+              <div style={{ fontSize: '11px', color: '#666' }}>小计</div>
+            </div>
+          </Col>
+        </Row>
+
+        {/* 输入区域 */}
+        <Row gutter={[12, 12]}>
+          <Col xs={24} sm={8}>
+            <div>
+              <Text style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: 4 }}>
+                本次供货数量
+              </Text>
+              <InputNumber
+                min={0}
+                max={available}
+                value={item.quantity}
+                onChange={(value) => updateSupplyItem(item.productId, 'quantity', value || 0)}
+                style={{ width: '100%' }}
+                placeholder="0"
+                size="small"
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={8}>
+            <div>
+              <Text style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: 4 }}>
+                单价
+              </Text>
+              <InputNumber
+                min={0}
+                precision={2}
+                value={item.unitPrice}
+                onChange={(value) => updateSupplyItem(item.productId, 'unitPrice', value || 0)}
+                style={{ width: '100%' }}
+                placeholder="0.00"
+                addonBefore="¥"
+                size="small"
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={8}>
+            <div>
+              <Text style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: 4 }}>
+                备注
+              </Text>
+              <Input
+                placeholder="备注"
+                value={item.remark}
+                onChange={(e) => updateSupplyItem(item.productId, 'remark', e.target.value)}
+                style={{ width: '100%' }}
+                size="small"
+              />
+            </div>
+          </Col>
+        </Row>
+      </Card>
+    );
+  };
 
   if (orderLoading) {
     return (
@@ -563,41 +619,52 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
         />
 
         <Form form={form} layout="vertical">
-          <Table
-            columns={columns}
-            dataSource={supplyItems}
-            rowKey="productId"
-            pagination={false}
-            size="small"
-            scroll={{ x: 800 }}
-            summary={() => {
-              const validItems = supplyItems.filter((item) => item.quantity > 0);
-              const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0);
+          {/* 产品供货卡片列表 */}
+          <div style={{ marginBottom: 24 }}>
+            {supplyItems.map((item) => renderProductCard(item))}
+          </div>
 
-              return (
-                <Table.Summary fixed>
-                  <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={4}>
-                      <Text strong>合计</Text>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={4}>
-                      <Text strong>{totalQuantity}</Text>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={5}>-</Table.Summary.Cell>
-                    <Table.Summary.Cell index={6}>
-                      <Text strong style={{ color: '#f50' }}>
-                        ¥{totalAmount.toFixed(2)}
-                      </Text>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={7}>-</Table.Summary.Cell>
-                  </Table.Summary.Row>
-                </Table.Summary>
-              );
-            }}
-          />
+          {/* 汇总信息卡片 */}
+          <Card
+            size="small"
+            style={{ marginBottom: 24, background: '#fafafa' }}
+            bodyStyle={{ padding: '16px' }}
+          >
+            <Row gutter={[16, 8]} align="middle">
+              <Col xs={24} sm={6}>
+                <Text strong style={{ fontSize: '16px' }}>
+                  合计
+                </Text>
+              </Col>
+              <Col xs={8} sm={6}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
+                    {supplyItems.filter((item) => item.quantity > 0).length}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>供货种类</div>
+                </div>
+              </Col>
+              <Col xs={8} sm={6}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#52c41a' }}>
+                    {supplyItems.reduce((sum, item) => sum + item.quantity, 0)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>总数量</div>
+                </div>
+              </Col>
+              <Col xs={8} sm={6}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f50' }}>
+                    ¥{totalAmount.toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>总金额</div>
+                </div>
+              </Col>
+            </Row>
+          </Card>
 
           <Form.Item label="备注" name="remark" style={{ marginTop: 24 }}>
-            <TextArea rows={3} placeholder="请填写供货备注信息（可选）" maxLength={500} />
+            <TextArea rows={3} placeholder="请填写物流单号和备注信息" maxLength={500} />
           </Form.Item>
 
           <Form.Item style={{ textAlign: 'center', marginTop: 32 }}>

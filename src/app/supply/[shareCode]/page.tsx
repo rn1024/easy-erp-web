@@ -123,7 +123,7 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
       {/* 主要内容区域 */}
       <div className="business-content">
         <Row gutter={[32, 32]} justify="center">
-          <Col xs={24} sm={15} md={15} lg={15} xl={15}>
+          <Col xs={24} sm={20} md={18} lg={16} xl={14}>
             <div className="business-card">
               {loading ? (
                 <div className="loading-section">
@@ -213,36 +213,6 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
                   )}
                 </>
               )}
-            </div>
-          </Col>
-
-          <Col xs={24} sm={9} md={9} lg={9} xl={9}>
-            <div className="business-card">
-              {/* 使用说明 */}
-              <div className="help-section">
-                <Title level={5} className="help-title">
-                  <SafetyOutlined />
-                  使用说明
-                </Title>
-                <ul className="help-list">
-                  <li>此链接由ERP系统管理员分享，用于填写供货记录</li>
-                  <li>验证成功后，您可以查看采购订单详情并填写供货信息</li>
-                  <li>所有操作都会被安全记录，请确保信息准确</li>
-                  <li>如有疑问，请联系分享此链接的工作人员</li>
-                </ul>
-              </div>
-
-              {/* 常见问题 */}
-              <div className="faq-section">
-                <Title level={5} className="faq-title">
-                  常见问题
-                </Title>
-                <div className="faq-content">
-                  <Text type="secondary">• 提取码错误？请检查分享信息中的提取码是否正确</Text>
-                  <br />
-                  <Text type="secondary">• 链接过期？请联系管理员重新获取分享链接</Text>
-                </div>
-              </div>
             </div>
           </Col>
         </Row>
