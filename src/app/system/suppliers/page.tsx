@@ -142,19 +142,22 @@ const SuppliersPage: React.FC = () => {
       title: '统一社会信用代码',
       dataIndex: 'creditCode',
       width: 180,
-      render: (_, record) => (
-        <Tooltip title={record.creditCode}>
-          <Tag color="blue">{record.creditCode}</Tag>
-        </Tooltip>
-      ),
+      render: (_, record) =>
+        record.creditCode ? (
+          <Tooltip title={record.creditCode}>
+            <Tag color="blue">{record.creditCode}</Tag>
+          </Tooltip>
+        ) : (
+          <span style={{ color: '#ccc' }}>-</span>
+        ),
     },
     {
       title: '银行信息',
       width: 200,
       render: (_, record) => (
         <div>
-          <div>{record.bankName}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.bankAccount}</div>
+          <div>{record.bankName || '-'}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{record.bankAccount || '-'}</div>
         </div>
       ),
     },

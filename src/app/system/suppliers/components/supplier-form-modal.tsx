@@ -206,17 +206,14 @@ const SupplierFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
             <Form.Item
               name="creditCode"
               label="统一社会信用代码"
-              rules={[
-                { required: true, message: '请输入统一社会信用代码' },
-                { len: 18, message: '统一社会信用代码必须为18位' },
-              ]}
+              rules={[{ len: 18, message: '统一社会信用代码必须为18位' }]}
             >
-              <Input placeholder="请输入统一社会信用代码" />
+              <Input placeholder="请输入统一社会信用代码（可选）" />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="bankName" label="开户银行">
-              <Input placeholder="请输入开户银行" />
+              <Input placeholder="请输入开户银行（可选）" />
             </Form.Item>
           </Col>
         </Row>
@@ -224,12 +221,12 @@ const SupplierFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="bankAccount" label="银行账号">
-              <Input placeholder="请输入银行账号" />
+              <Input placeholder="请输入银行账号（可选）" />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="bankAddress" label="开户地址">
-              <Input placeholder="请输入开户地址" />
+              <Input placeholder="请输入开户地址（可选）" />
             </Form.Item>
           </Col>
         </Row>
