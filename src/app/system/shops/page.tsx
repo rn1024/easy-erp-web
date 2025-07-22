@@ -94,6 +94,7 @@ const ShopsPage: React.FC = () => {
       title: 'ID',
       dataIndex: 'id',
       width: 80,
+      render: (_, record) => record.id,
     },
     {
       title: '店铺Logo',
@@ -118,11 +119,6 @@ const ShopsPage: React.FC = () => {
       dataIndex: 'name',
     },
     {
-      title: '店铺代码',
-      dataIndex: 'code',
-      width: 120,
-    },
-    {
       title: '国家/地区',
       dataIndex: 'country',
       width: 120,
@@ -131,6 +127,14 @@ const ShopsPage: React.FC = () => {
       title: '创建时间',
       dataIndex: 'createdAt',
       width: 180,
+      render: (_, record) =>
+        new Date(record.createdAt).toLocaleDateString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
     },
     {
       title: '操作',
