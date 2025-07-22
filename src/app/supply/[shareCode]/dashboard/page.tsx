@@ -461,7 +461,10 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
     <div className="supply-form">
       {/* 订单信息区域 */}
       <Card className="supply-card" style={{ marginBottom: 16 }}>
-        <div className="supply-card-header">
+        <div
+          className="supply-card-header"
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
           <Space>
             <InfoCircleOutlined style={{ color: '#1890ff' }} />
             <Title level={4} style={{ margin: 0 }}>
@@ -472,20 +475,13 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
               {orderInfo.urgent ? '紧急' : '常规'}
             </Tag>
           </Space>
+          <div style={{ fontSize: '14px', color: '#666' }}>
+            日期：{new Date(orderInfo.createdAt).toLocaleDateString()}
+          </div>
         </div>
 
         <Descriptions column={2} size="small">
           <Descriptions.Item label="订单号">{orderInfo.orderNumber}</Descriptions.Item>
-          <Descriptions.Item label="订单状态">
-            <Tag color="blue">{orderInfo.status}</Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="店铺">
-            <Space>
-              <ShopOutlined />
-              {orderInfo.shop.name}
-            </Space>
-          </Descriptions.Item>
-          <Descriptions.Item label="负责人">{orderInfo.shop.responsiblePerson}</Descriptions.Item>
           <Descriptions.Item label="供应商">
             <Space>
               <UserOutlined />
