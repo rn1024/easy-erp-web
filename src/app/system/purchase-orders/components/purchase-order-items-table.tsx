@@ -15,9 +15,6 @@ export interface PurchaseOrderItem {
   quantity: number;
   unitPrice: number;
   amount: number; // 小计金额 (quantity * unitPrice)
-  taxRate: number; // 税率 (%)
-  taxAmount: number; // 税额 (amount * taxRate / 100)
-  totalAmount: number; // 含税总额 (amount + taxAmount)
   remark?: string;
 }
 
@@ -62,15 +59,11 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
   const generateKey = () => `new-item-${Date.now()}-${Math.random()}`;
 
   // 计算单行金额
-  const calculateRowAmounts = (quantity: number, unitPrice: number, taxRate: number) => {
+  const calculateRowAmounts = (quantity: number, unitPrice: number) => {
     const amount = quantity * unitPrice;
-    const taxAmount = amount * (taxRate / 100);
-    const totalAmount = amount + taxAmount;
 
     return {
       amount: parseFloat(amount.toFixed(2)),
-      taxAmount: parseFloat(taxAmount.toFixed(2)),
-      totalAmount: parseFloat(totalAmount.toFixed(2)),
     };
   };
 
@@ -90,9 +83,6 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
       quantity: 1,
       unitPrice: 0,
       amount: 0,
-      taxRate: 13, // 默认税率13%
-      taxAmount: 0,
-      totalAmount: 0,
       remark: '',
     };
 
@@ -114,16 +104,13 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
         const updatedItem = { ...item, [field]: value };
 
         // 如果更新的是影响计算的字段，重新计算金额
-        if (['quantity', 'unitPrice', 'taxRate'].includes(field)) {
-          const { amount, taxAmount, totalAmount } = calculateRowAmounts(
+        if (['quantity', 'unitPrice'].includes(field)) {
+          const { amount } = calculateRowAmounts(
             field === 'quantity' ? value : updatedItem.quantity,
-            field === 'unitPrice' ? value : updatedItem.unitPrice,
-            field === 'taxRate' ? value : updatedItem.taxRate
+            field === 'unitPrice' ? value : updatedItem.unitPrice
           );
 
           updatedItem.amount = amount;
-          updatedItem.taxAmount = taxAmount;
-          updatedItem.totalAmount = totalAmount;
         }
 
         return updatedItem;
@@ -138,8 +125,6 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
   const summary = {
     totalQuantity: dataSource.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
     totalAmount: dataSource.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
-    totalTaxAmount: dataSource.reduce((sum, item) => sum + (Number(item.taxAmount) || 0), 0),
-    grandTotal: dataSource.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0),
   };
 
   // 表格列定义
@@ -235,46 +220,6 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
       render: (value) => <Text strong>¥{value.toFixed(2)}</Text>,
     },
     {
-      title: '税率(%)',
-      dataIndex: 'taxRate',
-      width: 100,
-      render: (value, record) => {
-        if (disabled) {
-          return `${value}%`;
-        }
-
-        return (
-          <InputNumber
-            value={value}
-            min={0}
-            max={100}
-            precision={2}
-            style={{ width: '100%' }}
-            suffix="%"
-            onChange={(val) => handleRowChange(record.key!, 'taxRate', val || 0)}
-          />
-        );
-      },
-    },
-    {
-      title: '税额',
-      dataIndex: 'taxAmount',
-      width: 120,
-      align: 'right',
-      render: (value) => <Text>¥{value.toFixed(2)}</Text>,
-    },
-    {
-      title: '税额合计',
-      dataIndex: 'totalAmount',
-      width: 120,
-      align: 'right',
-      render: (value) => (
-        <Text strong type="success">
-          ¥{value.toFixed(2)}
-        </Text>
-      ),
-    },
-    {
       title: '操作',
       key: 'action',
       width: 80,
@@ -330,15 +275,6 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
                 <Text strong>¥{(Number(summary.totalAmount) || 0).toFixed(2)}</Text>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={5} />
-              <Table.Summary.Cell index={6}>
-                <Text strong>¥{(Number(summary.totalTaxAmount) || 0).toFixed(2)}</Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={7}>
-                <Text strong type="success">
-                  ¥{(Number(summary.grandTotal) || 0).toFixed(2)}
-                </Text>
-              </Table.Summary.Cell>
-              <Table.Summary.Cell index={8} />
             </Table.Summary.Row>
           )}
         />
@@ -351,17 +287,9 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
               <Text strong>{summary.totalQuantity}</Text>
             </div>
             <div>
-              <Text>总金额（不含税）：</Text>
-              <Text strong>¥{(Number(summary.totalAmount) || 0).toFixed(2)}</Text>
-            </div>
-            <div>
-              <Text>总税额：</Text>
-              <Text strong>¥{(Number(summary.totalTaxAmount) || 0).toFixed(2)}</Text>
-            </div>
-            <div>
-              <Text>总计（含税）：</Text>
+              <Text>总金额：</Text>
               <Text strong type="success" style={{ fontSize: 16 }}>
-                ¥{(Number(summary.grandTotal) || 0).toFixed(2)}
+                ¥{(Number(summary.totalAmount) || 0).toFixed(2)}
               </Text>
             </div>
           </Space>

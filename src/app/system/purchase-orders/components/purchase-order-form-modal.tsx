@@ -114,7 +114,6 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
           status: entity.status,
           urgent: entity.urgent,
           remark: entity.remark,
-          discountRate: entity.discountRate || 0,
         });
 
         // 设置产品明细
@@ -124,9 +123,6 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             amount: item.amount,
-            taxRate: item.taxRate,
-            taxAmount: item.taxAmount,
-            totalAmount: item.totalAmount,
             remark: item.remark || '',
           }));
           setOrderItems(items);
@@ -138,7 +134,6 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         form.resetFields();
         form.setFieldsValue({
           urgent: false,
-          discountRate: 0,
         });
         setOrderItems([]);
       }
@@ -202,7 +197,6 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            taxRate: item.taxRate,
             remark: item.remark || '',
           })),
         };
@@ -255,12 +249,8 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item
-              name="supplierId"
-              label="供应商"
-              rules={[{ required: true, message: '请选择供应商' }]}
-            >
-              <Select placeholder="请选择供应商">
+            <Form.Item name="supplierId" label="供应商">
+              <Select placeholder="请选择供应商" allowClear>
                 {suppliersData.map((supplier: any) => (
                   <Option key={supplier.id} value={supplier.id}>
                     {supplier.nickname}
@@ -272,22 +262,6 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         </Row>
 
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="discountRate"
-              label="优惠率(%)"
-              rules={[{ type: 'number', min: 0, max: 100, message: '优惠率范围为0-100%' }]}
-            >
-              <InputNumber
-                placeholder="请输入优惠率"
-                style={{ width: '100%' }}
-                min={0}
-                max={100}
-                precision={2}
-                suffix="%"
-              />
-            </Form.Item>
-          </Col>
           <Col span={12}>
             <Form.Item name="urgent" label="紧急标记" valuePropName="checked">
               <Switch checkedChildren="紧急" unCheckedChildren="常规" />
