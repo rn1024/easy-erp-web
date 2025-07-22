@@ -182,8 +182,25 @@ export const getSharedProductsApi = (shareCode: string, extractCode?: string) =>
   });
 };
 
+// 提交供货清单数据类型
+export interface SupplySubmitData {
+  items: Array<{
+    productId: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    remark?: string;
+  }>;
+  totalAmount: number;
+  remark?: string;
+}
+
 // 提交供货清单
-export const submitSupplyListApi = (shareCode: string, data: any, extractCode?: string) => {
+export const submitSupplyListApi = (
+  shareCode: string,
+  data: SupplySubmitData,
+  extractCode?: string
+) => {
   return request.post(`/share/${shareCode}/supply`, {
     ...data,
     ...(extractCode ? { extractCode } : {}),

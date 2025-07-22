@@ -19,7 +19,6 @@ import {
   Progress,
   Row,
   Col,
-  Modal,
 } from 'antd';
 import {
   InfoCircleOutlined,
@@ -27,7 +26,6 @@ import {
   UserOutlined,
   SaveOutlined,
   CheckCircleOutlined,
-  ExclamationCircleOutlined,
   CalculatorOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
@@ -35,6 +33,7 @@ import {
   getSharedPurchaseOrderApi,
   getSharedProductsApi,
   submitSupplyListApi,
+  type SupplySubmitData,
 } from '@/services/supply';
 
 const { Title, Text, Paragraph } = Typography;
@@ -49,13 +48,6 @@ interface SupplyItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  remark?: string;
-}
-
-interface SupplierInfo {
-  name: string;
-  contactPerson: string;
-  contactPhone: string;
   remark?: string;
 }
 
@@ -82,13 +74,7 @@ const getAvailableProducts = async (shareCode: string, extractCode?: string) => 
 // 提交供货记录API
 const submitSupplyRecord = async (
   shareCode: string,
-  data: {
-    supplierInfo: SupplierInfo;
-    items: SupplyItem[];
-    totalAmount: number;
-    remark?: string;
-    extractCode?: string;
-  }
+  data: SupplySubmitData & { extractCode?: string }
 ) => {
   try {
     const response = await submitSupplyListApi(shareCode, data, data.extractCode);
@@ -102,14 +88,12 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form] = Form.useForm();
-  const [supplierForm] = Form.useForm();
 
   const [orderInfo, setOrderInfo] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
   const [supplyItems, setSupplyItems] = useState<SupplyItem[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
-  const [submitModalVisible, setSubmitModalVisible] = useState(false);
   const [refreshingProducts, setRefreshingProducts] = useState(false);
 
   const shareCode = params.shareCode;
@@ -204,30 +188,14 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
     manual: true,
     onSuccess: () => {
       message.success('供货记录提交成功！');
-      setSubmitModalVisible(false);
       // 可以选择刷新数据或跳转到成功页面
       window.location.reload();
     },
     onError: (error: any) => {
       // 检查是否是产品冲突错误
       if (error.message.includes('数量超限') || error.message.includes('不符合要求')) {
-        Modal.confirm({
-          title: '产品供货冲突',
-          content: (
-            <div>
-              <p style={{ color: '#ff4d4f', marginBottom: 16 }}>{error.message}</p>
-              <p>部分产品的可供货数量已发生变化，是否刷新产品列表？</p>
-            </div>
-          ),
-          okText: '刷新产品列表',
-          cancelText: '稍后重试',
-          onOk: () => {
-            refreshProducts(shareCode, extractCode || '');
-          },
-          onCancel: () => {
-            setSubmitModalVisible(false);
-          },
-        });
+        message.error(error.message + '，请刷新产品列表后重试');
+        refreshProducts(shareCode, extractCode || '');
       } else {
         message.error(error.message || '提交失败');
       }
@@ -264,7 +232,7 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
     return products.find((p) => p.product.id === productId);
   };
 
-  // 验证并显示提交确认
+  // 验证并提交供货记录
   const handleSubmit = () => {
     const validItems = supplyItems.filter((item) => item.quantity > 0);
 
@@ -287,21 +255,12 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
       return;
     }
 
-    setSubmitModalVisible(true);
-  };
-
-  // 确认提交
-  const confirmSubmit = () => {
-    supplierForm.validateFields().then((supplierValues) => {
-      const validItems = supplyItems.filter((item) => item.quantity > 0);
-
-      submitRecord(shareCode, {
-        supplierInfo: supplierValues,
-        items: validItems,
-        totalAmount,
-        remark: form.getFieldValue('remark'),
-        extractCode: extractCode || undefined,
-      });
+    // 直接提交供货记录
+    submitRecord(shareCode, {
+      items: validItems,
+      totalAmount,
+      remark: form.getFieldValue('remark'),
+      extractCode: extractCode || undefined,
     });
   };
 
@@ -676,106 +635,13 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
               className="supply-btn supply-btn-primary"
               style={{ width: '200px' }}
               disabled={totalAmount <= 0}
+              loading={submitLoading}
             >
               提交供货记录
             </Button>
           </Form.Item>
         </Form>
       </Card>
-
-      {/* 提交确认弹窗 */}
-      <Modal
-        title={
-          <Space>
-            <ExclamationCircleOutlined style={{ color: '#faad14' }} />
-            确认提交供货记录
-          </Space>
-        }
-        open={submitModalVisible}
-        onCancel={() => setSubmitModalVisible(false)}
-        footer={null}
-        width={600}
-      >
-        <Alert
-          message="请确认供应商信息"
-          description="提交后将创建正式的供货记录，请确保信息准确无误"
-          type="warning"
-          showIcon
-          style={{ marginBottom: 24 }}
-        />
-
-        <Form form={supplierForm} layout="vertical">
-          <Form.Item
-            label="供应商名称"
-            name="name"
-            rules={[{ required: true, message: '请输入供应商名称' }]}
-          >
-            <Input placeholder="请输入供应商名称" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="联系人"
-                name="contactPerson"
-                rules={[{ required: true, message: '请输入联系人' }]}
-              >
-                <Input placeholder="请输入联系人" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="联系电话"
-                name="contactPhone"
-                rules={[{ required: true, message: '请输入联系电话' }]}
-              >
-                <Input placeholder="请输入联系电话" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item label="供应商备注" name="remark">
-            <TextArea rows={2} placeholder="供应商备注信息（可选）" />
-          </Form.Item>
-        </Form>
-
-        <Divider />
-
-        <div>
-          <Text strong>供货汇总:</Text>
-          <div
-            style={{ marginTop: 8, padding: '12px', background: '#fafafa', borderRadius: '4px' }}
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Text>供货种类: {supplyItems.filter((item) => item.quantity > 0).length} 种</Text>
-              </Col>
-              <Col span={12}>
-                <Text>总数量: {supplyItems.reduce((sum, item) => sum + item.quantity, 0)} 件</Text>
-              </Col>
-              <Col span={24} style={{ marginTop: 8 }}>
-                <Text strong style={{ color: '#f50' }}>
-                  总金额: ¥{totalAmount.toFixed(2)}
-                </Text>
-              </Col>
-            </Row>
-          </div>
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <Space>
-            <Button onClick={() => setSubmitModalVisible(false)}>取消</Button>
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={confirmSubmit}
-              loading={submitLoading}
-            >
-              确认提交
-            </Button>
-          </Space>
-        </div>
-      </Modal>
     </div>
   );
 };

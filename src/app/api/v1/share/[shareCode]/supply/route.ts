@@ -10,7 +10,7 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
     const shareCode = params.shareCode;
     const body = await request.json();
 
-    const { supplierInfo, items, totalAmount, remark, extractCode } = body;
+    const { items, totalAmount, remark, extractCode } = body;
 
     // 验证分享链接权限
     const verifyResult = await SupplyShareManager.verifyShareAccess(shareCode, extractCode);
@@ -21,13 +21,8 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
     const purchaseOrderId = verifyResult.purchaseOrderId!;
 
     // 验证必需参数
-    if (!supplierInfo || !items || !Array.isArray(items) || items.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return ApiResponseHelper.validationError({}, '请提供完整的供货信息');
-    }
-
-    // 验证供应商信息
-    if (!supplierInfo.name || !supplierInfo.contactPerson || !supplierInfo.contactPhone) {
-      return ApiResponseHelper.validationError({}, '请填写完整的供应商信息');
     }
 
     // 验证供货明细
@@ -57,9 +52,18 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
       );
     }
 
-    // 验证采购订单是否存在
+    // 验证采购订单是否存在并获取供应商信息
     const purchaseOrder = await prisma.purchaseOrder.findUnique({
       where: { id: purchaseOrderId },
+      include: {
+        supplier: {
+          select: {
+            nickname: true,
+            contactPerson: true,
+            contactPhone: true,
+          },
+        },
+      },
     });
 
     if (!purchaseOrder) {
@@ -68,17 +72,12 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
 
     // 开始事务创建供货记录
     const result = await prisma.$transaction(async (tx) => {
-      // 创建供货记录主记录
+      // 创建供货记录主记录（不存储supplierInfo，通过purchaseOrderId关联）
       const supplyRecord = await tx.supplyRecord.create({
         data: {
           purchaseOrderId,
           shareCode,
-          supplierInfo: {
-            name: supplierInfo.name,
-            contactPerson: supplierInfo.contactPerson,
-            contactPhone: supplierInfo.contactPhone,
-            remark: supplierInfo.remark || null,
-          },
+          supplierInfo: {}, // 空对象，通过purchaseOrderId关联获取供应商信息
           totalAmount: Number(totalAmount) || 0,
           remark: remark || null,
           status: 'active',
@@ -107,7 +106,7 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
       };
     });
 
-    // 记录操作日志（无登录用户，记录IP和供应商信息）
+    // 记录操作日志
     await prisma.log.create({
       data: {
         category: 'SUPPLY_RECORD',
@@ -118,7 +117,7 @@ export async function POST(request: NextRequest, { params }: { params: { shareCo
         details: {
           purchaseOrderId,
           shareCode,
-          supplierInfo: supplierInfo.name,
+          supplierInfo: purchaseOrder.supplier?.nickname || '未知供应商',
           recordId: result.supplyRecord.id,
           itemCount: validItems.length,
           totalAmount: totalAmount,
@@ -267,7 +266,7 @@ export async function PUT(request: NextRequest, { params }: { params: { shareCod
     const shareCode = params.shareCode;
     const body = await request.json();
 
-    const { recordId, supplierInfo, items, totalAmount, remark, extractCode } = body;
+    const { recordId, items, totalAmount, remark, extractCode } = body;
 
     if (!recordId) {
       return ApiResponseHelper.validationError({}, '请提供供货记录ID');
@@ -323,18 +322,24 @@ export async function PUT(request: NextRequest, { params }: { params: { shareCod
       );
     }
 
+    // 获取采购订单信息用于日志记录
+    const purchaseOrder = await prisma.purchaseOrder.findUnique({
+      where: { id: purchaseOrderId },
+      include: {
+        supplier: {
+          select: {
+            nickname: true,
+          },
+        },
+      },
+    });
+
     // 开始事务更新供货记录
     const result = await prisma.$transaction(async (tx) => {
-      // 更新供货记录主记录
+      // 更新供货记录主记录（不更新supplierInfo，保持通过purchaseOrderId关联）
       const updatedRecord = await tx.supplyRecord.update({
         where: { id: recordId },
         data: {
-          supplierInfo: {
-            name: supplierInfo.name,
-            contactPerson: supplierInfo.contactPerson,
-            contactPhone: supplierInfo.contactPhone,
-            remark: supplierInfo.remark || null,
-          },
           totalAmount: Number(totalAmount) || 0,
           remark: remark || null,
           updatedAt: new Date(),
@@ -379,7 +384,7 @@ export async function PUT(request: NextRequest, { params }: { params: { shareCod
         details: {
           purchaseOrderId,
           shareCode,
-          supplierInfo: supplierInfo.name,
+          supplierInfo: purchaseOrder?.supplier?.nickname || '未知供应商',
           recordId,
           itemCount: validItems.length,
           totalAmount: totalAmount,
