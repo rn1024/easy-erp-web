@@ -71,7 +71,7 @@ const LoginForm: React.FC = () => {
       });
 
       // 等待一小段时间确保token保存完成
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // 跳转到目标页面
       const redirectParam = params.get('redirect');
@@ -108,7 +108,7 @@ const LoginForm: React.FC = () => {
             <Space>
               <img alt="" className={styles['auth-login-logo']} src="/favicon.svg" />
 
-              <strong>CMS Admin</strong>
+              <strong>ERP Admin</strong>
             </Space>
           </Col>
 
