@@ -194,9 +194,6 @@ const DeliveryRecordsPage: React.FC = () => {
         country: record.country,
         channel: record.channel,
         shippingChannel: record.shippingChannel,
-        warehouseShippingDeadline: record.warehouseShippingDeadline
-          ? dayjs(record.warehouseShippingDeadline)
-          : null,
         warehouseReceiptDeadline: record.warehouseReceiptDeadline
           ? dayjs(record.warehouseReceiptDeadline)
           : null,
@@ -235,7 +232,6 @@ const DeliveryRecordsPage: React.FC = () => {
     const submitData = {
       ...values,
       date: values.date?.format('YYYY-MM-DD'),
-      warehouseShippingDeadline: values.warehouseShippingDeadline?.format('YYYY-MM-DD'),
       warehouseReceiptDeadline: values.warehouseReceiptDeadline?.format('YYYY-MM-DD'),
       products: productItems.map((item) => ({
         productId: item.productId,
@@ -347,7 +343,7 @@ const DeliveryRecordsPage: React.FC = () => {
               size="small"
               danger
               icon={<DeleteOutlined />}
-              disabled={!['PREPARING', 'CANCELLED'].includes(record.status)}
+              disabled={!['PENDING'].includes(record.status)}
             >
               删除
             </Button>
@@ -500,12 +496,7 @@ const DeliveryRecordsPage: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="warehouseShippingDeadline" label="仓库发货截止日期">
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="warehouseReceiptDeadline" label="仓库收货截止日期">
+              <Form.Item name="warehouseReceiptDeadline" label="货代仓库截止收货时间">
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -533,7 +524,7 @@ const DeliveryRecordsPage: React.FC = () => {
 
           <div style={{ marginBottom: 16 }}>
             <Alert
-              message="发货记录：管理发货产品的详细信息，货代为可选字段，支持FBA发货编码管理"
+              message="发货记录：管理发货产品的详细信息，货代为可选字段，支持FBA货件编码管理"
               type="info"
               showIcon
             />
@@ -589,12 +580,7 @@ const DeliveryRecordsPage: React.FC = () => {
               <Descriptions.Item label="发货日期">
                 {dayjs(selectedRecord.date).format('YYYY-MM-DD')}
               </Descriptions.Item>
-              <Descriptions.Item label="仓库发货截止日期">
-                {selectedRecord.warehouseShippingDeadline
-                  ? dayjs(selectedRecord.warehouseShippingDeadline).format('YYYY-MM-DD')
-                  : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="仓库收货截止日期">
+              <Descriptions.Item label="货代仓库截止收货时间">
                 {selectedRecord.warehouseReceiptDeadline
                   ? dayjs(selectedRecord.warehouseReceiptDeadline).format('YYYY-MM-DD')
                   : '-'}

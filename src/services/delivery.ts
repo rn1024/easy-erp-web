@@ -2,30 +2,39 @@ import axios from './index';
 
 // 发货记录状态枚举
 export enum ShipmentRecordStatus {
-  PREPARING = 'PREPARING',
-  SHIPPED = 'SHIPPED',
-  IN_TRANSIT = 'IN_TRANSIT',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
+  PENDING = 'PENDING', // 待发货
+  SHIPPED = 'SHIPPED', // 已发货
+  IN_TRANSIT = 'IN_TRANSIT', // 在途
+  ARRIVED = 'ARRIVED', // 到港
+  DELIVERED = 'DELIVERED', // 交付
+  WAITING_RECEIVE = 'WAITING_RECEIVE', // 等待接收
+  RECEIVING = 'RECEIVING', // 正在接收
+  COMPLETED = 'COMPLETED', // 已完结
 }
 
 // 发货记录状态选项
 export const shipmentRecordStatusOptions = [
-  { label: '准备中', value: 'PREPARING' },
+  { label: '待发货', value: 'PENDING' },
   { label: '已发货', value: 'SHIPPED' },
-  { label: '运输中', value: 'IN_TRANSIT' },
-  { label: '已送达', value: 'DELIVERED' },
-  { label: '已取消', value: 'CANCELLED' },
+  { label: '在途', value: 'IN_TRANSIT' },
+  { label: '到港', value: 'ARRIVED' },
+  { label: '交付', value: 'DELIVERED' },
+  { label: '等待接收', value: 'WAITING_RECEIVE' },
+  { label: '正在接收', value: 'RECEIVING' },
+  { label: '已完结', value: 'COMPLETED' },
 ];
 
 // 获取发货记录状态标签
 export const getShipmentRecordStatusLabel = (status: ShipmentRecordStatus) => {
   const statusMap = {
-    PREPARING: { label: '准备中', color: 'blue' },
+    PENDING: { label: '待发货', color: 'blue' },
     SHIPPED: { label: '已发货', color: 'orange' },
-    IN_TRANSIT: { label: '运输中', color: 'purple' },
-    DELIVERED: { label: '已送达', color: 'green' },
-    CANCELLED: { label: '已取消', color: 'red' },
+    IN_TRANSIT: { label: '在途', color: 'purple' },
+    ARRIVED: { label: '到港', color: 'cyan' },
+    DELIVERED: { label: '交付', color: 'green' },
+    WAITING_RECEIVE: { label: '等待接收', color: 'yellow' },
+    RECEIVING: { label: '正在接收', color: 'processing' },
+    COMPLETED: { label: '已完结', color: 'success' },
   };
   return statusMap[status] || { label: '未知', color: 'default' };
 };
@@ -62,7 +71,6 @@ export interface ShipmentRecordInfo {
   country?: string;
   channel?: string;
   shippingChannel?: string;
-  warehouseShippingDeadline?: string;
   warehouseReceiptDeadline?: string;
   shippingDetails?: string;
   date: string;
@@ -89,7 +97,6 @@ export interface CreateShipmentRecordData {
   country?: string;
   channel?: string;
   shippingChannel?: string;
-  warehouseShippingDeadline?: string;
   warehouseReceiptDeadline?: string;
   shippingDetails?: string;
   date: string;
@@ -108,7 +115,6 @@ export interface UpdateShipmentRecordData {
   country?: string;
   channel?: string;
   shippingChannel?: string;
-  warehouseShippingDeadline?: string;
   warehouseReceiptDeadline?: string;
   shippingDetails?: string;
   date?: string;

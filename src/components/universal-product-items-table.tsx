@@ -431,7 +431,7 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
             },
           },
           {
-            title: 'FBA发货编码',
+            title: 'FBA货件编码',
             dataIndex: 'fbaShipmentCode',
             key: 'fbaShipmentCode',
             width: 150,
@@ -442,7 +442,7 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
                   <Input
                     value={value}
                     onChange={(e) => updateItem(record.key!, 'fbaShipmentCode', e.target.value)}
-                    placeholder="请输入FBA发货编码"
+                    placeholder="请输入FBA货件编码"
                     disabled={disabled}
                   />
                 );
