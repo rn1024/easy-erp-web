@@ -40,7 +40,7 @@ alwaysApply: true
 - **业务组件**:
   - [search-user.tsx](mdc:src/components/search-user.tsx) - 用户搜索
   - [search-form-select-operator.tsx](mdc:src/components/search-form-select-operator.tsx) - 操作员选择
-  - [upload-drawer.tsx](mdc:src/components/upload-drawer.tsx) - 文件上传抽屉
+
 - **UI组件**: [ui/](mdc:src/components/ui) - 通用UI组件
 - **表格单元格**: [table-cell/](mdc:src/components/table-cell) - 表格专用组件
 

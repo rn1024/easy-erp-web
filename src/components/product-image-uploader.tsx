@@ -204,7 +204,7 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
   const loadImages = async () => {
     try {
       const response = await getProductImagesApi(productId);
-      if (response.data.code === 200) {
+      if (response.data.code === 0 || response.data.code === 200) {
         triggerChange(response.data.data);
       }
     } catch (error) {
@@ -229,7 +229,10 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
       // 调用批量上传API
       const uploadResponse = await uploadBatchFiles([file], 'image');
 
-      if (uploadResponse.data.code === 0 && uploadResponse.data.data.length > 0) {
+      if (
+        (uploadResponse.data.code === 0 || uploadResponse.data.code === 200) &&
+        uploadResponse.data.data.length > 0
+      ) {
         const uploadedFile = uploadResponse.data.data[0];
 
         // 添加到产品图片
@@ -243,7 +246,7 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
 
         const response = await uploadProductImagesApi(productId, [imageData]);
 
-        if (response.data.code === 200) {
+        if (response.data.code === 0 || response.data.code === 200) {
           const newImages = [...images, ...response.data.data];
           triggerChange(newImages);
           onSuccess(response.data.data[0]);

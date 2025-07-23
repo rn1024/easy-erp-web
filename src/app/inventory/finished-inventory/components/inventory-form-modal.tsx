@@ -140,11 +140,11 @@ const InventoryFormModal: React.FC<Props> = ({
       setSubmittingTrue();
       try {
         const res = await formSubmit(entity, formData);
-        if (get(res, 'data.code') === 0) {
+        if (get(res, 'code') === 0 || get(res, 'code') === 200) {
           message.success(entity ? '更新成功' : '创建成功');
           closeModal(true);
         } else {
-          message.error(get(res, 'data.msg') || '操作失败');
+          message.error(get(res, 'msg') || '操作失败');
           setSubmittingFalse();
         }
       } catch (error: any) {

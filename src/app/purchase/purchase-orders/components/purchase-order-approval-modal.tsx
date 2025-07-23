@@ -74,7 +74,7 @@ const PurchaseOrderApprovalModal: React.FC<ApprovalModalProps> = ({ open, record
         entityId: orderId,
       });
 
-      if (response.data.code === 0) {
+      if (response.data.code === 0 || response.data.code === 200) {
         setApprovalHistory(response.data.data || []);
       } else {
         message.error(response.data.msg || '获取审批历史失败');
@@ -101,7 +101,7 @@ const PurchaseOrderApprovalModal: React.FC<ApprovalModalProps> = ({ open, record
     try {
       const response = await approvePurchaseOrderApi(record.id, values);
 
-      if (response.data.code === 0) {
+      if (response.data.code === 0 || response.data.code === 200) {
         message.success('审批成功');
         form.resetFields();
         onClose(true); // 刷新列表

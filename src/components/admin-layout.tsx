@@ -20,7 +20,7 @@ import { logout, me } from '@/services/auth';
 /**
  * Components
  */
-import ComponentChangePasswordModal from '@/components/changePasswordModal';
+import ComponentChangePasswordModal from '@/components/change-password-modal';
 import ComponentLanguage from '@/components/language';
 
 /**

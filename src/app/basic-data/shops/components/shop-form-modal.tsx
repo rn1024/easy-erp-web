@@ -45,7 +45,7 @@ const customUpload = async (file: File): Promise<string> => {
   try {
     const response = await uploadFile(file, 'avatar');
 
-    if (response.data.code === 0) {
+    if (response.data.code === 0 || response.data.code === 200) {
       return response.data.data.fileUrl;
     } else {
       throw new Error(response.data.msg || '上传失败');
@@ -194,11 +194,11 @@ const ShopFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
       setSubmittingTrue();
       try {
         const res = await formSubmit(entity, formData);
-        if (get(res, 'data.code') === 0) {
+        if (get(res, 'code') === 0 || get(res, 'code') === 200) {
           message.success(entity ? '店铺更新成功' : '店铺创建成功');
           closeModal(true);
         } else {
-          message.error(get(res, 'data.msg') || '操作失败');
+          message.error(get(res, 'msg') || '操作失败');
           setSubmittingFalse();
         }
       } catch (error: any) {

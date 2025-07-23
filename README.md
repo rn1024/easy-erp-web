@@ -38,7 +38,7 @@ nextjs-cms-template/
 │   │   ├── admin-layout.tsx      # 管理后台布局
 │   │   ├── permission.tsx        # 权限控制组件
 │   │   ├── search-user.tsx       # 用户搜索组件
-│   │   ├── upload-drawer.tsx     # 文件上传抽屉
+
 │   │   └── table-cell/           # 表格单元格组件
 │   ├── lib/                      # 核心库
 │   │   ├── auth.ts               # JWT 认证工具

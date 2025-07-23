@@ -434,7 +434,12 @@ const ProductManagement: React.FC = () => {
       <ProTable {...proTableProps} />
 
       {/* 产品表单弹窗 */}
-      <ProductFormModal open={drawerVisible} entity={editingProduct} closeModal={closeDrawer} />
+      <ProductFormModal
+        open={drawerVisible}
+        entity={editingProduct}
+        closeModal={closeDrawer}
+        categoriesList={categoriesData?.data?.data?.list || []}
+      />
 
       {/* 产品详情弹窗 */}
       <ProductDetailModal

@@ -71,11 +71,11 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
       };
 
       const res = await formSubmit(entity, submitData);
-      if (get(res, 'data.code') === 0) {
+      if (get(res, 'code') === 0 || get(res, 'code') === 200) {
         message.success(entity ? '更新产品成功' : '创建产品成功');
         closeModal(true);
       } else {
-        message.error(get(res, 'data.msg') || '操作失败');
+        message.error(get(res, 'msg') || '操作失败');
         setSubmittingFalse();
       }
     } catch (error: any) {

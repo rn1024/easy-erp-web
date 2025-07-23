@@ -87,12 +87,12 @@ const ComponentChangePasswordModal: React.FC<Props> = ({ open, closeModelForm })
           old_password: formData.old_password,
           new_password: formData.new_password,
         });
-        if (get(res, 'data.code') === 0) {
+        if (get(res, 'code') === 0 || get(res, 'code') === 200) {
           message.success(intl.formatMessage({ id: 'c.operationCompleted' }));
           store.clear();
           window.location.href = '/login';
         } else {
-          message.error(get(res, 'data.msg', 'Error'));
+          message.error(get(res, 'msg', 'Error'));
           setSubmittingFlase();
         }
       } catch {

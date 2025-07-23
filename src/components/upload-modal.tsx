@@ -36,7 +36,7 @@ const ComponentUploadModal: React.FC<Props> = ({ open, templateHref, closeModal,
       hideLoading?.();
       const response = info.file.response;
       const { success, total } = get(response, 'data.data', { success: 0, total: 0 });
-      if (response.data.code === 0) {
+      if (response.data.code === 0 || response.data.code === 200) {
         closeModal(true);
         if (success === total) {
           message.success(intl.formatMessage({ id: 'c.importSuccess' }, { total: success }));
