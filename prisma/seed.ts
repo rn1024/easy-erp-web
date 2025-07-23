@@ -746,9 +746,9 @@ async function main() {
       },
       {
         shopId: testShop.id,
-        type: 'SHIPPING',
+        type: 'PACKAGING',
         status: 'PENDING',
-        progress: null, // 发货任务不需要进度
+        progress: 60,
         operatorId: adminAccount.id,
       },
     ],

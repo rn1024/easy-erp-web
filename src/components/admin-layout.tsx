@@ -217,7 +217,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       routes: routes,
     },
     siderWidth: 240,
-    title: 'ERP Admin',
+    title: 'CMS Admin',
     actionsRender: () => [<ComponentLanguage key="language" />],
     menuFooterRender: (props) => `v${props?.collapsed ? '1.0' : '1.0.0'}`,
     menuDataRender: (menuData) => {

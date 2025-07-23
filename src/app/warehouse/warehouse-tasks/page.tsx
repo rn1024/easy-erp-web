@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRequest } from 'ahooks';
-import { Button, Form, Select, Space, Tag, Popconfirm, message, Flex } from 'antd';
+import { Button, Form, Select, Space, Tag, Progress, Popconfirm, message, Flex } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -11,61 +10,44 @@ import {
   SearchOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-
-/**
- * APIs
- */
+import { useRequest } from 'ahooks';
+import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import {
   getWarehouseTasksApi,
   createWarehouseTaskApi,
   updateWarehouseTaskApi,
   deleteWarehouseTaskApi,
+  type WarehouseTaskInfo,
+  type CreateWarehouseTaskData,
+  type UpdateWarehouseTaskData,
+  type WarehouseTaskQueryParams,
+  WarehouseTaskStatus,
   WarehouseTaskType,
   warehouseTaskStatusOptions,
+  warehouseTaskTypeOptions,
   getWarehouseTaskStatusLabel,
+  getWarehouseTaskTypeLabel,
 } from '@/services/warehouse';
 import { getShops } from '@/services/shops';
-import { saveProductItemsApi, ProductItemRelatedType } from '@/services/product-items';
-
-/**
- * Types
- */
-import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
-import type {
-  WarehouseTaskInfo,
-  CreateWarehouseTaskData,
-  UpdateWarehouseTaskData,
-  WarehouseTaskQueryParams,
-} from '@/services/warehouse';
+import {
+  saveProductItemsApi,
+  getProductItemsApi,
+  ProductItemRelatedType,
+} from '@/services/product-items';
 import type { UniversalProductItem } from '@/components/universal-product-items-table';
-
-/**
- * Components
- */
-import ShippingTaskFormModal from './components/shipping-task-form-modal';
+import WarehouseTaskFormModal from './components/warehouse-task-form-modal';
 
 const { Option } = Select;
 
-const ShippingTasksPage: React.FC = () => {
-  /**
-   * Hooks
-   */
+const WarehouseTasksPage: React.FC = () => {
   const [searchForm] = Form.useForm();
-
-  /**
-   * State
-   */
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<WarehouseTaskInfo | null>(null);
   const [searchParams, setSearchParams] = useState<WarehouseTaskQueryParams>({
     page: 1,
     pageSize: 10,
-    type: WarehouseTaskType.SHIPPING, // 固定为发货任务
   });
 
-  /**
-   * Requests
-   */
   const {
     data: tasksData,
     loading,
@@ -76,14 +58,14 @@ const ShippingTasksPage: React.FC = () => {
 
   const { data: shopsData } = useRequest(() => getShops({}));
 
-  /**
-   * Event Handlers
-   */
+  const shops = shopsData?.data?.data?.list || [];
+  const tasks = tasksData?.data?.list || [];
+  const total = tasksData?.data?.total || 0;
+
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
     setSearchParams({
       ...values,
-      type: WarehouseTaskType.SHIPPING, // 确保始终是发货任务
       page: 1,
       pageSize: searchParams.pageSize,
     });
@@ -94,7 +76,6 @@ const ShippingTasksPage: React.FC = () => {
     setSearchParams({
       page: 1,
       pageSize: 10,
-      type: WarehouseTaskType.SHIPPING,
     });
   };
 
@@ -110,19 +91,13 @@ const ShippingTasksPage: React.FC = () => {
     try {
       let taskId: string;
 
-      // 确保任务类型为发货
-      const taskData = {
-        ...data,
-        type: WarehouseTaskType.SHIPPING,
-      };
-
       if (editingTask) {
-        // 更新发货任务
-        await updateWarehouseTaskApi(editingTask.id, taskData as UpdateWarehouseTaskData);
+        // 更新仓库任务
+        await updateWarehouseTaskApi(editingTask.id, data as UpdateWarehouseTaskData);
         taskId = editingTask.id;
       } else {
-        // 创建发货任务
-        const response = await createWarehouseTaskApi(taskData as CreateWarehouseTaskData);
+        // 创建仓库任务
+        const response = await createWarehouseTaskApi(data as CreateWarehouseTaskData);
         taskId = response.data.id;
       }
 
@@ -149,16 +124,13 @@ const ShippingTasksPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteWarehouseTaskApi(id);
-      message.success('删除发货任务成功');
+      message.success('删除仓库任务成功');
       refresh();
     } catch (error: any) {
       message.error(error.response?.data?.message || '删除失败');
     }
   };
 
-  /**
-   * Table Columns
-   */
   const columns: ProColumns<WarehouseTaskInfo>[] = [
     {
       title: '任务ID',
@@ -170,6 +142,35 @@ const ShippingTasksPage: React.FC = () => {
       title: '店铺',
       dataIndex: ['shop'],
       render: (_, record) => record.shop?.nickname || '-',
+    },
+    {
+      title: '任务类型',
+      dataIndex: 'type',
+      render: (_, record) => {
+        const config = getWarehouseTaskTypeLabel(record.type);
+        return <Tag color={config.color}>{config.label}</Tag>;
+      },
+    },
+    {
+      title: '进度',
+      dataIndex: 'progress',
+      width: 120,
+      render: (_, record) => {
+        if (
+          record.type === 'PACKAGING' &&
+          record.progress !== null &&
+          record.progress !== undefined
+        ) {
+          return (
+            <Progress
+              percent={record.progress}
+              size="small"
+              status={record.progress === 100 ? 'success' : 'active'}
+            />
+          );
+        }
+        return '-';
+      },
     },
     {
       title: '状态',
@@ -203,7 +204,7 @@ const ShippingTasksPage: React.FC = () => {
             编辑
           </Button>
           <Popconfirm
-            title="确定要删除这个发货任务吗？"
+            title="确定要删除这个仓库任务吗？"
             description="删除后不可恢复"
             onConfirm={() => handleDelete(record.id)}
           >
@@ -222,29 +223,21 @@ const ShippingTasksPage: React.FC = () => {
     },
   ];
 
-  /**
-   * ProTableProps
-   */
   const proTableProps: ProTableProps<WarehouseTaskInfo, any> = {
     columns,
-    dataSource: tasksData?.data?.list || [],
+    dataSource: tasks,
     loading,
     rowKey: 'id',
     search: false,
     pagination: {
       current: Number(searchParams.page) || 1,
       pageSize: Number(searchParams.pageSize) || 20,
-      total: tasksData?.data?.total || 0,
+      total: total || 0,
       showSizeChanger: true,
       showQuickJumper: true,
       showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
       onChange: (page, pageSize) => {
-        setSearchParams({
-          ...searchParams,
-          page: page,
-          pageSize: pageSize || 20,
-          type: WarehouseTaskType.SHIPPING,
-        });
+        setSearchParams({ ...searchParams, page: page, pageSize: pageSize || 20 });
       },
     },
     options: {
@@ -252,7 +245,7 @@ const ShippingTasksPage: React.FC = () => {
     },
     toolBarRender: () => [
       <Button key="add" type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-        新增发货任务
+        新增任务
       </Button>,
       <Button key="refresh" icon={<ReloadOutlined />} onClick={refresh}>
         刷新
@@ -260,14 +253,8 @@ const ShippingTasksPage: React.FC = () => {
     ],
   };
 
-  /**
-   * Data Processing
-   */
-  const shops = shopsData?.data?.data?.list || [];
-
   return (
     <>
-      {/* 搜索区域 */}
       <ProCard className="mb-16">
         <Form form={searchForm} layout="inline">
           <Flex gap={16} wrap={true}>
@@ -289,6 +276,15 @@ const ShippingTasksPage: React.FC = () => {
                 ))}
               </Select>
             </Form.Item>
+            <Form.Item name="type" style={{ marginRight: 0 }}>
+              <Select placeholder="选择类型" style={{ width: 120 }} allowClear>
+                {warehouseTaskTypeOptions.map((option) => (
+                  <Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
             <Button
               type="primary"
               icon={<SearchOutlined />}
@@ -304,11 +300,9 @@ const ShippingTasksPage: React.FC = () => {
         </Form>
       </ProCard>
 
-      {/* 表格区域 */}
       <ProTable {...proTableProps} />
 
-      {/* 弹窗组件 */}
-      <ShippingTaskFormModal
+      <WarehouseTaskFormModal
         visible={isModalVisible}
         editingTask={editingTask}
         onCancel={() => {
@@ -326,4 +320,4 @@ const ShippingTasksPage: React.FC = () => {
   );
 };
 
-export default ShippingTasksPage;
+export default WarehouseTasksPage;

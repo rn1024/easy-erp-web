@@ -556,7 +556,6 @@ enum WarehouseTaskStatus {
 
 enum WarehouseTaskType {
   PACKAGING
-  SHIPPING
 }
 
 enum ShipmentRecordStatus {

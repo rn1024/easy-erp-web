@@ -58,7 +58,7 @@ const enUSMenu = {
     'Purchase-Management_Orders': 'Purchase Orders',
     'Warehouse-Management': 'Warehouse Management',
     'Warehouse-Management_Packaging-Tasks': 'Packaging Tasks',
-    'Warehouse-Management_Shipping-Tasks': 'Shipping Tasks',
+
     'Delivery-Management': 'Delivery Management',
     'Delivery-Management_Records': 'Delivery Records',
     'Financial-Management': 'Financial Management',

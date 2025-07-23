@@ -263,7 +263,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="urgent" label="紧急标记" valuePropName="checked">
+            <Form.Item name="urgent" label="是否紧急" valuePropName="checked">
               <Switch checkedChildren="紧急" unCheckedChildren="常规" />
             </Form.Item>
           </Col>

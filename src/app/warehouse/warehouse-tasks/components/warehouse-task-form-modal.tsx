@@ -35,7 +35,7 @@ import UniversalProductItemsTable, {
 
 const { Option } = Select;
 
-interface ShippingTaskFormModalProps {
+interface WarehouseTaskFormModalProps {
   visible: boolean;
   editingTask?: WarehouseTaskInfo | null;
   onCancel: () => void;
@@ -46,7 +46,7 @@ interface ShippingTaskFormModalProps {
   ) => Promise<void>;
 }
 
-const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
+const WarehouseTaskFormModal: React.FC<WarehouseTaskFormModalProps> = ({
   visible,
   editingTask,
   onCancel,
@@ -56,6 +56,9 @@ const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [productItems, setProductItems] = useState<UniversalProductItem[]>([]);
+  const [selectedTaskType, setSelectedTaskType] = useState<WarehouseTaskType | undefined>(
+    undefined
+  );
 
   // 获取店铺数据
   const { data: shopsData } = useRequest(() => getShops({}));
@@ -78,6 +81,14 @@ const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
   const resetForm = () => {
     form.resetFields();
     setProductItems([]);
+    setSelectedTaskType(undefined);
+  };
+
+  // 监听任务类型变化
+  const handleTaskTypeChange = (type: WarehouseTaskType) => {
+    setSelectedTaskType(type);
+    // 清空产品明细，让用户重新选择
+    setProductItems([]);
   };
 
   // 监听modal显示状态
@@ -87,7 +98,10 @@ const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
         // 编辑模式
         form.setFieldsValue({
           shopId: editingTask.shopId,
+          type: editingTask.type,
+          progress: editingTask.progress,
         });
+        setSelectedTaskType(editingTask.type);
 
         // 加载产品明细
         loadProductItems(editingTask.id);
@@ -109,7 +123,7 @@ const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
           key: item.id,
           productId: item.productId,
           quantity: item.quantity,
-          completedQuantity: undefined, // 发货任务不需要完成数量
+          completedQuantity: item.completedQuantity || undefined,
           remark: item.remark,
         }));
         setProductItems(items);
@@ -135,25 +149,25 @@ const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
         return;
       }
 
-      // 构造提交数据 - 固定为发货任务
+      // 构造提交数据
       if (editingTask) {
         // 更新模式
         const updateData: UpdateWarehouseTaskData = {
-          type: 'SHIPPING' as WarehouseTaskType,
-          progress: undefined, // 发货任务不需要进度
+          type: values.type,
+          progress: values.type === 'PACKAGING' ? values.progress : undefined,
         };
         await onSubmit(updateData, productItems);
       } else {
         // 创建模式
         const createData: CreateWarehouseTaskData = {
           shopId: values.shopId,
-          type: 'SHIPPING' as WarehouseTaskType,
-          progress: undefined, // 发货任务不需要进度
+          type: values.type,
+          progress: values.type === 'PACKAGING' ? values.progress || 0 : undefined,
         };
         await onSubmit(createData, productItems);
       }
 
-      message.success(editingTask ? '更新发货任务成功' : '创建发货任务成功');
+      message.success(editingTask ? '更新仓库任务成功' : '创建仓库任务成功');
       onSuccess();
     } catch (error: any) {
       console.error('提交失败:', error);
@@ -163,9 +177,14 @@ const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
     }
   };
 
+  // 获取组件模式
+  const getComponentMode = (): 'warehouse-packaging' => {
+    return 'warehouse-packaging';
+  };
+
   return (
     <Modal
-      title={editingTask ? '编辑发货任务' : '新建发货任务'}
+      title={editingTask ? '编辑仓库任务' : '新建仓库任务'}
       open={visible}
       onCancel={onCancel}
       onOk={handleSubmit}
@@ -175,7 +194,7 @@ const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
     >
       <Form form={form} layout="vertical" preserve={false}>
         <Row gutter={16}>
-          <Col span={24}>
+          <Col span={12}>
             <Form.Item
               label="店铺"
               name="shopId"
@@ -195,26 +214,73 @@ const ShippingTaskFormModal: React.FC<ShippingTaskFormModalProps> = ({
               </Select>
             </Form.Item>
           </Col>
+
+          <Col span={12}>
+            <Form.Item
+              label="任务类型"
+              name="type"
+              rules={[{ required: true, message: '请选择任务类型' }]}
+            >
+              <Select
+                placeholder="请选择任务类型"
+                onChange={handleTaskTypeChange}
+                disabled={!!editingTask} // 编辑时不可修改类型
+              >
+                <Option value="PACKAGING">包装任务</Option>
+              </Select>
+            </Form.Item>
+          </Col>
         </Row>
 
-        <div style={{ marginBottom: 16 }}>
-          <Alert
-            message="发货任务专注于基础产品信息管理，无需进度追踪。适用于产品出库、物流配送等发货流程管理。"
-            type="info"
-            showIcon
-          />
-        </div>
+        {selectedTaskType === 'PACKAGING' && (
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="当前进度 (%)"
+                name="progress"
+                rules={[
+                  { required: true, message: '请输入进度' },
+                  { type: 'number', min: 0, max: 100, message: '进度必须在0-100之间' },
+                ]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="请输入当前进度"
+                  min={0}
+                  max={100}
+                  precision={1}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
 
-        <UniversalProductItemsTable
-          mode="warehouse-shipping"
-          items={productItems}
-          onChange={setProductItems}
-          productsData={productsOptions}
-          disabled={false}
-        />
+        {selectedTaskType && (
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <Alert
+                message={
+                  selectedTaskType === 'PACKAGING'
+                    ? '包装任务：支持进度追踪，可记录已完成数量和完成率'
+                    : '发货任务：基础产品信息管理，无需进度追踪'
+                }
+                type="info"
+                showIcon
+              />
+            </div>
+
+            <UniversalProductItemsTable
+              mode={getComponentMode()}
+              items={productItems}
+              onChange={setProductItems}
+              productsData={productsOptions}
+              disabled={false}
+            />
+          </>
+        )}
       </Form>
     </Modal>
   );
 };
 
-export default ShippingTaskFormModal;
+export default WarehouseTaskFormModal;

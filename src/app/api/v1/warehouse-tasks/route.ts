@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证任务类型
-    if (!['PACKAGING', 'SHIPPING'].includes(type)) {
+    if (!['PACKAGING'].includes(type)) {
       return NextResponse.json(
         {
           code: 400,

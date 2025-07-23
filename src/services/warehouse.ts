@@ -11,7 +11,6 @@ export enum WarehouseTaskStatus {
 // 仓库任务类型枚举
 export enum WarehouseTaskType {
   PACKAGING = 'PACKAGING',
-  SHIPPING = 'SHIPPING',
 }
 
 // 仓库任务状态选项
@@ -25,7 +24,6 @@ export const warehouseTaskStatusOptions = [
 // 仓库任务类型选项
 export const warehouseTaskTypeOptions = [
   { label: '包装', value: WarehouseTaskType.PACKAGING, color: 'purple' },
-  { label: '发货', value: WarehouseTaskType.SHIPPING, color: 'cyan' },
 ];
 
 // 获取状态标签配置
