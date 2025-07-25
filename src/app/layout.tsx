@@ -3,8 +3,8 @@ import '@/globals.css';
 import ClientProvider from '@/components/client-provider';
 
 export const metadata: Metadata = {
-  title: 'CMS Admin',
-  description: 'CMS Admin Management System',
+  title: 'ERP Admin',
+  description: 'ERP Admin Management System',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

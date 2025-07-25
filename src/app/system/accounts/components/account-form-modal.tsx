@@ -61,7 +61,7 @@ const AccountFormModal: React.FC<Props> = ({ open, entity, closeModal, roleOptio
       setSubmittingTrue();
 
       const res = await formSubmit(entity, formData);
-      if (get(res, 'code') === 0 || get(res, 'code') === 200) {
+      if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
         message.success(entity ? '更新成功' : '创建成功');
         closeModal(true);
       } else {

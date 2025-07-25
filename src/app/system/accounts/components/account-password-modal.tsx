@@ -58,7 +58,7 @@ const AccountPasswordModal: React.FC<Props> = ({ open, entity, closeModal }) => 
       setSubmittingTrue();
 
       const res = await formSubmit(entity, formData);
-      if (get(res, 'code') === 0 || get(res, 'code') === 200) {
+      if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
         message.success('密码修改成功');
         closeModal(true);
       } else {

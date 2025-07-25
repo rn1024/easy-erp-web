@@ -127,7 +127,7 @@ const SupplierFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
         };
 
         const res = await formSubmit(entity, submitData);
-        if (get(res, 'code') === 0 || get(res, 'code') === 200) {
+        if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
           message.success(entity ? '更新供应商成功' : '创建供应商成功');
           closeModal(true);
         } else {
