@@ -214,6 +214,7 @@ model ProductInfo {
   shopId                 String
   categoryId             String
   code                   String?
+  name                   String?                 // 新增产品名称字段
   specification          String?
   color                  String?
   setQuantity            Int                     @default(1)

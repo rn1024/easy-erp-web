@@ -265,6 +265,17 @@ const ProductManagement: React.FC = () => {
       ),
     },
     {
+      title: '产品名称',
+      dataIndex: 'name',
+      width: 150,
+      ellipsis: true,
+      render: (_, record: ProductInfo) => (
+        <Tooltip title={record.name}>
+          <span>{record.name || '-'}</span>
+        </Tooltip>
+      ),
+    },
+    {
       title: 'SKU',
       dataIndex: 'sku',
       width: 120,

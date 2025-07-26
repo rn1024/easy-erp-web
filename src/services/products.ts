@@ -54,6 +54,7 @@ export interface ProductInfo {
   shopId: string;
   categoryId: string;
   code?: string;
+  name?: string;
   specification?: string;
   color?: string;
   setQuantity: number;
@@ -106,6 +107,7 @@ export interface ProductFormData {
   shopId: string;
   categoryId: string;
   code?: string;
+  name?: string;
   specification?: string;
   color?: string;
   setQuantity?: number;

@@ -186,18 +186,23 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="sku" label="SKU">
-                <Input placeholder="SKU" />
+              <Form.Item name="name" label="产品名称">
+                <Input placeholder="产品名称" />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="asin" label="ASIN">
-                <Input placeholder="Amazon ASIN" maxLength={20} />
+              <Form.Item name="sku" label="SKU">
+                <Input placeholder="SKU" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="asin" label="ASIN">
+                <Input placeholder="Amazon ASIN" maxLength={20} />
+              </Form.Item>
+            </Col>
             <Col span={8}>
               <Form.Item name="specification" label="规格">
                 <Input placeholder="规格" />
@@ -208,6 +213,9 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
                 <Input placeholder="颜色" />
               </Form.Item>
             </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="setQuantity" label="套装数量">
                 <InputNumber min={1} placeholder="套装数量" style={{ width: '100%' }} />
