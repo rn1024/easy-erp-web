@@ -16,11 +16,11 @@ import {
 } from 'antd';
 import { useRequest } from 'ahooks';
 import type {
-  WarehouseTaskInfo,
-  CreateWarehouseTaskData,
-  UpdateWarehouseTaskData,
-  WarehouseTaskType,
-} from '@/services/warehouse';
+  PackagingTaskInfo,
+  CreatePackagingTaskData,
+  UpdatePackagingTaskData,
+  PackagingTaskType,
+} from '@/services/packaging';
 import { getShops } from '@/services/shops';
 import { getProductsApi } from '@/services/products';
 import {
@@ -37,11 +37,11 @@ const { Option } = Select;
 
 interface PackagingTaskFormModalProps {
   visible: boolean;
-  editingTask?: WarehouseTaskInfo | null;
+  editingTask?: PackagingTaskInfo | null;
   onCancel: () => void;
   onSuccess: () => void;
   onSubmit: (
-    data: CreateWarehouseTaskData | UpdateWarehouseTaskData,
+    data: CreatePackagingTaskData | UpdatePackagingTaskData,
     items: UniversalProductItem[]
   ) => Promise<void>;
 }
@@ -106,7 +106,7 @@ const PackagingTaskFormModal: React.FC<PackagingTaskFormModalProps> = ({
   // 加载产品明细
   const loadProductItems = async (taskId: string) => {
     try {
-      const response = await getProductItemsApi(ProductItemRelatedType.WAREHOUSE_TASK, taskId);
+      const response = await getProductItemsApi(ProductItemRelatedType.PACKAGING_TASK, taskId);
       if (response?.data) {
         const items: UniversalProductItem[] = response.data.map((item: ProductItemInfo) => ({
           key: item.id,
@@ -141,16 +141,16 @@ const PackagingTaskFormModal: React.FC<PackagingTaskFormModalProps> = ({
       // 构造提交数据 - 固定为包装任务
       if (editingTask) {
         // 更新模式
-        const updateData: UpdateWarehouseTaskData = {
-          type: 'PACKAGING' as WarehouseTaskType,
+        const updateData: UpdatePackagingTaskData = {
+          type: 'PACKAGING' as PackagingTaskType,
           progress: values.progress,
         };
         await onSubmit(updateData, productItems);
       } else {
         // 创建模式
-        const createData: CreateWarehouseTaskData = {
+        const createData: CreatePackagingTaskData = {
           shopId: values.shopId,
-          type: 'PACKAGING' as WarehouseTaskType,
+          type: 'PACKAGING' as PackagingTaskType,
           progress: values.progress || 0,
         };
         await onSubmit(createData, productItems);

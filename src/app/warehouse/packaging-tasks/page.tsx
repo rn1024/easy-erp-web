@@ -16,14 +16,14 @@ import {
  * APIs
  */
 import {
-  getWarehouseTasksApi,
-  createWarehouseTaskApi,
-  updateWarehouseTaskApi,
-  deleteWarehouseTaskApi,
-  WarehouseTaskType,
-  warehouseTaskStatusOptions,
-  getWarehouseTaskStatusLabel,
-} from '@/services/warehouse';
+  getPackagingTasksApi,
+  createPackagingTaskApi,
+  updatePackagingTaskApi,
+  deletePackagingTaskApi,
+  PackagingTaskType,
+  packagingTaskStatusOptions,
+  getPackagingTaskStatusLabel,
+} from '@/services/packaging';
 import { getShops } from '@/services/shops';
 import { saveProductItemsApi, ProductItemRelatedType } from '@/services/product-items';
 
@@ -32,11 +32,11 @@ import { saveProductItemsApi, ProductItemRelatedType } from '@/services/product-
  */
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
 import type {
-  WarehouseTaskInfo,
-  CreateWarehouseTaskData,
-  UpdateWarehouseTaskData,
-  WarehouseTaskQueryParams,
-} from '@/services/warehouse';
+  PackagingTaskInfo,
+  CreatePackagingTaskData,
+  UpdatePackagingTaskData,
+  PackagingTaskQueryParams,
+} from '@/services/packaging';
 import type { UniversalProductItem } from '@/components/universal-product-items-table';
 
 /**
@@ -56,11 +56,11 @@ const PackagingTasksPage: React.FC = () => {
    * State
    */
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingTask, setEditingTask] = useState<WarehouseTaskInfo | null>(null);
-  const [searchParams, setSearchParams] = useState<WarehouseTaskQueryParams>({
+  const [editingTask, setEditingTask] = useState<PackagingTaskInfo | null>(null);
+  const [searchParams, setSearchParams] = useState<PackagingTaskQueryParams>({
     page: 1,
     pageSize: 10,
-    type: WarehouseTaskType.PACKAGING, // 固定为包装任务
+    type: PackagingTaskType.PACKAGING, // 固定为包装任务
   });
 
   /**
@@ -70,7 +70,7 @@ const PackagingTasksPage: React.FC = () => {
     data: tasksData,
     loading,
     refresh,
-  } = useRequest(() => getWarehouseTasksApi(searchParams), {
+  } = useRequest(() => getPackagingTasksApi(searchParams), {
     refreshDeps: [searchParams],
   });
 
@@ -83,7 +83,7 @@ const PackagingTasksPage: React.FC = () => {
     const values = searchForm.getFieldsValue();
     setSearchParams({
       ...values,
-      type: WarehouseTaskType.PACKAGING, // 确保始终是包装任务
+      type: PackagingTaskType.PACKAGING, // 确保始终是包装任务
       page: 1,
       pageSize: searchParams.pageSize,
     });
@@ -94,17 +94,17 @@ const PackagingTasksPage: React.FC = () => {
     setSearchParams({
       page: 1,
       pageSize: 10,
-      type: WarehouseTaskType.PACKAGING,
+      type: PackagingTaskType.PACKAGING,
     });
   };
 
-  const showModal = (task?: WarehouseTaskInfo) => {
+  const showModal = (task?: PackagingTaskInfo) => {
     setEditingTask(task || null);
     setIsModalVisible(true);
   };
 
   const handleSubmit = async (
-    data: CreateWarehouseTaskData | UpdateWarehouseTaskData,
+    data: CreatePackagingTaskData | UpdatePackagingTaskData,
     productItems: UniversalProductItem[]
   ) => {
     try {
@@ -113,30 +113,30 @@ const PackagingTasksPage: React.FC = () => {
       // 确保任务类型为包装
       const taskData = {
         ...data,
-        type: WarehouseTaskType.PACKAGING,
+        type: PackagingTaskType.PACKAGING,
       };
 
       if (editingTask) {
         // 更新包装任务
-        await updateWarehouseTaskApi(editingTask.id, taskData as UpdateWarehouseTaskData);
+        await updatePackagingTaskApi(editingTask.id, taskData as UpdatePackagingTaskData);
         taskId = editingTask.id;
       } else {
         // 创建包装任务
-        const response = await createWarehouseTaskApi(taskData as CreateWarehouseTaskData);
+        const response = await createPackagingTaskApi(taskData as CreatePackagingTaskData);
         taskId = response.data.id;
       }
 
       // 保存产品明细
-      await saveProductItemsApi({
-        relatedType: ProductItemRelatedType.WAREHOUSE_TASK,
-        relatedId: taskId,
-        items: productItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          completedQuantity: item.completedQuantity,
-          remark: item.remark,
-        })),
-      });
+        await saveProductItemsApi({
+          relatedType: ProductItemRelatedType.PACKAGING_TASK,
+          relatedId: taskId,
+          items: productItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            completedQuantity: item.completedQuantity,
+            remark: item.remark,
+          })),
+        });
 
       setIsModalVisible(false);
       setEditingTask(null);
@@ -148,7 +148,7 @@ const PackagingTasksPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteWarehouseTaskApi(id);
+      await deletePackagingTaskApi(id);
       message.success('删除包装任务成功');
       refresh();
     } catch (error: any) {
@@ -159,7 +159,7 @@ const PackagingTasksPage: React.FC = () => {
   /**
    * Table Columns
    */
-  const columns: ProColumns<WarehouseTaskInfo>[] = [
+  const columns: ProColumns<PackagingTaskInfo>[] = [
     {
       title: '任务ID',
       dataIndex: 'id',
@@ -193,7 +193,7 @@ const PackagingTasksPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       render: (_, record) => {
-        const config = getWarehouseTaskStatusLabel(record.status);
+        const config = getPackagingTaskStatusLabel(record.status);
         return <Tag color={config.color}>{config.label}</Tag>;
       },
     },
@@ -243,7 +243,7 @@ const PackagingTasksPage: React.FC = () => {
   /**
    * ProTableProps
    */
-  const proTableProps: ProTableProps<WarehouseTaskInfo, any> = {
+  const proTableProps: ProTableProps<PackagingTaskInfo, any> = {
     columns,
     dataSource: tasksData?.data?.list || [],
     loading,
@@ -261,7 +261,7 @@ const PackagingTasksPage: React.FC = () => {
           ...searchParams,
           page: page,
           pageSize: pageSize || 20,
-          type: WarehouseTaskType.PACKAGING,
+          type: PackagingTaskType.PACKAGING,
         });
       },
     },
@@ -300,7 +300,7 @@ const PackagingTasksPage: React.FC = () => {
             </Form.Item>
             <Form.Item name="status" style={{ marginRight: 0 }}>
               <Select placeholder="选择状态" style={{ width: 120 }} allowClear>
-                {warehouseTaskStatusOptions.map((option) => (
+                {packagingTaskStatusOptions.map((option) => (
                   <Option key={option.value} value={option.value}>
                     {option.label}
                   </Option>

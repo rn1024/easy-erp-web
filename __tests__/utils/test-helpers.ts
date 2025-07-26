@@ -175,18 +175,7 @@ export class TestDataFactory {
     };
   }
 
-  static warehouseTask(overrides = {}) {
-    return {
-      type: 'PICK',
-      description: '测试仓库任务',
-      priority: 'MEDIUM',
-      status: 'PENDING',
-      assignedUserId: 1,
-      createdById: 1,
-      dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // 明天
-      ...overrides,
-    };
-  }
+  // warehouseTask 已被移除，包装任务现在作为独立功能存在
 
   static financialReport(overrides = {}) {
     return {
@@ -292,13 +281,7 @@ export const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
-  warehouseTask: {
-    findUnique: jest.fn(),
-    findMany: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  },
+  // warehouseTask mock 已被移除
   financialReport: {
     findUnique: jest.fn(),
     findMany: jest.fn(),

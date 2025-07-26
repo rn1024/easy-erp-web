@@ -25,7 +25,7 @@ model Account {
   operatedShipments      ShipmentRecord[] @relation("ShipmentOperator")
   operatedShops          Shop[]           @relation("ShopOperator")
   operatedSuppliers      Supplier[]       @relation("SupplierOperator")
-  operatedWarehouseTasks WarehouseTask[]  @relation("WarehouseTaskOperator")
+
 
   @@map("accounts")
 }
@@ -145,7 +145,7 @@ model Shop {
   shipmentRecords   ShipmentRecord[]
   operator          Account             @relation("ShopOperator", fields: [operatorId], references: [id])
   spareInventory    SpareInventory[]
-  warehouseTasks    WarehouseTask[]
+
 
   @@index([operatorId], map: "shops_operatorId_fkey")
   @@map("shops")
@@ -371,23 +371,7 @@ model FinancialReport {
   @@map("financial_reports")
 }
 
-model WarehouseTask {
-  id         String              @id @default(cuid())
-  shopId     String
-  progress   Decimal?            @default(0.00) @db.Decimal(5, 2)
-  status     WarehouseTaskStatus @default(PENDING)
-  type       WarehouseTaskType
-  operatorId String
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-  operator   Account             @relation("WarehouseTaskOperator", fields: [operatorId], references: [id])
-  shop       Shop                @relation(fields: [shopId], references: [id])
 
-  @@index([shopId, status])
-  @@index([type, status])
-  @@index([operatorId], map: "warehouse_tasks_operatorId_fkey")
-  @@map("warehouse_tasks")
-}
 
 model ShipmentRecord {
   id                        String                  @id @default(cuid())
@@ -548,16 +532,7 @@ enum PurchaseOrderStatus {
   CANCELLED
 }
 
-enum WarehouseTaskStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
 
-enum WarehouseTaskType {
-  PACKAGING
-}
 
 enum ShipmentRecordStatus {
   PREPARING

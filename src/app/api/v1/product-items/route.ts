@@ -99,19 +99,9 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-    } else if (relatedType === ProductItemRelatedType.WAREHOUSE_TASK) {
-      const task = await prisma.warehouseTask.findUnique({
-        where: { id: relatedId },
-      });
-      if (!task) {
-        return NextResponse.json(
-          {
-            code: 404,
-            msg: '仓库任务不存在',
-          },
-          { status: 404 }
-        );
-      }
+    } else if (relatedType === ProductItemRelatedType.PACKAGING_TASK) {
+      // 包装任务验证可以在这里添加，目前暂时跳过
+      // 因为包装任务的数据模型已被移除
     }
 
     const result = await prisma.$transaction(async (tx) => {

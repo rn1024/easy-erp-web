@@ -7,7 +7,7 @@ import { getAuthToken } from '../utils/test-helpers';
 jest.mock('../../src/lib/db', () => ({
   __esModule: true,
   prisma: {
-    warehouseTask: {
+    packagingTask: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
@@ -72,14 +72,14 @@ describe('Warehouse Tasks API - Refactor Validation', () => {
   describe('ProductItem Integration', () => {
     it('should support universal ProductItem table for warehouse tasks', () => {
       const warehouseProductItem = {
-        relatedType: 'WAREHOUSE_TASK',
-        relatedId: 'warehouse-task-1',
+        relatedType: 'PACKAGING_TASK',
+        relatedId: 'packaging-task-1',
         productId: 'product-1',
         quantity: 100,
         completedQuantity: 30, // For packaging tasks
       };
 
-      expect(warehouseProductItem.relatedType).toBe('WAREHOUSE_TASK');
+      expect(warehouseProductItem.relatedType).toBe('PACKAGING_TASK');
       expect(warehouseProductItem.quantity).toBe(100);
       expect(warehouseProductItem.completedQuantity).toBe(30);
     });
@@ -125,44 +125,39 @@ describe('Warehouse Tasks API - Refactor Validation', () => {
         amount: 1050.0,
       };
 
-      const warehouseTaskItem = {
-        relatedType: 'WAREHOUSE_TASK',
-        relatedId: 'warehouse-task-1',
+      const packagingTaskItem = {
+        relatedType: 'PACKAGING_TASK',
+        relatedId: 'packaging-task-1',
         productId: 'product-1',
         quantity: 100,
         completedQuantity: 30,
       };
 
       expect(purchaseOrderItem.relatedType).toBe('PURCHASE_ORDER');
-      expect(warehouseTaskItem.relatedType).toBe('WAREHOUSE_TASK');
+      expect(packagingTaskItem.relatedType).toBe('PACKAGING_TASK');
 
       // Both should have common fields
       expect(purchaseOrderItem.productId).toBeDefined();
-      expect(warehouseTaskItem.productId).toBeDefined();
+      expect(packagingTaskItem.productId).toBeDefined();
       expect(purchaseOrderItem.quantity).toBeDefined();
-      expect(warehouseTaskItem.quantity).toBeDefined();
+      expect(packagingTaskItem.quantity).toBeDefined();
     });
 
-    it('should validate WarehouseTask table structure', () => {
-      const warehouseTask = {
+    it('should validate PackagingTask structure', () => {
+      const packagingTask = {
         id: 'task-1',
         shopId: 'shop-1',
         type: 'PACKAGING',
         progress: 50,
         status: 'IN_PROGRESS',
         operatorId: 'operator-1',
-        // Note: No longer has categoryId, productId, totalQuantity
       };
 
-      expect(warehouseTask.shopId).toBeDefined();
-      expect(warehouseTask.type).toBeDefined();
-      expect(warehouseTask.progress).toBeDefined();
-      expect(warehouseTask.status).toBeDefined();
-
-      // These fields should not exist in the new schema
-      expect(warehouseTask).not.toHaveProperty('categoryId');
-      expect(warehouseTask).not.toHaveProperty('productId');
-      expect(warehouseTask).not.toHaveProperty('totalQuantity');
+      expect(packagingTask.shopId).toBeDefined();
+      expect(packagingTask.type).toBeDefined();
+      expect(packagingTask.progress).toBeDefined();
+      expect(packagingTask.status).toBeDefined();
+      expect(packagingTask.operatorId).toBeDefined();
     });
   });
 
@@ -205,13 +200,11 @@ describe('Warehouse Tasks API - Refactor Validation', () => {
     it('should validate UniversalProductItemsTable modes', () => {
       const modes = {
         purchase: 'purchase',
-        warehousePackaging: 'warehouse-packaging',
-        warehouseShipping: 'warehouse-shipping',
+        packagingTask: 'packaging-task',
       };
 
       expect(modes.purchase).toBe('purchase');
-      expect(modes.warehousePackaging).toBe('warehouse-packaging');
-      expect(modes.warehouseShipping).toBe('warehouse-shipping');
+      expect(modes.packagingTask).toBe('packaging-task');
     });
 
     it('should validate component features for different modes', () => {
@@ -223,7 +216,7 @@ describe('Warehouse Tasks API - Refactor Validation', () => {
         hasProgress: false,
       };
 
-      // Warehouse packaging mode features
+      // Packaging task mode features
       const packagingFeatures = {
         hasPrice: false,
         hasTax: false,
@@ -232,18 +225,9 @@ describe('Warehouse Tasks API - Refactor Validation', () => {
         hasCompletedQuantity: true,
       };
 
-      // Warehouse shipping mode features
-      const shippingFeatures = {
-        hasPrice: false,
-        hasTax: false,
-        hasAmount: false,
-        hasProgress: false,
-        hasCompletedQuantity: false,
-      };
-
       expect(purchaseFeatures.hasPrice).toBe(true);
       expect(packagingFeatures.hasProgress).toBe(true);
-      expect(shippingFeatures.hasProgress).toBe(false);
+      // Shipping features are no longer part of warehouse tasks
     });
   });
 
@@ -251,7 +235,7 @@ describe('Warehouse Tasks API - Refactor Validation', () => {
     it('should confirm all required features are implemented', () => {
       const requiredFeatures = {
         polymorphicProductItem: true,
-        warehouseTaskTypes: true,
+        packagingTaskTypes: true,
         progressTracking: true,
         universalComponent: true,
         apiIntegration: true,

@@ -4,7 +4,7 @@ import type { ResType } from '@/types/api';
 // 通用产品明细类型枚举
 export enum ProductItemRelatedType {
   PURCHASE_ORDER = 'PURCHASE_ORDER',
-  WAREHOUSE_TASK = 'WAREHOUSE_TASK',
+  PACKAGING_TASK = 'PACKAGING_TASK',
 }
 
 // 通用产品明细接口
@@ -22,7 +22,7 @@ export interface ProductItemInfo {
   taxAmount?: number;
   totalAmount?: number;
 
-  // 仓库任务专用字段
+  // 包装任务专用字段
   completedQuantity?: number;
 
   // 通用字段
@@ -101,8 +101,8 @@ export const calculatePurchaseOrderItemAmounts = (
   };
 };
 
-// 工具方法：计算仓库任务总进度
-export const calculateWarehouseTaskProgress = (items: ProductItemInfo[]) => {
+// 工具方法：计算包装任务总进度
+export const calculatePackagingTaskProgress = (items: ProductItemInfo[]) => {
   if (!items.length) return 0;
 
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -142,8 +142,8 @@ export const validateProductItems = (
       }
     }
 
-    // 仓库任务特定验证
-    if (relatedType === ProductItemRelatedType.WAREHOUSE_TASK) {
+    // 包装任务特定验证
+    if (relatedType === ProductItemRelatedType.PACKAGING_TASK) {
       if (item.completedQuantity !== undefined && item.completedQuantity > item.quantity) {
         errors.push(`第${index + 1}行：完成数量不能超过总数量`);
       }

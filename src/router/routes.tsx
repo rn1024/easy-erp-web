@@ -104,12 +104,6 @@ const routes: MenuDataItem[] = [
         path: '/warehouse/packaging-tasks',
         key: '/warehouse/packaging-tasks',
       },
-      {
-        icon: <InboxOutlined />,
-        name: 'Warehouse-Management_Warehouse-Tasks',
-        path: '/warehouse/warehouse-tasks',
-        key: '/warehouse/warehouse-tasks',
-      },
     ],
   },
 

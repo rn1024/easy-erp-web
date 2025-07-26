@@ -734,70 +734,7 @@ async function main() {
   });
   console.log('✓ 创建采购订单产品明细');
 
-  // 创建测试仓库任务
-  const warehouseTasks = await prisma.warehouseTask.createMany({
-    data: [
-      {
-        shopId: testShop.id,
-        type: 'PACKAGING',
-        status: 'IN_PROGRESS',
-        progress: 65.0,
-        operatorId: adminAccount.id,
-      },
-      {
-        shopId: testShop.id,
-        type: 'PACKAGING',
-        status: 'PENDING',
-        progress: 60,
-        operatorId: adminAccount.id,
-      },
-    ],
-  });
-  console.log('✓ 创建测试仓库任务');
-
-  // 获取创建的仓库任务
-  const createdTasks = await prisma.warehouseTask.findMany({
-    where: {
-      operatorId: adminAccount.id,
-    },
-    orderBy: {
-      createdAt: 'asc',
-    },
-  });
-
-  // 为仓库任务创建产品明细
-  await prisma.productItem.createMany({
-    data: [
-      // 包装任务明细
-      {
-        relatedType: 'WAREHOUSE_TASK',
-        relatedId: createdTasks[0].id,
-        productId: testProducts[0].id, // 手机保护壳
-        quantity: 50,
-        completedQuantity: 35,
-        remark: '包装进行中',
-      },
-      {
-        relatedType: 'WAREHOUSE_TASK',
-        relatedId: createdTasks[0].id,
-        productId: testProducts[1].id, // 数据线
-        quantity: 30,
-        completedQuantity: 15,
-        remark: '包装进行中',
-      },
-
-      // 发货任务明细
-      {
-        relatedType: 'WAREHOUSE_TASK',
-        relatedId: createdTasks[1].id,
-        productId: testProducts[2].id, // 无线充电器
-        quantity: 20,
-        completedQuantity: null, // 发货任务不需要完成数量
-        remark: '待发货',
-      },
-    ],
-  });
-  console.log('✓ 创建仓库任务产品明细');
+  // 注意：仓库任务功能已被移除，包装任务现在作为独立功能存在
 
   // 创建测试发货记录
   const testShipmentRecords = await prisma.shipmentRecord.createMany({

@@ -9,7 +9,7 @@ import { GET as suppliersHandler } from '@/app/api/v1/suppliers/route';
 import { GET as productsHandler } from '@/app/api/v1/products/route';
 import { GET as finishedInventoryHandler } from '@/app/api/v1/finished-inventory/route';
 import { GET as purchaseOrdersHandler } from '@/app/api/v1/purchase-orders/route';
-import { GET as warehouseTasksHandler } from '@/app/api/v1/warehouse-tasks/route';
+// warehouseTasksHandler 已被移除
 import { GET as deliveryRecordsHandler } from '@/app/api/v1/delivery-records/route';
 import { GET as logsHandler } from '@/app/api/v1/logs/route';
 import { getAuthToken } from '../utils/test-helpers';
@@ -99,14 +99,7 @@ jest.mock('../../src/lib/db', () => ({
       delete: jest.fn(),
       count: jest.fn(),
     },
-    warehouseTask: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      count: jest.fn(),
-    },
+    // warehouseTask mock 已被移除
     deliveryRecord: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
@@ -201,7 +194,7 @@ describe('API 集成测试', () => {
     mockPrisma.productInfo.count.mockResolvedValue(0);
     mockPrisma.finishedInventory.count.mockResolvedValue(0);
     mockPrisma.purchaseOrder.count.mockResolvedValue(0);
-    mockPrisma.warehouseTask.count.mockResolvedValue(0);
+    // warehouseTask count mock 已被移除
     mockPrisma.shipmentRecord.count.mockResolvedValue(0);
     mockPrisma.systemLog.count.mockResolvedValue(0);
     mockPrisma.log.count.mockResolvedValue(0);
@@ -361,22 +354,7 @@ describe('API 集成测试', () => {
       expect(data.code).toBe(0);
     });
 
-    it('应该获取仓库任务列表', async () => {
-      mockPrisma.warehouseTask.findMany.mockResolvedValue([]);
-
-      const token = getAuthToken('admin');
-      const req = new NextRequest('http://localhost:3000/api/v1/warehouse-tasks', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const response = await warehouseTasksHandler(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-    });
+    // 仓库任务测试已被移除，包装任务现在作为独立功能存在
 
     it('应该获取发货记录列表', async () => {
       mockPrisma.shipmentRecord.findMany.mockResolvedValue([]);
