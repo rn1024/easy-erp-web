@@ -309,6 +309,18 @@ const ProductManagement: React.FC = () => {
       ),
     },
     {
+      title: '重量(g)',
+      dataIndex: 'weight',
+      width: 80,
+      render: (_, record: ProductInfo) => record.weight ? `${record.weight}g` : '-',
+    },
+    {
+      title: '包装类型',
+      dataIndex: 'packageType',
+      width: 100,
+      render: (_, record: ProductInfo) => record.packageType || '-',
+    },
+    {
       title: '分类',
       dataIndex: 'category',
       width: 100,

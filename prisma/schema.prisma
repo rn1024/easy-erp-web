@@ -231,6 +231,14 @@ model ProductInfo {
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   asin                   String?
+  // 新增包装相关字段
+  packageType            String?                 // 包装类型
+  packageOuterSize       String?                 // 包装外尺寸
+  packageInnerSize       String?                 // 包装内尺寸
+  packageWeight          String?                 // 包装重量
+  outerBoxSize           String?                 // 外箱尺寸/装箱数
+  // 新增标签文件字段
+  labelFileUrl           String?                 // 产品标签PDF文件URL
   finishedInventory      FinishedInventory[]
   images                 ProductImage[]
   category               ProductCategory         @relation(fields: [categoryId], references: [id])
@@ -240,6 +248,7 @@ model ProductInfo {
   shipmentProductRecords ShipmentProductRecord[]
   spareInventory         SpareInventory[]
   supplyRecordItems      SupplyRecordItem[]
+  entityResources        EntityResource[]        // 关联EntityResource
 
   @@index([shopId])
   @@index([categoryId])
@@ -540,4 +549,18 @@ enum ShipmentRecordStatus {
   IN_TRANSIT
   DELIVERED
   CANCELLED
+}
+
+// 通用资源关联表
+model EntityResource {
+  id         String      @id @default(cuid())
+  entityType String      // 实体类型，如 "PRODUCT_INFO"
+  entityId   String      // 实体ID
+  resourceUrl String     // 资源文件URL
+  fileName   String?     // 原始文件名
+  createdAt  DateTime    @default(now())
+  productInfo ProductInfo? @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@map("entity_resources")
 }

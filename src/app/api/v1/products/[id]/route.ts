@@ -44,6 +44,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             sortOrder: 'asc',
           },
         },
+        entityResources: {
+          where: {
+            entityType: 'PRODUCT_INFO'
+          },
+          orderBy: {
+            createdAt: 'asc'
+          }
+        },
       },
     });
 
@@ -97,6 +105,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       styleInfo,
       accessoryInfo,
       remark,
+      // 新增包装相关字段
+      packageType,
+      packageOuterSize,
+      packageInnerSize,
+      packageWeight,
+      outerBoxSize,
+      // 新增标签文件字段
+      labelFileUrl,
+      // 配件图片资源
+      accessoryImages,
     } = body;
 
     if (!id) {
@@ -139,28 +157,69 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    // 更新产品信息
-    const product = await prisma.productInfo.update({
+    // 使用事务处理产品信息更新和EntityResource同步
+    const product = await prisma.$transaction(async (tx) => {
+      // 更新产品信息
+      const updatedProduct = await tx.productInfo.update({
+        where: { id },
+        data: {
+          ...(shopId && { shopId }),
+          ...(categoryId && { categoryId }),
+          ...(code && { code }),
+          ...(name !== undefined && { name }),
+          ...(specification !== undefined && { specification }),
+          ...(color !== undefined && { color }),
+          ...(setQuantity !== undefined && { setQuantity }),
+          ...(internalSize !== undefined && { internalSize }),
+          ...(externalSize !== undefined && { externalSize }),
+          ...(weight !== undefined && { weight: weight ? parseFloat(weight) : null }),
+          ...(sku && { sku }),
+          ...(asin !== undefined && { asin }),
+          ...(label !== undefined && { label }),
+          ...(codeFileUrl !== undefined && { codeFileUrl }),
+          ...(styleInfo !== undefined && { styleInfo }),
+          ...(accessoryInfo !== undefined && { accessoryInfo }),
+          ...(remark !== undefined && { remark }),
+          // 新增包装相关字段
+          ...(packageType !== undefined && { packageType }),
+          ...(packageOuterSize !== undefined && { packageOuterSize }),
+          ...(packageInnerSize !== undefined && { packageInnerSize }),
+          ...(packageWeight !== undefined && { packageWeight }),
+          ...(outerBoxSize !== undefined && { outerBoxSize }),
+          // 新增标签文件字段
+          ...(labelFileUrl !== undefined && { labelFileUrl }),
+        },
+      });
+
+      // 处理配件图片资源
+      if (accessoryImages !== undefined) {
+        // 删除现有的配件图片资源
+        await tx.entityResource.deleteMany({
+          where: {
+            entityType: 'PRODUCT_INFO',
+            entityId: id,
+          },
+        });
+
+        // 添加新的配件图片资源
+        if (accessoryImages && accessoryImages.length > 0) {
+          await tx.entityResource.createMany({
+            data: accessoryImages.map((image: any) => ({
+              entityType: 'PRODUCT_INFO',
+              entityId: id,
+              resourceUrl: image.url,
+              fileName: image.fileName || null,
+            })),
+          });
+        }
+      }
+
+      return updatedProduct;
+    });
+
+    // 获取完整的产品信息（包含关联数据）
+    const productWithRelations = await prisma.productInfo.findUnique({
       where: { id },
-      data: {
-        ...(shopId && { shopId }),
-        ...(categoryId && { categoryId }),
-        ...(code && { code }),
-        ...(name !== undefined && { name }),
-        ...(specification !== undefined && { specification }),
-        ...(color !== undefined && { color }),
-        ...(setQuantity !== undefined && { setQuantity }),
-        ...(internalSize !== undefined && { internalSize }),
-        ...(externalSize !== undefined && { externalSize }),
-        ...(weight !== undefined && { weight: weight ? parseFloat(weight) : null }),
-        ...(sku && { sku }),
-        ...(asin !== undefined && { asin }),
-        ...(label !== undefined && { label }),
-        ...(codeFileUrl !== undefined && { codeFileUrl }),
-        ...(styleInfo !== undefined && { styleInfo }),
-        ...(accessoryInfo !== undefined && { accessoryInfo }),
-        ...(remark !== undefined && { remark }),
-      },
       include: {
         shop: {
           select: {
@@ -185,13 +244,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             sortOrder: 'asc',
           },
         },
+        entityResources: {
+          where: {
+            entityType: 'PRODUCT_INFO'
+          },
+          orderBy: {
+            createdAt: 'asc'
+          }
+        },
       },
     });
 
     return NextResponse.json({
       code: 200,
       msg: '更新成功',
-      data: product,
+      data: productWithRelations,
     });
   } catch (error) {
     console.error('更新产品信息失败:', error);

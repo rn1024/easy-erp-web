@@ -66,6 +66,14 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
               sortOrder: 'asc',
             },
           },
+          entityResources: {
+            where: {
+              entityType: 'PRODUCT_INFO'
+            },
+            orderBy: {
+              createdAt: 'asc'
+            }
+          },
         },
         skip,
         take: pageSize,
@@ -124,6 +132,16 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       styleInfo,
       accessoryInfo,
       remark,
+      // 新增包装相关字段
+      packageType,
+      packageOuterSize,
+      packageInnerSize,
+      packageWeight,
+      outerBoxSize,
+      // 新增标签文件字段
+      labelFileUrl,
+      // 配件图片资源
+      accessoryImages,
     } = body;
 
     // 验证必填字段
@@ -156,27 +174,57 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       }
     }
 
-    // 创建产品信息
-    const product = await prisma.productInfo.create({
-      data: {
-        shopId,
-        categoryId,
-        code,
-        name: name || null,
-        specification: specification || null,
-        color: color || null,
-        setQuantity: setQuantity || 1,
-        internalSize: internalSize || null,
-        externalSize: externalSize || null,
-        weight: weight ? parseFloat(weight) : null,
-        sku,
-        label: label || null,
-        codeFileUrl: codeFileUrl || null,
-        styleInfo: styleInfo || null,
-        accessoryInfo: accessoryInfo || null,
-        remark: remark || null,
-        operatorId: user.id,
-      },
+    // 使用事务创建产品信息和EntityResource
+    const product = await prisma.$transaction(async (tx) => {
+      // 创建产品信息
+      const newProduct = await tx.productInfo.create({
+        data: {
+          shopId,
+          categoryId,
+          code,
+          name: name || null,
+          specification: specification || null,
+          color: color || null,
+          setQuantity: setQuantity || 1,
+          internalSize: internalSize || null,
+          externalSize: externalSize || null,
+          weight: weight ? parseFloat(weight) : null,
+          sku,
+          label: label || null,
+          codeFileUrl: codeFileUrl || null,
+          styleInfo: styleInfo || null,
+          accessoryInfo: accessoryInfo || null,
+          remark: remark || null,
+          // 新增包装相关字段
+          packageType: packageType || null,
+          packageOuterSize: packageOuterSize || null,
+          packageInnerSize: packageInnerSize || null,
+          packageWeight: packageWeight || null,
+          outerBoxSize: outerBoxSize || null,
+          // 新增标签文件字段
+          labelFileUrl: labelFileUrl || null,
+          operatorId: user.id,
+        },
+      });
+
+      // 添加配件图片资源
+      if (accessoryImages && accessoryImages.length > 0) {
+        await tx.entityResource.createMany({
+          data: accessoryImages.map((image: any) => ({
+            entityType: 'PRODUCT_INFO',
+            entityId: newProduct.id,
+            resourceUrl: image.url,
+            fileName: image.fileName || null,
+          })),
+        });
+      }
+
+      return newProduct;
+    });
+
+    // 获取完整的产品信息（包含关联数据）
+    const productWithRelations = await prisma.productInfo.findUnique({
+      where: { id: product.id },
       include: {
         shop: {
           select: {
@@ -201,13 +249,21 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
             sortOrder: 'asc',
           },
         },
+        entityResources: {
+          where: {
+            entityType: 'PRODUCT_INFO'
+          },
+          orderBy: {
+            createdAt: 'asc'
+          }
+        },
       },
     });
 
     return NextResponse.json({
       code: 0,
       msg: '创建成功',
-      data: product,
+      data: productWithRelations,
     });
   } catch (error) {
     console.error('创建产品信息失败:', error);

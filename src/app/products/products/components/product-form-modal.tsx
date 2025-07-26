@@ -1,9 +1,24 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Modal, Form, Input, Space, Select, Row, Col, InputNumber } from 'antd';
-import { useEffect } from 'react';
+import {
+  App,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Space,
+  Select,
+  Row,
+  Col,
+  InputNumber,
+  Upload,
+  Divider,
+} from 'antd';
+import { useEffect, useState } from 'react';
+import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import ProductImageUploader from '@/components/product-image-uploader';
+import AccessoryImageUploader from '@/components/accessory-image-uploader';
 
 /**
  * Utils
@@ -67,6 +82,7 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
       const submitData: ProductFormData = {
         ...formData,
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        packageWeight: formData.packageWeight ? parseFloat(formData.packageWeight) : undefined,
         setQuantity: formData.setQuantity || 1,
       };
 
@@ -101,6 +117,7 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
         form.setFieldsValue({
           ...entity,
           weight: entity.weight?.toString(),
+          packageWeight: entity.packageWeight?.toString(),
         });
       } else {
         form.resetFields();
@@ -249,6 +266,48 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
             </Col>
           </Row>
 
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="packageType" label="包装类型">
+                <Select placeholder="选择包装类型">
+                  <Option value="box">盒装</Option>
+                  <Option value="bag">袋装</Option>
+                  <Option value="bottle">瓶装</Option>
+                  <Option value="tube">管装</Option>
+                  <Option value="other">其他</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="packageOuterSize" label="包装外尺寸">
+                <Input placeholder="包装外尺寸" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="packageInnerSize" label="包装内尺寸">
+                <Input placeholder="包装内尺寸" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="packageWeight" label="包装重量(g)">
+                <InputNumber min={0} placeholder="包装重量" style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="outerBoxSize" label="外箱尺寸">
+                <Input placeholder="外箱尺寸" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="labelFileUrl" label="标签文件">
+                <Input placeholder="标签文件URL" />
+              </Form.Item>
+            </Col>
+          </Row>
+
           {/* 产品图片上传 */}
           <Form.Item label="产品图片">
             <ProductImageUploader
@@ -259,6 +318,20 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
             {!entity?.id && (
               <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
                 请先保存产品信息后再上传图片
+              </div>
+            )}
+          </Form.Item>
+
+          {/* 配件图片上传 */}
+          <Form.Item label="配件图片">
+            <AccessoryImageUploader
+              productId={entity?.id || ''}
+              disabled={!entity?.id}
+              maxCount={20}
+            />
+            {!entity?.id && (
+              <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+                请先保存产品信息后再上传配件图片
               </div>
             )}
           </Form.Item>

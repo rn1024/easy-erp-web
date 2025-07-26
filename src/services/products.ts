@@ -48,6 +48,20 @@ export interface ProductCategoryFormData {
   name: string;
 }
 
+// 配件图片相关接口
+export interface AccessoryImage {
+  id: string;
+  entityId: string;
+  entityType: string;
+  resourceType: string;
+  resourceUrl: string;
+  fileName: string;
+  fileSize: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // 产品信息相关接口
 export interface ProductInfo {
   id: string;
@@ -68,6 +82,13 @@ export interface ProductInfo {
   styleInfo?: string;
   accessoryInfo?: string;
   remark?: string;
+  // 新增包装相关字段
+  packageType?: string;
+  packageOuterSize?: string;
+  packageInnerSize?: string;
+  packageWeight?: number;
+  outerBoxSize?: string;
+  labelFileUrl?: string;
   operatorId: string;
   createdAt: string;
   updatedAt: string;
@@ -84,6 +105,7 @@ export interface ProductInfo {
     name: string;
   };
   images?: ProductImage[]; // 产品图片数组
+  accessoryImages?: AccessoryImage[]; // 配件图片数组
   _count?: {
     finishedInventory: number;
     spareInventory: number;
@@ -121,6 +143,20 @@ export interface ProductFormData {
   styleInfo?: string;
   accessoryInfo?: string;
   remark?: string;
+  // 新增包装相关字段
+  packageType?: string;
+  packageOuterSize?: string;
+  packageInnerSize?: string;
+  packageWeight?: number;
+  outerBoxSize?: string;
+  labelFileUrl?: string;
+  // 配件图片数据
+  accessoryImages?: {
+    resourceUrl: string;
+    fileName: string;
+    fileSize: number;
+    sortOrder: number;
+  }[];
 }
 
 // 产品分类 API

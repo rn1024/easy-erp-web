@@ -1,7 +1,7 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { App, Button, Modal, Space, Descriptions, Tag, Image } from 'antd';
+import { App, Button, Modal, Space, Descriptions, Tag, Image, Divider, Row, Col } from 'antd';
 import { ShopOutlined, TagOutlined, PictureOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -96,11 +96,27 @@ const ProductDetailModal: React.FC<Props> = ({ open, entity, closeModal }) => {
           <Descriptions.Item label="备注" span={2}>
             {entity.remark || '-'}
           </Descriptions.Item>
+          <Descriptions.Item label="包装类型">{entity.packageType || '-'}</Descriptions.Item>
+          <Descriptions.Item label="包装外尺寸">{entity.packageOuterSize || '-'}</Descriptions.Item>
+          <Descriptions.Item label="包装内尺寸">{entity.packageInnerSize || '-'}</Descriptions.Item>
+          <Descriptions.Item label="包装重量">
+            {entity.packageWeight ? `${entity.packageWeight}g` : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="外箱尺寸">{entity.outerBoxSize || '-'}</Descriptions.Item>
+          <Descriptions.Item label="标签文件">
+            {entity.labelFileUrl ? (
+              <a href={entity.labelFileUrl} target="_blank" rel="noopener noreferrer">
+                查看文件
+              </a>
+            ) : (
+              '-'
+            )}
+          </Descriptions.Item>
         </Descriptions>
 
         {entity.images && entity.images.length > 0 && (
           <div className="mt-4">
-            <h4 className="mb-2">产品图片 ({entity.images.length}张)</h4>
+            <Divider orientation="left">产品图片 ({entity.images.length}张)</Divider>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {entity.images.map((image) => (
                 <div key={image.id} style={{ position: 'relative' }}>
@@ -127,6 +143,24 @@ const ProductDetailModal: React.FC<Props> = ({ open, entity, closeModal }) => {
                     </div>
                   )}
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {entity.accessoryImages && entity.accessoryImages.length > 0 && (
+          <div className="mt-4">
+            <Divider orientation="left">配件图片 ({entity.accessoryImages.length}张)</Divider>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {entity.accessoryImages.map((image) => (
+                <Image
+                  key={image.id}
+                  src={image.resourceUrl}
+                  alt={image.fileName}
+                  width={100}
+                  height={100}
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                />
               ))}
             </div>
           </div>
