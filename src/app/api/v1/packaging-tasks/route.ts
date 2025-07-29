@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { PackagingTaskStatus, PackagingTaskType } from '@/services/packaging';
 
 export const dynamic = 'force-dynamic';
-
-// 模拟包装任务数据存储
-const packagingTasks: any[] = [];
-let nextId = 1;
 
 // 获取包装任务列表
 export async function GET(request: NextRequest) {
@@ -23,29 +20,43 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '10');
 
-    // 过滤数据
-    let filteredTasks = packagingTasks;
+    // 构建查询条件
+    const where: any = {};
     if (shopId) {
-      filteredTasks = filteredTasks.filter(task => task.shopId === shopId);
+      where.shopId = shopId;
     }
     if (status) {
-      filteredTasks = filteredTasks.filter(task => task.status === status);
+      where.status = status;
     }
     if (type) {
-      filteredTasks = filteredTasks.filter(task => task.type === type);
+      where.type = type;
     }
 
-    // 分页
-    const total = filteredTasks.length;
+    // 查询总数
+    const total = await prisma.packagingTask.count({ where });
+
+    // 查询数据
+    const tasks = await prisma.packagingTask.findMany({
+      where,
+      include: {
+        shop: {
+          select: { id: true, nickname: true },
+        },
+        operator: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
     const totalPages = Math.ceil(total / pageSize);
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const list = filteredTasks.slice(startIndex, endIndex);
 
     return NextResponse.json({
       code: 200,
       data: {
-        list,
+        list: tasks,
         total,
         page,
         pageSize,
@@ -74,40 +85,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const data = await request.json();
-    const { shopId, type, progress = 0 } = data;
+    const body = await request.json();
+    const { shopId, type = PackagingTaskType.PACKAGING, progress = 0 } = body;
 
-    if (!shopId || !type) {
+    if (!shopId) {
       return NextResponse.json(
         {
           code: 400,
-          msg: '缺少必要参数',
+          msg: '店铺ID不能为空',
         },
         { status: 400 }
       );
     }
 
-    const newTask = {
-      id: nextId.toString(),
-      shopId,
-      type,
-      progress,
-      status: PackagingTaskStatus.PENDING,
-      operatorId: user.id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      shop: {
-        id: shopId,
-        nickname: `店铺${shopId}`,
+    // 创建包装任务
+    const newTask = await prisma.packagingTask.create({
+      data: {
+        shopId,
+        type,
+        progress,
+        status: PackagingTaskStatus.PENDING,
+        operatorId: user.id,
       },
-      operator: {
-        id: user.id,
-        name: user.name,
+      include: {
+        shop: {
+          select: { id: true, nickname: true },
+        },
+        operator: {
+          select: { id: true, name: true },
+        },
       },
-    };
-
-    packagingTasks.push(newTask);
-    nextId++;
+    });
 
     return NextResponse.json({
       code: 200,

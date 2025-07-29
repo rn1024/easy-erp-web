@@ -25,6 +25,7 @@ model Account {
   operatedShipments      ShipmentRecord[] @relation("ShipmentOperator")
   operatedShops          Shop[]           @relation("ShopOperator")
   operatedSuppliers      Supplier[]       @relation("SupplierOperator")
+  operatedPackagingTasks PackagingTask[]  @relation("PackagingTaskOperator")
 
 
   @@map("accounts")
@@ -143,6 +144,7 @@ model Shop {
   products          ProductInfo[]
   purchaseOrders    PurchaseOrder[]
   shipmentRecords   ShipmentRecord[]
+  packagingTasks    PackagingTask[]
   operator          Account             @relation("ShopOperator", fields: [operatorId], references: [id])
   spareInventory    SpareInventory[]
 
@@ -380,6 +382,24 @@ model FinancialReport {
   @@map("financial_reports")
 }
 
+model PackagingTask {
+  id         String              @id @default(cuid())
+  shopId     String
+  type       PackagingTaskType   @default(PACKAGING)
+  progress   Float?              @default(0)
+  status     PackagingTaskStatus @default(PENDING)
+  operatorId String
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  shop       Shop                @relation(fields: [shopId], references: [id])
+  operator   Account             @relation("PackagingTaskOperator", fields: [operatorId], references: [id])
+
+  @@index([shopId])
+  @@index([status])
+  @@index([operatorId])
+  @@map("packaging_tasks")
+}
+
 
 
 model ShipmentRecord {
@@ -549,6 +569,17 @@ enum ShipmentRecordStatus {
   IN_TRANSIT
   DELIVERED
   CANCELLED
+}
+
+enum PackagingTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PackagingTaskType {
+  PACKAGING
 }
 
 // 通用资源关联表

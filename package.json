@@ -42,6 +42,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@next/bundle-analyzer": "^15.3.4",
+    "@playwright/test": "^1.54.1",
     "@prisma/client": "^6.10.1",
     "@types/ali-oss": "^6.16.11",
     "@types/bcryptjs": "^3.0.0",

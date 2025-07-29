@@ -100,8 +100,18 @@ export async function POST(request: NextRequest) {
         );
       }
     } else if (relatedType === ProductItemRelatedType.PACKAGING_TASK) {
-      // 包装任务验证可以在这里添加，目前暂时跳过
-      // 因为包装任务的数据模型已被移除
+      const task = await prisma.packagingTask.findUnique({
+        where: { id: relatedId },
+      });
+      if (!task) {
+        return NextResponse.json(
+          {
+            code: 404,
+            msg: '包装任务不存在',
+          },
+          { status: 404 }
+        );
+      }
     }
 
     const result = await prisma.$transaction(async (tx) => {
