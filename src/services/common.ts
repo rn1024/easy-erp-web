@@ -25,12 +25,15 @@ export const checkUserId = (id: number | string) => {
   });
 };
 
-// upload image
+// upload image (OSS)
 export const uploadImage = (data: UploadImageData) => {
   const formData = new FormData();
   formData.append('file', data.file);
+  if (data.category) {
+    formData.append('category', data.category);
+  }
 
-  return axios<ResType<string[]>>('/oss/image', {
+  return axios<ResType<any>>('/api/v1/oss/image', {
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -47,7 +50,7 @@ export const uploadFile = (file: File, type?: string) => {
     formData.append('type', type);
   }
 
-  return axios<ResType<{ fileUrl: string }>>('/upload', {
+  return axios<ResType<{ fileUrl: string }>>('/api/v1/upload', {
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -66,7 +69,7 @@ export const uploadBatchFiles = (files: File[], type?: string) => {
     formData.append('type', type);
   }
 
-  return axios<ResType<Array<{ fileUrl: string; fileName: string }>>>('/upload/batch', {
+  return axios<ResType<Array<{ fileUrl: string; fileName: string }>>>('/api/v1/upload/batch', {
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -75,12 +78,18 @@ export const uploadBatchFiles = (files: File[], type?: string) => {
   });
 };
 
-// upload video
+// upload video (OSS)
 export const uploadVideo = (data: UploadVideoData) => {
   const formData = new FormData();
   formData.append('file', data.file);
+  if (data.category) {
+    formData.append('category', data.category);
+  }
+  if (data.description) {
+    formData.append('description', data.description);
+  }
 
-  return axios<ResType<string[]>>('/oss/video', {
+  return axios<ResType<any>>('/api/v1/oss/video', {
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -103,7 +112,12 @@ export const gOperators = (model: string) => {
 // upload image
 export type UploadImageData = {
   file: File;
+  category?: string;
 };
 
 // upload video
-export type UploadVideoData = UploadImageData;
+export type UploadVideoData = {
+  file: File;
+  category?: string;
+  description?: string;
+};

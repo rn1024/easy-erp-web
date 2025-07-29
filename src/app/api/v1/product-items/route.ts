@@ -162,3 +162,168 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// 批量更新产品明细
+export async function PUT(request: NextRequest) {
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { items } = await request.json();
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json(
+        {
+          code: 400,
+          msg: '请求参数格式错误，items必须是非空数组',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 验证所有明细项是否存在
+    const itemIds = items.map(item => item.id).filter(Boolean);
+    const existingItems = await prisma.productItem.findMany({
+      where: {
+        id: { in: itemIds },
+      },
+    });
+
+    if (existingItems.length !== itemIds.length) {
+      return NextResponse.json(
+        {
+          code: 404,
+          msg: '部分产品明细不存在',
+        },
+        { status: 404 }
+      );
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedItems = await Promise.all(
+        items.map((item: any) => {
+          if (!item.id) {
+            throw new Error('明细项ID不能为空');
+          }
+          
+          return tx.productItem.update({
+            where: { id: item.id },
+            data: {
+              quantity: item.quantity,
+              unitPrice: item.unitPrice || null,
+              amount: item.amount || null,
+              taxRate: item.taxRate || null,
+              taxAmount: item.taxAmount || null,
+              totalAmount: item.totalAmount || null,
+              completedQuantity: item.completedQuantity || null,
+              remark: item.remark || null,
+            },
+            include: {
+              product: {
+                include: {
+                  shop: { select: { id: true, nickname: true } },
+                  category: { select: { id: true, name: true } },
+                },
+              },
+            },
+          });
+        })
+      );
+
+      return updatedItems;
+    });
+
+    return NextResponse.json({
+      code: 200,
+      data: result,
+      msg: '批量更新产品明细成功',
+    });
+  } catch (error) {
+    console.error('批量更新产品明细失败:', error);
+    return NextResponse.json(
+      {
+        code: 500,
+        msg: '批量更新产品明细失败',
+        error: error instanceof Error ? error.message : '未知错误',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// 批量删除产品明细
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const idsParam = searchParams.get('ids');
+    
+    if (!idsParam) {
+      return NextResponse.json(
+        {
+          code: 400,
+          msg: '请提供要删除的明细ID列表',
+        },
+        { status: 400 }
+      );
+    }
+
+    const ids = idsParam.split(',').filter(Boolean);
+    
+    if (ids.length === 0) {
+      return NextResponse.json(
+        {
+          code: 400,
+          msg: 'ID列表不能为空',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 验证所有明细项是否存在
+    const existingItems = await prisma.productItem.findMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+
+    if (existingItems.length !== ids.length) {
+      return NextResponse.json(
+        {
+          code: 404,
+          msg: '部分产品明细不存在',
+        },
+        { status: 404 }
+      );
+    }
+
+    // 批量删除
+    const deleteResult = await prisma.productItem.deleteMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+
+    return NextResponse.json({
+      code: 200,
+      data: { deletedCount: deleteResult.count },
+      msg: `成功删除 ${deleteResult.count} 条产品明细`,
+    });
+  } catch (error) {
+    console.error('批量删除产品明细失败:', error);
+    return NextResponse.json(
+      {
+        code: 500,
+        msg: '批量删除产品明细失败',
+        error: error instanceof Error ? error.message : '未知错误',
+      },
+      { status: 500 }
+    );
+  }
+}
