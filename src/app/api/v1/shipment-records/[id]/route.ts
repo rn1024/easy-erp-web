@@ -110,7 +110,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       for (const product of products) {
         if (
           !product.productId ||
-          !product.forwarderId ||
           !product.totalBoxes ||
           product.totalBoxes <= 0
         ) {
@@ -120,18 +119,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
       // 验证所有产品和货代是否存在
       const productIds = products.map((p) => p.productId);
-      const forwarderIds = products.map((p) => p.forwarderId);
+      const forwarderIds = products.map((p) => p.forwarderId).filter(Boolean); // 过滤空值
+      
+      // 去重处理
+      const uniqueProductIds = [...new Set(productIds)];
+      const uniqueForwarderIds = [...new Set(forwarderIds)];
 
       const [foundProducts, foundForwarders] = await Promise.all([
-        prisma.productInfo.findMany({ where: { id: { in: productIds } } }),
-        prisma.forwarder.findMany({ where: { id: { in: forwarderIds } } }),
+        prisma.productInfo.findMany({ where: { id: { in: uniqueProductIds } } }),
+        uniqueForwarderIds.length > 0
+          ? prisma.forwarder.findMany({ where: { id: { in: uniqueForwarderIds } } })
+          : Promise.resolve([]),
       ]);
 
-      if (foundProducts.length !== productIds.length) {
+      if (foundProducts.length !== uniqueProductIds.length) {
         return NextResponse.json({ message: 'Some products not found' }, { status: 404 });
       }
 
-      if (foundForwarders.length !== forwarderIds.length) {
+      if (uniqueForwarderIds.length > 0 && foundForwarders.length !== uniqueForwarderIds.length) {
         return NextResponse.json({ message: 'Some forwarders not found' }, { status: 404 });
       }
     }
@@ -179,7 +184,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
                 data: {
                   shipmentRecordId: params.id,
                   productId: product.productId,
-                  forwarderId: product.forwarderId,
+                  forwarderId: product.forwarderId || null,
                   totalBoxes: parseInt(product.totalBoxes),
                   fbaShipmentCode: product.fbaShipmentCode || null,
                   fbaWarehouseCode: product.fbaWarehouseCode || null,

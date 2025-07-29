@@ -30,22 +30,27 @@ const nextConfig = {
 
   // Webpack配置
   webpack: (config, { isServer }) => {
-    // 恢复正常的代码分割策略
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-            // 恢复正常的chunk大小限制
-            maxSize: 500000,
+    // 简化代码分割策略，避免 vendors.js 问题
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            // 使用默认的分割策略
+            framework: {
+              chunks: 'all',
+              name: 'framework',
+              test: /(?<!node_modules.*)[\/]node_modules[\/](react|react-dom|scheduler|prop-types|use-subscription)[\/]/,
+              priority: 40,
+              enforce: true,
+            },
           },
         },
-      },
-    };
+      };
+    }
 
     // 只在客户端构建时排除Node.js专用模块
     if (!isServer) {
