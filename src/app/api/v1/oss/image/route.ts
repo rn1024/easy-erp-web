@@ -1,31 +1,16 @@
 // 标记为动态路由
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { existsSync, mkdirSync } from 'fs';
 
-// OSS配置（实际项目中应该从环境变量读取）
-const OSS_CONFIG = {
-  // 这里可以配置阿里云OSS、腾讯云COS等云存储服务
-  // 暂时使用本地存储模拟OSS功能
-  endpoint: process.env.OSS_ENDPOINT || 'local',
-  bucket: process.env.OSS_BUCKET || 'erp-images',
-  region: process.env.OSS_REGION || 'local',
-};
 
-// 模拟OSS上传函数
-const uploadToOSS = async (file: File, fileName: string): Promise<string> => {
-  // 实际项目中这里应该调用OSS SDK上传文件
-  // 这里返回模拟的OSS URL
-  const ossUrl = `https://${OSS_CONFIG.bucket}.${OSS_CONFIG.endpoint}/images/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${fileName}`;
-  
-  // 模拟上传延迟
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  return ossUrl;
-};
 
-// POST /api/v1/oss/image - OSS图片上传
+// POST /api/v1/oss/image - 上传图片
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
@@ -38,64 +23,84 @@ export async function POST(request: NextRequest) {
     const category = (formData.get('category') as string) || 'general';
 
     if (!file) {
-      return NextResponse.json({ code: 400, msg: '请选择要上传的图片' }, { status: 400 });
+      return NextResponse.json({ code: 400, msg: '请选择要上传的文件' }, { status: 400 });
     }
 
     // 验证文件类型
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { code: 400, msg: '只支持 JPEG、PNG、GIF、WebP 格式的图片' },
-        { status: 400 }
-      );
+      return NextResponse.json({ code: 400, msg: '不支持的文件类型' }, { status: 400 });
     }
 
-    // 验证文件大小（10MB）
-    const maxSize = 10 * 1024 * 1024;
+    // 验证文件大小 (5MB)
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      return NextResponse.json(
-        { code: 400, msg: '图片大小不能超过 10MB' },
-        { status: 400 }
-      );
+      return NextResponse.json({ code: 400, msg: '文件大小不能超过5MB' }, { status: 400 });
     }
 
     // 生成唯一文件名
     const fileExtension = file.name.split('.').pop() || 'jpg';
     const fileName = `${uuidv4()}.${fileExtension}`;
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    
+    // 本地存储路径（实际项目中应该上传到OSS）
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'images', year.toString(), month.toString());
+    const filePath = join(uploadDir, fileName);
+    const fileUrl = `/uploads/images/${year}/${month}/${fileName}`;
 
     try {
-      // 上传到OSS
-      const ossUrl = await uploadToOSS(file, fileName);
+      // 确保目录存在
+       if (!existsSync(uploadDir)) {
+         mkdirSync(uploadDir, { recursive: true });
+       }
 
-      // 生成文件信息
-      const fileInfo = {
-        id: uuidv4(),
-        originalName: file.name,
-        fileName,
-        fileUrl: ossUrl,
-        fileSize: file.size,
-        fileType: file.type,
-        category,
-        uploader: user.name,
-        uploaderId: user.id,
-        uploadTime: new Date().toISOString(),
-        storage: 'oss',
-      };
+      // 保存文件到本地
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      await writeFile(filePath, buffer);
+
+      // 创建数据库记录
+      const fileRecord = await prisma.fileUpload.create({
+        data: {
+          originalName: file.name,
+          fileName: fileName,
+          fileUrl: fileUrl,
+          fileSize: file.size,
+          fileType: file.type,
+          category: category,
+          storage: 'local',
+          uploaderId: user.id,
+        },
+        include: {
+          uploader: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
 
       return NextResponse.json({
         code: 200,
-        msg: '图片上传成功',
-        data: fileInfo,
+        msg: '上传成功',
+        data: fileRecord,
       });
     } catch (uploadError) {
-      console.error('OSS上传失败:', uploadError);
+      console.error('文件上传失败:', uploadError);
       return NextResponse.json(
-        { code: 500, msg: 'OSS上传失败' },
+        {
+          code: 500,
+          msg: '文件上传失败',
+          data: null,
+        },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('OSS图片上传失败:', error);
+    console.error('上传图片失败:', error);
     return NextResponse.json(
       {
         code: 500,
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/v1/oss/image - 获取OSS图片列表
+// GET /api/v1/oss/image - 获取图片列表
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
@@ -119,48 +124,55 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const category = searchParams.get('category');
+    const fileName = searchParams.get('fileName');
+    const fileType = searchParams.get('fileType');
 
-    // 模拟OSS图片列表数据
-    const mockImages = [
-      {
-        id: '1',
-        originalName: 'product1.jpg',
-        fileName: 'uuid1.jpg',
-        fileUrl: `https://${OSS_CONFIG.bucket}.${OSS_CONFIG.endpoint}/images/2024/1/uuid1.jpg`,
-        fileSize: 1024000,
-        fileType: 'image/jpeg',
-        category: 'product',
-        uploader: user.name,
-        uploadTime: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        originalName: 'avatar.png',
-        fileName: 'uuid2.png',
-        fileUrl: `https://${OSS_CONFIG.bucket}.${OSS_CONFIG.endpoint}/images/2024/1/uuid2.png`,
-        fileSize: 512000,
-        fileType: 'image/png',
-        category: 'avatar',
-        uploader: user.name,
-        uploadTime: new Date(Date.now() - 3600000).toISOString(),
-      },
-    ];
+    const skip = (page - 1) * limit;
 
-    // 应用筛选条件
-    let filteredImages = mockImages;
+    // 构建查询条件
+    const where: any = {};
+    
     if (category) {
-      filteredImages = filteredImages.filter(img => img.category === category);
+      where.category = category;
+    }
+    
+    if (fileName) {
+      where.OR = [
+        { fileName: { contains: fileName } },
+        { originalName: { contains: fileName } },
+      ];
+    }
+    
+    if (fileType) {
+      where.fileType = fileType;
     }
 
-    const total = filteredImages.length;
-    const skip = (page - 1) * limit;
-    const paginatedImages = filteredImages.slice(skip, skip + limit);
+    // 从数据库查询文件上传记录
+    const [files, total] = await Promise.all([
+      prisma.fileUpload.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          uploader: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.fileUpload.count({ where }),
+    ]);
 
     return NextResponse.json({
       code: 200,
       msg: '获取成功',
       data: {
-        list: paginatedImages,
+        list: files,
         meta: {
           total,
           page,
@@ -170,7 +182,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('获取OSS图片列表失败:', error);
+    console.error('获取图片列表失败:', error);
     return NextResponse.json(
       {
         code: 500,

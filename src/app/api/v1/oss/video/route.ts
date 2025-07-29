@@ -1,31 +1,18 @@
 // 标记为动态路由
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { existsSync, mkdirSync } from 'fs';
 
-// OSS配置（实际项目中应该从环境变量读取）
-const OSS_CONFIG = {
-  // 这里可以配置阿里云OSS、腾讯云COS等云存储服务
-  // 暂时使用本地存储模拟OSS功能
-  endpoint: process.env.OSS_ENDPOINT || 'local',
-  bucket: process.env.OSS_BUCKET || 'erp-videos',
-  region: process.env.OSS_REGION || 'local',
-};
 
-// 模拟OSS上传函数
-const uploadToOSS = async (file: File, fileName: string): Promise<string> => {
-  // 实际项目中这里应该调用OSS SDK上传文件
-  // 这里返回模拟的OSS URL
-  const ossUrl = `https://${OSS_CONFIG.bucket}.${OSS_CONFIG.endpoint}/videos/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${fileName}`;
-  
-  // 模拟上传延迟（视频文件较大，上传时间较长）
-  await new Promise(resolve => setTimeout(resolve, 3000));
-  
-  return ossUrl;
-};
 
-// POST /api/v1/oss/video - OSS视频上传
+
+
+// POST /api/v1/oss/video - 上传视频
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
@@ -36,17 +23,16 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const category = (formData.get('category') as string) || 'general';
-    const description = (formData.get('description') as string) || '';
 
     if (!file) {
       return NextResponse.json({ code: 400, msg: '请选择要上传的视频' }, { status: 400 });
     }
 
     // 验证文件类型
-    const allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv', 'video/webm'];
+    const allowedTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/wmv', 'video/flv'];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { code: 400, msg: '只支持 MP4、AVI、MOV、WMV、FLV、WebM 格式的视频' },
+        { code: 400, msg: '只支持 MP4、MOV、AVI、WMV、FLV 格式的视频' },
         { status: 400 }
       );
     }
@@ -63,44 +49,62 @@ export async function POST(request: NextRequest) {
     // 生成唯一文件名
     const fileExtension = file.name.split('.').pop() || 'mp4';
     const fileName = `${uuidv4()}.${fileExtension}`;
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    
+    // 本地存储路径（实际项目中应该上传到OSS）
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'videos', year.toString(), month.toString());
+    const filePath = join(uploadDir, fileName);
+    const fileUrl = `/uploads/videos/${year}/${month}/${fileName}`;
 
     try {
-      // 上传到OSS
-      const ossUrl = await uploadToOSS(file, fileName);
+      // 确保目录存在
+      if (!existsSync(uploadDir)) {
+        mkdirSync(uploadDir, { recursive: true });
+      }
 
-      // 生成文件信息
-      const fileInfo = {
-        id: uuidv4(),
-        originalName: file.name,
-        fileName,
-        fileUrl: ossUrl,
-        fileSize: file.size,
-        fileType: file.type,
-        category,
-        description,
-        uploader: user.name,
-        uploaderId: user.id,
-        uploadTime: new Date().toISOString(),
-        storage: 'oss',
-        status: 'uploaded', // uploaded, processing, ready, failed
-        duration: null, // 视频时长，需要后续处理获取
-        thumbnail: null, // 视频缩略图，需要后续处理生成
-      };
+      // 保存文件到本地
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      await writeFile(filePath, buffer);
+
+      // 创建数据库记录
+      const fileRecord = await prisma.fileUpload.create({
+        data: {
+          originalName: file.name,
+          fileName: fileName,
+          fileUrl: fileUrl,
+          fileSize: file.size,
+          fileType: file.type,
+          category: category,
+          storage: 'local',
+          uploaderId: user.id,
+        },
+        include: {
+          uploader: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
 
       return NextResponse.json({
         code: 200,
         msg: '视频上传成功',
-        data: fileInfo,
+        data: fileRecord,
       });
     } catch (uploadError) {
-      console.error('OSS上传失败:', uploadError);
+      console.error('视频上传失败:', uploadError);
       return NextResponse.json(
-        { code: 500, msg: 'OSS上传失败' },
+        { code: 500, msg: '视频上传失败' },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('OSS视频上传失败:', error);
+    console.error('上传视频失败:', error);
     return NextResponse.json(
       {
         code: 500,
@@ -112,7 +116,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/v1/oss/video - 获取OSS视频列表
+// GET /api/v1/oss/video - 获取视频列表
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser(request);
@@ -124,60 +128,54 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const category = searchParams.get('category');
-    const status = searchParams.get('status');
+    const fileName = searchParams.get('fileName');
 
-    // 模拟OSS视频列表数据
-    const mockVideos = [
-      {
-        id: '1',
-        originalName: 'product_demo.mp4',
-        fileName: 'uuid1.mp4',
-        fileUrl: `https://${OSS_CONFIG.bucket}.${OSS_CONFIG.endpoint}/videos/2024/1/uuid1.mp4`,
-        fileSize: 50 * 1024 * 1024,
-        fileType: 'video/mp4',
-        category: 'product',
-        description: '产品演示视频',
-        uploader: user.name,
-        uploadTime: new Date().toISOString(),
-        status: 'ready',
-        duration: 120, // 2分钟
-        thumbnail: `https://${OSS_CONFIG.bucket}.${OSS_CONFIG.endpoint}/thumbnails/uuid1.jpg`,
-      },
-      {
-        id: '2',
-        originalName: 'training.mov',
-        fileName: 'uuid2.mov',
-        fileUrl: `https://${OSS_CONFIG.bucket}.${OSS_CONFIG.endpoint}/videos/2024/1/uuid2.mov`,
-        fileSize: 80 * 1024 * 1024,
-        fileType: 'video/mov',
-        category: 'training',
-        description: '培训视频',
-        uploader: user.name,
-        uploadTime: new Date(Date.now() - 3600000).toISOString(),
-        status: 'processing',
-        duration: null,
-        thumbnail: null,
-      },
-    ];
-
-    // 应用筛选条件
-    let filteredVideos = mockVideos;
-    if (category) {
-      filteredVideos = filteredVideos.filter(video => video.category === category);
-    }
-    if (status) {
-      filteredVideos = filteredVideos.filter(video => video.status === status);
-    }
-
-    const total = filteredVideos.length;
     const skip = (page - 1) * limit;
-    const paginatedVideos = filteredVideos.slice(skip, skip + limit);
+
+    // 构建查询条件
+    const where: any = {
+      fileType: {
+        startsWith: 'video/',
+      },
+    };
+    
+    if (category) {
+      where.category = category;
+    }
+    
+    if (fileName) {
+      where.OR = [
+        { fileName: { contains: fileName } },
+        { originalName: { contains: fileName } },
+      ];
+    }
+
+    // 从数据库查询视频文件记录
+    const [videos, total] = await Promise.all([
+      prisma.fileUpload.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          uploader: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.fileUpload.count({ where }),
+    ]);
 
     return NextResponse.json({
       code: 200,
       msg: '获取成功',
       data: {
-        list: paginatedVideos,
+        list: videos,
         meta: {
           total,
           page,
@@ -187,7 +185,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('获取OSS视频列表失败:', error);
+    console.error('获取视频列表失败:', error);
     return NextResponse.json(
       {
         code: 500,

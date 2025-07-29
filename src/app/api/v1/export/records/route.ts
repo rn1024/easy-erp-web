@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
     const operator = searchParams.get('operator');
     const startDate = searchParams.get('startDate');
@@ -32,7 +32,9 @@ export async function GET(request: NextRequest) {
     
     if (operator) {
       where.operator = {
-        contains: operator,
+        name: {
+          contains: operator,
+        },
       };
     }
     
@@ -50,58 +52,32 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 模拟导出记录数据（实际项目中应该从数据库查询）
-    // 这里先返回模拟数据，后续可以根据实际需求调整
-    const mockRecords = [
-      {
-        id: '1',
-        fileName: '产品数据导出_20240101.xlsx',
-        exportType: 'products',
-        status: 'completed',
-        fileSize: 1024000,
-        downloadUrl: '/api/v1/export/download/1',
-        operator: user.name,
-        createdAt: new Date().toISOString(),
-        completedAt: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        fileName: '采购订单导出_20240101.xlsx',
-        exportType: 'purchase-orders',
-        status: 'processing',
-        fileSize: null,
-        downloadUrl: null,
-        operator: user.name,
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-        completedAt: null,
-      },
-    ];
-
-    // 应用筛选条件
-    let filteredRecords = mockRecords;
-    
-    if (status) {
-      filteredRecords = filteredRecords.filter(record => record.status === status);
-    }
-    
-    if (exportType) {
-      filteredRecords = filteredRecords.filter(record => record.exportType === exportType);
-    }
-    
-    if (operator) {
-      filteredRecords = filteredRecords.filter(record => 
-        record.operator.includes(operator)
-      );
-    }
-
-    const total = filteredRecords.length;
-    const paginatedRecords = filteredRecords.slice(skip, skip + limit);
+    // 从数据库查询导出记录
+     const [records, total] = await Promise.all([
+       prisma.exportRecord.findMany({
+         where,
+         skip,
+         take: limit,
+         include: {
+           operator: {
+             select: {
+               id: true,
+               name: true,
+             },
+           },
+         },
+         orderBy: {
+           createdAt: 'desc',
+         },
+       }),
+       prisma.exportRecord.count({ where }),
+     ]);
 
     return NextResponse.json({
       code: 200,
       msg: '获取成功',
       data: {
-        list: paginatedRecords,
+        list: records,
         meta: {
           total,
           page,
@@ -139,18 +115,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 创建导出任务记录
-    const exportRecord = {
-      id: Date.now().toString(),
-      fileName: fileName || `${exportType}_导出_${new Date().toISOString().split('T')[0]}.xlsx`,
-      exportType,
-      status: 'processing',
-      fileSize: null,
-      downloadUrl: null,
-      operator: user.name,
-      filters: filters || {},
-      createdAt: new Date().toISOString(),
-      completedAt: null,
-    };
+     const exportRecord = await prisma.exportRecord.create({
+       data: {
+         fileName: fileName || `${exportType}_导出_${new Date().toISOString().split('T')[0]}.xlsx`,
+         exportType,
+         status: 'PROCESSING',
+         operatorId: user.id,
+         filters: filters || {},
+       },
+     });
 
     // 这里应该启动后台导出任务
     // 实际实现中可以使用队列系统处理导出任务

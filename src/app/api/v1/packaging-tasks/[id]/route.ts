@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-
-// 模拟包装任务数据存储（与主路由共享）
-const packagingTasks: any[] = [];
 
 // 获取包装任务详情
 export async function GET(
@@ -18,7 +16,13 @@ export async function GET(
     }
 
     const { id } = params;
-    const task = packagingTasks.find(t => t.id === id);
+    const task = await prisma.packagingTask.findUnique({
+      where: { id },
+      include: {
+        shop: true,
+        operator: true,
+      },
+    });
 
     if (!task) {
       return NextResponse.json(
@@ -61,9 +65,13 @@ export async function PUT(
 
     const { id } = params;
     const data = await request.json();
-    const taskIndex = packagingTasks.findIndex(t => t.id === id);
+    
+    // 检查任务是否存在
+    const existingTask = await prisma.packagingTask.findUnique({
+      where: { id },
+    });
 
-    if (taskIndex === -1) {
+    if (!existingTask) {
       return NextResponse.json(
         {
           code: 404,
@@ -74,12 +82,17 @@ export async function PUT(
     }
 
     // 更新任务
-    const updatedTask = {
-      ...packagingTasks[taskIndex],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    packagingTasks[taskIndex] = updatedTask;
+    const updatedTask = await prisma.packagingTask.update({
+      where: { id },
+      data: {
+        ...data,
+        updatedAt: new Date(),
+      },
+      include: {
+        shop: true,
+        operator: true,
+      },
+    });
 
     return NextResponse.json({
       code: 200,
@@ -111,9 +124,13 @@ export async function DELETE(
     }
 
     const { id } = params;
-    const taskIndex = packagingTasks.findIndex(t => t.id === id);
+    
+    // 检查任务是否存在
+    const existingTask = await prisma.packagingTask.findUnique({
+      where: { id },
+    });
 
-    if (taskIndex === -1) {
+    if (!existingTask) {
       return NextResponse.json(
         {
           code: 404,
@@ -124,7 +141,9 @@ export async function DELETE(
     }
 
     // 删除任务
-    packagingTasks.splice(taskIndex, 1);
+    await prisma.packagingTask.delete({
+      where: { id },
+    });
 
     return NextResponse.json({
       code: 200,

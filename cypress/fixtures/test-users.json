@@ -1,0 +1,53 @@
+{
+  "admin": {
+    "username": "admin@easyerp.com",
+    "password": "Admin@123456",
+    "role": "super_admin",
+    "permissions": ["all"],
+    "profile": {
+      "name": "系统管理员",
+      "email": "admin@easyerp.com",
+      "phone": "138-0013-8000"
+    }
+  },
+  "purchaseManager": {
+    "username": "purchase.manager@easyerp.com",
+    "password": "Purchase@2024",
+    "role": "purchase_manager",
+    "permissions": [
+      "products.read", "products.write",
+      "purchase.all",
+      "suppliers.all"
+    ]
+  },
+  "warehouseAdmin": {
+    "username": "warehouse.admin@easyerp.com",
+    "password": "Warehouse@2024",
+    "role": "warehouse_admin",
+    "permissions": [
+      "inventory.all",
+      "packaging.all",
+      "products.read"
+    ]
+  },
+  "financeUser": {
+    "username": "finance.user@easyerp.com",
+    "password": "Finance@2024",
+    "role": "finance_user",
+    "permissions": [
+      "finance.all",
+      "reports.all",
+      "products.read"
+    ]
+  },
+  "shopAdmin": {
+    "username": "shop.admin@easyerp.com",
+    "password": "ShopAdmin@2024",
+    "role": "shop_admin",
+    "permissions": [
+      "products.read", "products.write",
+      "inventory.read", "inventory.write",
+      "purchase.read", "purchase.write"
+    ]
+  }
+}
