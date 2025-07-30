@@ -14,9 +14,9 @@ export function checkToken(redirect: string = encodeURIComponent(window.location
 
       // Token 有效
       if (exp > Date.now() / 1000) {
-        // 且在登录页则跳转
+        // 且在登录页则跳转到dashboard
         if (window.location.pathname.startsWith('/login')) {
-          window.location.href = '/';
+          window.location.href = '/dashboard';
         }
 
         return;

@@ -24,7 +24,9 @@ export async function POST(request: NextRequest) {
 
     // 验证验证码
     const storedCaptcha = await redisService.get<{ code: string }>(`captcha:${key}`);
+    console.log('Login captcha verification:', { key, captcha, storedCaptcha });
     if (!storedCaptcha || storedCaptcha.code !== captcha.toLowerCase()) {
+      console.log('Captcha verification failed:', { stored: storedCaptcha?.code, input: captcha.toLowerCase() });
       return NextResponse.json({ code: 1, msg: '验证码错误', data: null }, { status: 200 });
     }
 

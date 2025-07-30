@@ -4,7 +4,7 @@ import { useRequest, useSetState } from 'ahooks';
 import { App, Button, Col, Form, Input, Row, Space, Spin, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import store from 'store2';
 
@@ -44,6 +44,7 @@ const LoginForm: React.FC = () => {
    * Requests
    */
   const { loading: loadingCaptcha, run: runCaptcha } = useRequest(captcha, {
+    manual: true,
     onSuccess({ data: { code, data, msg } }) {
       if (code !== 0) {
         return message.error(msg);
@@ -83,6 +84,14 @@ const LoginForm: React.FC = () => {
       window.location.href = redirectUrl;
     },
   });
+
+  /**
+   * Effects
+   */
+  useEffect(() => {
+    // 组件加载时自动获取验证码
+    runCaptcha();
+  }, []);
 
   /**
    * Events

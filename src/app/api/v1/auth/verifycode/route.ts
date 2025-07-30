@@ -13,11 +13,26 @@ export async function GET(request: NextRequest) {
 
     console.log('Captcha generated successfully:', { key: result.key });
 
+    // 在开发环境下，为了方便测试，可以返回验证码文本
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const responseData: any = {
+      key: result.key,
+      captcha: result.captcha,
+    };
+
+    // 开发环境下添加验证码文本用于测试
+    if (isDevelopment) {
+      // 从Redis中获取验证码文本
+      const { redisService } = await import('@/lib/redis');
+      const redisKey = `captcha:${result.key}`;
+      const stored = await redisService.get<{ code: string }>(redisKey);
+      if (stored) {
+        responseData.text = stored.code; // 返回验证码文本（小写，与存储格式一致）
+      }
+    }
+
     return ApiResponse.success(
-      {
-        key: result.key,
-        captcha: result.captcha,
-      },
+      responseData,
       '验证码生成成功'
     );
   } catch (error) {

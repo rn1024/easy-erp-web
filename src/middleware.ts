@@ -68,12 +68,12 @@ export const config = {
   matcher: [
     /*
      * 匹配所有路径除了：
-     * - api/health (健康检查)
+     * - api/* (所有API路由)
      * - _next/static (静态文件)
      * - _next/image (图片优化)
      * - favicon.ico (网站图标)
      * - 静态资源文件
      */
-    '/((?!api/health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

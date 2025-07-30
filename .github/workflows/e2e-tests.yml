@@ -1,0 +1,358 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * 1-5'  # 每天凌晨2点运行，周一至周五
+
+env:
+  CYPRESS_CACHE_FOLDER: ~/.cache/Cypress
+  NODE_VERSION: '18'
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Cache Cypress
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/Cypress
+            ~/.npm
+          key: cypress-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            cypress-cache-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Cypress
+        run: npm run cypress:install
+
+      - name: Save build folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          if-no-files-found: error
+          path: |
+            .next
+            node_modules
+            cypress
+
+  e2e-desktop:
+    runs-on: ubuntu-latest
+    needs: install
+    strategy:
+      fail-fast: false
+      matrix:
+        containers: [1, 2, 3, 4]  # 并行运行4个容器
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Run E2E Tests on Desktop
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          start: npm run start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          browser: chrome
+          spec: |
+            cypress/e2e/auth/*.cy.js
+            cypress/e2e/products/*.cy.js
+            cypress/e2e/inventory/*.cy.js
+            cypress/e2e/purchase/*.cy.js
+          parallel: true
+          record: true
+          group: 'Desktop Chrome'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_baseUrl: http://localhost:3000
+          CYPRESS_viewportWidth: 1920
+          CYPRESS_viewportHeight: 1080
+
+  e2e-tablet:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Run E2E Tests on Tablet
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          start: npm run start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          browser: chrome
+          spec: |
+            cypress/e2e/responsive/*.cy.js
+          parallel: false
+          record: true
+          group: 'Tablet Viewport'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_baseUrl: http://localhost:3000
+          CYPRESS_viewportWidth: 768
+          CYPRESS_viewportHeight: 1024
+
+  e2e-mobile:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Run E2E Tests on Mobile
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          start: npm run start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          browser: chrome
+          spec: |
+            cypress/e2e/responsive/*.cy.js
+          parallel: false
+          record: true
+          group: 'Mobile Viewport'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_baseUrl: http://localhost:3000
+          CYPRESS_viewportWidth: 375
+          CYPRESS_viewportHeight: 667
+
+  e2e-end-to-end:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Run End-to-End Business Flow Tests
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          start: npm run start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          browser: chrome
+          spec: |
+            cypress/e2e/end-to-end/*.cy.js
+          parallel: false
+          record: true
+          group: 'End-to-End Tests'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_baseUrl: http://localhost:3000
+
+  e2e-firefox:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Run E2E Tests on Firefox
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          start: npm run start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          browser: firefox
+          spec: |
+            cypress/e2e/auth/*.cy.js
+            cypress/e2e/products/*.cy.js
+          parallel: false
+          record: true
+          group: 'Firefox Tests'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_baseUrl: http://localhost:3000
+
+  e2e-edge:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Run E2E Tests on Edge
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          start: npm run start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          browser: edge
+          spec: |
+            cypress/e2e/auth/*.cy.js
+            cypress/e2e/inventory/*.cy.js
+          parallel: false
+          record: true
+          group: 'Edge Tests'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_baseUrl: http://localhost:3000
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download build folder
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+
+      - name: Run Performance Tests
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          start: npm run start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          browser: chrome
+          spec: |
+            cypress/e2e/performance/*.cy.js
+          parallel: false
+          record: true
+          group: 'Performance Tests'
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_baseUrl: http://localhost:3000
+
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: [e2e-desktop, e2e-tablet, e2e-mobile, e2e-end-to-end, e2e-firefox, e2e-edge, performance-tests]
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Test Summary
+        run: |
+          echo "## E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Desktop: ${{ needs.e2e-desktop.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Tablet: ${{ needs.e2e-tablet.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Mobile: ${{ needs.e2e-mobile.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- End-to-End: ${{ needs.e2e-end-to-end.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Firefox: ${{ needs.e2e-firefox.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Edge: ${{ needs.e2e-edge.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance: ${{ needs.performance-tests.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify Slack
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: 'E2E tests failed! Check the details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: [test-summary]
+    if: always()
+    steps:
+      - name: Cleanup Artifacts
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: build
+          failOnError: false

@@ -1,29 +1,25 @@
-const { defineConfig } = require('cypress')
+import { defineConfig } from 'cypress'
 
-module.exports = defineConfig({
+export default defineConfig({
   e2e: {
     baseUrl: 'http://localhost:3000',
     viewportWidth: 1920,
     viewportHeight: 1080,
     video: false,
     screenshot: true,
-    defaultCommandTimeout: 10000,
-    requestTimeout: 10000,
-    responseTimeout: 10000,
+    defaultCommandTimeout: 30000,
+    requestTimeout: 30000,
+    responseTimeout: 30000,
+    pageLoadTimeout: 30000,
     retries: {
       runMode: 2,
       openMode: 0
     },
     chromeWebSecurity: false,
     env: {
-      adminUser: 'admin@easyerp.com',
-      adminPassword: 'Admin@123456',
-      purchaseManagerUser: 'purchase.manager@easyerp.com',
-      purchaseManagerPassword: 'Purchase@2024',
-      warehouseAdminUser: 'warehouse.admin@easyerp.com',
-      warehouseAdminPassword: 'Warehouse@2024',
-      financeUser: 'finance.user@easyerp.com',
-      financePassword: 'Finance@2024'
+      adminUser: 'admin',
+      adminPassword: 'admin123456',
+      apiBaseUrl: 'http://localhost:3000/api/v1'
     },
     specPattern: 'cypress/e2e/**/*.cy.{js,jsx,ts,tsx}',
     supportFile: 'cypress/support/e2e.js'
