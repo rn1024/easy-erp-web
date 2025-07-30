@@ -1,8 +1,19 @@
 describe('库存管理模块', () => {
   beforeEach(() => {
+    // 设置API拦截
+    cy.intercept('GET', '/api/v1/inventory*').as('getInventory')
+    cy.intercept('POST', '/api/v1/inventory/adjust').as('adjustInventory')
+    cy.intercept('GET', '/api/v1/inventory/filter*').as('filterInventory')
+    
+    // 使用可靠的管理员登录
     cy.loginAsAdmin()
+    
+    // 访问库存页面
     cy.visit('/inventory/finished-inventory')
-    cy.waitForPageLoad()
+    
+    // 等待页面基本加载
+    cy.get('body').should('exist')
+    cy.wait(3000)
   })
 
   describe('TC001: 核心库存功能', () => {

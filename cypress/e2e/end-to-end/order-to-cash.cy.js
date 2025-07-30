@@ -10,6 +10,25 @@ describe('端到端业务流程测试', () => {
   }
 
   beforeEach(() => {
+    // 设置API拦截
+    cy.intercept('GET', '/api/v1/orders/sales*').as('getSalesOrders')
+    cy.intercept('POST', '/api/v1/orders/sales').as('createSalesOrder')
+    cy.intercept('GET', '/api/v1/orders/purchase*').as('getPurchaseOrders')
+    cy.intercept('POST', '/api/v1/orders/purchase').as('createPurchaseOrder')
+    cy.intercept('GET', '/api/v1/delivery*').as('getDeliveryRecords')
+    cy.intercept('POST', '/api/v1/delivery').as('createDeliveryRecord')
+    cy.intercept('GET', '/api/v1/finance/receivables*').as('getReceivables')
+    cy.intercept('POST', '/api/v1/finance/receivables').as('createReceivable')
+    cy.intercept('POST', '/api/v1/finance/receivables/*/collect').as('recordCollection')
+    cy.intercept('GET', '/api/v1/finance/payables*').as('getPayables')
+    cy.intercept('POST', '/api/v1/finance/payables').as('createPayable')
+    cy.intercept('POST', '/api/v1/finance/payables/*/pay').as('recordPayment')
+    cy.intercept('POST', '/api/v1/receiving').as('confirmReceiving')
+    cy.intercept('GET', '/api/v1/customers*').as('getCustomers')
+    cy.intercept('GET', '/api/v1/suppliers*').as('getSuppliers')
+    cy.intercept('GET', '/api/v1/products*').as('getProducts')
+    
+    // 使用可靠的管理员登录
     cy.loginAsAdmin()
   })
 
@@ -17,6 +36,8 @@ describe('端到端业务流程测试', () => {
     it('完整的订单到现金业务流程', () => {
       // 1. 创建销售订单
       cy.visit('/orders/sales')
+      cy.get('body').should('exist')
+      cy.wait(3000)
       cy.get('button').contains('创建订单').click()
       cy.waitForModal()
       
@@ -39,6 +60,8 @@ describe('端到端业务流程测试', () => {
       
       // 2. 确认发货
       cy.visit('/delivery/records')
+      cy.get('body').should('exist')
+      cy.wait(3000)
       cy.get('button').contains('创建发货单').click()
       cy.waitForModal()
       
@@ -52,6 +75,8 @@ describe('端到端业务流程测试', () => {
       
       // 3. 记录收款
       cy.visit('/finance/receivables')
+      cy.get('body').should('exist')
+      cy.wait(3000)
       cy.get('button').contains('新增应收').click()
       cy.waitForModal()
       
@@ -76,6 +101,8 @@ describe('端到端业务流程测试', () => {
     it('完整的采购到付款业务流程', () => {
       // 1. 创建采购订单
       cy.visit('/orders/purchase')
+      cy.get('body').should('exist')
+      cy.wait(3000)
       cy.get('button').contains('创建采购订单').click()
       cy.waitForModal()
       
@@ -98,6 +125,8 @@ describe('端到端业务流程测试', () => {
       
       // 2. 确认收货
       cy.visit('/receiving/records')
+      cy.get('body').should('exist')
+      cy.wait(3000)
       cy.get('button').contains('创建收货单').click()
       cy.waitForModal()
       
@@ -111,6 +140,8 @@ describe('端到端业务流程测试', () => {
       
       // 3. 记录付款
       cy.visit('/finance/payables')
+      cy.get('body').should('exist')
+      cy.wait(3000)
       cy.get('button').contains('新增应付').click()
       cy.waitForModal()
       

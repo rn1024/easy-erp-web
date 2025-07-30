@@ -1,7 +1,22 @@
 describe('采购管理模块 - 采购订单测试', () => {
   beforeEach(() => {
+    // 设置API拦截
+    cy.intercept('GET', '/api/v1/purchase-orders*').as('getPurchaseOrders')
+    cy.intercept('POST', '/api/v1/purchase-orders').as('createPurchaseOrder')
+    cy.intercept('PUT', '/api/v1/purchase-orders/*/approve').as('approvePurchaseOrder')
+    cy.intercept('PUT', '/api/v1/purchase-orders/*/reject').as('rejectPurchaseOrder')
+    cy.intercept('GET', '/api/v1/suppliers*').as('getSuppliers')
+    cy.intercept('GET', '/api/v1/products*').as('getProducts')
+    
+    // 使用可靠的管理员登录
     cy.loginAsAdmin()
+    
+    // 访问采购订单页面
     cy.visit('/purchase/purchase-orders')
+    
+    // 等待页面基本加载
+    cy.get('body').should('exist')
+    cy.wait(3000)
   })
 
   describe('TC031: 核心采购功能', () => {
