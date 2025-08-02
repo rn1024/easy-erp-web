@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data: category,
     });
@@ -96,7 +96,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '更新成功',
       data: category,
     });
@@ -151,7 +151,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '删除成功',
       data: null,
     });

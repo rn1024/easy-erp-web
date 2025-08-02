@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: items,
       msg: '获取产品明细列表成功',
     });
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: result,
       msg: '产品明细保存成功',
     });
@@ -246,7 +246,7 @@ export async function PUT(request: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: result,
       msg: '批量更新产品明细成功',
     });
@@ -321,7 +321,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: { deletedCount: deleteResult.count },
       msg: `成功删除 ${deleteResult.count} 条产品明细`,
     });

@@ -71,7 +71,7 @@ export async function PUT(
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '更新成功',
       data: updatedImage,
     });
@@ -128,7 +128,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '删除成功',
       data: null,
     });

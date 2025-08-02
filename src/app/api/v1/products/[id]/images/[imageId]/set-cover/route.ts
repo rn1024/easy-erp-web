@@ -33,7 +33,7 @@ export async function PATCH(
     // 如果已经是封面图，不需要更改
     if (image.isCover) {
       return NextResponse.json({
-        code: 200,
+        code: 0,
         msg: '该图片已经是封面图',
         data: image,
       });
@@ -57,7 +57,7 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '封面图设置成功',
       data: result,
     });

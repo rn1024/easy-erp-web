@@ -131,7 +131,7 @@ const SupplierFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
           message.success(entity ? '更新供应商成功' : '创建供应商成功');
           closeModal(true);
         } else {
-          message.error(get(res, 'msg') || '操作失败');
+          // 错误信息已由统一拦截器处理，这里只需要停止loading状态
           setSubmittingFalse();
         }
       } catch (error: any) {

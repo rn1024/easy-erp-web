@@ -97,13 +97,25 @@ const ShopFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
           responsiblePerson: entity.responsiblePerson,
           remark: entity.remark,
         });
+        // 确保图片URL正确设置
         setImageUrl(entity.avatarUrl || '');
       } else {
         form.resetFields();
         setImageUrl('');
       }
+    } else {
+      // 模态框关闭时重置状态
+      setImageUrl('');
     }
   }, [open, entity, form]);
+
+  // 监听表单字段变化，确保图片URL同步
+  useEffect(() => {
+    const avatarUrl = form.getFieldValue('avatarUrl');
+    if (avatarUrl && avatarUrl !== imageUrl) {
+      setImageUrl(avatarUrl);
+    }
+  }, [form, imageUrl]);
 
   /**
    * Upload props

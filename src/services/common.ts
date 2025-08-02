@@ -50,7 +50,7 @@ export const uploadFile = (file: File, type?: string) => {
     formData.append('type', type);
   }
 
-  return axios<ResType<{ fileUrl: string }>>('/api/v1/upload', {
+  return axios<ResType<{ fileUrl: string }>>('/upload', {
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -69,7 +69,7 @@ export const uploadBatchFiles = (files: File[], type?: string) => {
     formData.append('type', type);
   }
 
-  return axios<ResType<Array<{ fileUrl: string; fileName: string }>>>('/api/v1/upload/batch', {
+  return axios<ResType<Array<{ fileUrl: string; fileName: string }>>>('/upload/batch', {
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data',

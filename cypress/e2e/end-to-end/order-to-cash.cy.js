@@ -10,26 +10,84 @@ describe('端到端业务流程测试', () => {
   }
 
   beforeEach(() => {
-    // 设置API拦截
+    cy.log('🔐 开始端到端业务流程测试 - 登录验证阶段')
+    
+    // 设置API拦截 - 添加Mock响应数据
     cy.intercept('GET', '/api/v1/orders/sales*').as('getSalesOrders')
+    
     cy.intercept('POST', '/api/v1/orders/sales').as('createSalesOrder')
+    
     cy.intercept('GET', '/api/v1/orders/purchase*').as('getPurchaseOrders')
+    
     cy.intercept('POST', '/api/v1/orders/purchase').as('createPurchaseOrder')
+    
     cy.intercept('GET', '/api/v1/delivery*').as('getDeliveryRecords')
+    
     cy.intercept('POST', '/api/v1/delivery').as('createDeliveryRecord')
+    
     cy.intercept('GET', '/api/v1/finance/receivables*').as('getReceivables')
+    
     cy.intercept('POST', '/api/v1/finance/receivables').as('createReceivable')
+    
     cy.intercept('POST', '/api/v1/finance/receivables/*/collect').as('recordCollection')
+    
     cy.intercept('GET', '/api/v1/finance/payables*').as('getPayables')
+    
     cy.intercept('POST', '/api/v1/finance/payables').as('createPayable')
+    
     cy.intercept('POST', '/api/v1/finance/payables/*/pay').as('recordPayment')
+    
     cy.intercept('POST', '/api/v1/receiving').as('confirmReceiving')
+    
     cy.intercept('GET', '/api/v1/customers*').as('getCustomers')
+    
     cy.intercept('GET', '/api/v1/suppliers*').as('getSuppliers')
+    
     cy.intercept('GET', '/api/v1/products*').as('getProducts')
     
-    // 使用可靠的管理员登录
+    // 使用详细日志记录登录过程
+    cy.log('📝 尝试使用管理员账号登录 (admin/admin123456)')
+    
     cy.loginAsAdmin()
+      .then(() => {
+        cy.log('✅ 登录成功 - 正在进行登录验证')
+        
+        // 验证登录状态
+        cy.url().should('include', '/dashboard')
+          .then((url) => {
+            cy.log(`✅ 已跳转到dashboard页面: ${url}`)
+          })
+        
+        cy.get('body').should('not.be.empty')
+          .then(() => {
+            cy.log('✅ 页面内容加载完成')
+          })
+        
+        // 验证用户认证状态
+        cy.window().then((win) => {
+          const token = win.localStorage.getItem('token')
+          const user = win.localStorage.getItem('user')
+          if (token && user) {
+            cy.log(`✅ 认证信息已保存 - Token: ${token.substring(0, 20)}...`)
+            cy.log(`✅ 用户信息: ${user}`)
+          } else {
+            cy.log('❌ 认证信息未正确保存')
+            throw new Error('登录验证失败 - 认证信息未保存')
+          }
+        })
+      })
+      .then(() => {
+        cy.log('🚀 登录验证完成 - 端到端测试前置条件已准备')
+      })
+      .should(() => {
+        // 确保所有前置条件都满足
+        cy.window().then((win) => {
+          const token = win.localStorage.getItem('token')
+          if (!token) {
+            throw new Error('❌ 登录验证失败 - 未检测到有效token')
+          }
+        })
+      })
   })
 
   describe('订单到现金流程', () => {

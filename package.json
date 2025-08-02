@@ -23,6 +23,8 @@
     "test:e2e": "cypress run",
     "test:e2e:open": "cypress open",
     "test:e2e:ci": "cypress run --browser chrome --headless",
+    "test:e2e:dev": "SKIP_CAPTCHA=true NODE_ENV=development cypress open",
+    "test:e2e:dev:ci": "SKIP_CAPTCHA=true NODE_ENV=development cypress run --browser chrome --headless",
     "test:auto": "node scripts/run-tests.js",
     "test:auto:token": "node scripts/run-tests.js token",
     "test:auto:api": "node scripts/run-tests.js api",

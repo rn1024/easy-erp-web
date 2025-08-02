@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
      ]);
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data: {
         list: records,
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     // 实际实现中可以使用队列系统处理导出任务
     
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '导出任务已创建',
       data: exportRecord,
     });

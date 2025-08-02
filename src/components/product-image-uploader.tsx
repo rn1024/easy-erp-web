@@ -214,10 +214,10 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
 
   // 初始加载
   useEffect(() => {
-    if (productId && images.length === 0) {
+    if (productId && value.length === 0) {
       loadImages();
     }
-  }, [productId]);
+  }, [productId, value.length]);
 
   // 自定义上传处理
   const customUpload = async (options: any) => {

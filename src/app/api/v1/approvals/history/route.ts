@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data: approvals,
     });

@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
     const successRate = totalLogs > 0 ? ((successLogs / totalLogs) * 100).toFixed(2) : '0.00';
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取日志统计成功',
       data: {
         total: totalLogs,

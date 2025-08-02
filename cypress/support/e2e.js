@@ -35,13 +35,23 @@ beforeEach(() => {
 
 // 全局错误处理
 Cypress.on('uncaught:exception', (err, runnable) => {
+  console.error('🚨 Cypress捕获到未处理的异常:');
+  console.error('错误消息:', err.message);
+  console.error('错误堆栈:', err.stack);
+  console.error('运行的测试:', runnable?.title || '未知');
+  
   // 返回false以防止Cypress失败
   if (err.message.includes('ResizeObserver loop limit exceeded')) {
+    console.log('⚠️ ResizeObserver错误已忽略');
     return false
   }
   if (err.message.includes('ResizeObserver loop completed with undelivered notifications')) {
+    console.log('⚠️ ResizeObserver通知错误已忽略');
     return false
   }
+  
+  // 记录其他错误但不阻止测试
+  console.error('❌ 其他未处理异常，继续执行测试');
   return false
 })
 

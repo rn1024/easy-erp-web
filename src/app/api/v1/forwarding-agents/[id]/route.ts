@@ -31,7 +31,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     }
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取货代详情成功',
       data: forwarder,
     });
@@ -128,7 +128,7 @@ export const PUT = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '货代更新成功',
       data: forwarder,
     });
@@ -175,7 +175,7 @@ export const DELETE = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '货代删除成功',
       data: null,
     });

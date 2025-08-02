@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json({
-        code: 200,
+        code: 0,
         msg: '视频上传成功',
         data: fileRecord,
       });
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data: {
         list: videos,
@@ -219,8 +219,8 @@ export async function DELETE(request: NextRequest) {
     // 4. 从数据库删除记录
 
     return NextResponse.json({
-      code: 200,
-      msg: '视频删除成功',
+      code: 0,
+      msg: '删除成功',
       data: null,
     });
   } catch (error) {

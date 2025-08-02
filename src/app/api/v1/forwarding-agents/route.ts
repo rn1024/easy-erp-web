@@ -52,7 +52,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取货代列表成功',
       data: {
         list: agents,
@@ -130,7 +130,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '货代创建成功',
       data: agent,
     });

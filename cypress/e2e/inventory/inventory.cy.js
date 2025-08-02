@@ -1,19 +1,82 @@
 describe('库存管理模块', () => {
   beforeEach(() => {
-    // 设置API拦截
+    cy.log('🔐 开始库存模块测试 - 登录验证阶段')
+    
+    // 设置API拦截 - 添加Mock响应数据
     cy.intercept('GET', '/api/v1/inventory*').as('getInventory')
+    
     cy.intercept('POST', '/api/v1/inventory/adjust').as('adjustInventory')
+    
     cy.intercept('GET', '/api/v1/inventory/filter*').as('filterInventory')
     
-    // 使用可靠的管理员登录
+    cy.intercept('GET', '/api/v1/products*').as('getProducts')
+    
+    // 使用详细日志记录登录过程
+    cy.log('📝 尝试使用管理员账号登录 (admin/admin123456)')
+    
     cy.loginAsAdmin()
-    
-    // 访问库存页面
-    cy.visit('/inventory/finished-inventory')
-    
-    // 等待页面基本加载
-    cy.get('body').should('exist')
-    cy.wait(3000)
+      .then(() => {
+        cy.log('✅ 登录成功 - 正在进行登录验证')
+        
+        // 验证登录状态
+        cy.url().should('include', '/dashboard')
+          .then((url) => {
+            cy.log(`✅ 已跳转到dashboard页面: ${url}`)
+          })
+        
+        cy.get('body').should('not.be.empty')
+          .then(() => {
+            cy.log('✅ 页面内容加载完成')
+          })
+        
+        // 验证用户认证状态
+        cy.window().then((win) => {
+          const token = win.localStorage.getItem('token')
+          const user = win.localStorage.getItem('user')
+          if (token && user) {
+            cy.log(`✅ 认证信息已保存 - Token: ${token.substring(0, 20)}...`)
+            cy.log(`✅ 用户信息: ${user}`)
+          } else {
+            cy.log('❌ 认证信息未正确保存')
+            throw new Error('登录验证失败 - 认证信息未保存')
+          }
+        })
+      })
+      .then(() => {
+        cy.log('🚀 登录验证完成 - 开始访问库存页面')
+        
+        // 访问库存页面
+        cy.visit('/inventory/finished-inventory')
+        cy.log('📍 已访问库存页面')
+        
+        // 等待API调用完成
+        cy.wait('@getInventory')
+          .then((interception) => {
+            const status = interception.response?.statusCode || 'unknown'
+            cy.log(`✅ 库存API调用完成 - 状态码: ${status}`)
+            if (interception.response?.statusCode >= 400) {
+              throw new Error(`库存API调用失败 - 状态码: ${status}`)
+            }
+          })
+        
+        // 等待页面渲染完成
+        cy.get('.ant-table', { timeout: 15000 }).should('be.visible')
+          .then(() => {
+            cy.log('✅ 库存页面加载完成 - 表格已显示')
+          })
+      })
+      .then(() => {
+        cy.log('🎉 库存模块测试前置条件全部完成')
+      })
+      .should(() => {
+        // 确保所有前置条件都满足
+        cy.window().then((win) => {
+          const token = win.localStorage.getItem('token')
+          if (!token) {
+            throw new Error('❌ 登录验证失败 - 未检测到有效token')
+          }
+        })
+      })
   })
 
   describe('TC001: 核心库存功能', () => {

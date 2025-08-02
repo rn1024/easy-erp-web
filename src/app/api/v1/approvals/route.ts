@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 200,
-      msg: '审批成功',
+      code: 0,
+      msg: '审批记录创建成功',
       data: result,
     });
   } catch (error) {
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data: {
         list: records,

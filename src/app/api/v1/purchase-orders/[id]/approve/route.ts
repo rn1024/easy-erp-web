@@ -112,7 +112,7 @@ const approveHandler = async (
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '审批成功',
       data: {
         approval: result.approvalRecord,

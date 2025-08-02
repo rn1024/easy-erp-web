@@ -35,7 +35,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: task,
       msg: '获取包装任务详情成功',
     });
@@ -95,7 +95,7 @@ export async function PUT(
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: updatedTask,
       msg: '更新包装任务成功',
     });
@@ -146,7 +146,7 @@ export async function DELETE(
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: { message: '删除成功' },
       msg: '删除包装任务成功',
     });

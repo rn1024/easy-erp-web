@@ -22,12 +22,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ code: 1, msg: '参数不完整', data: null }, { status: 200 });
     }
 
-    // 验证验证码
-    const storedCaptcha = await redisService.get<{ code: string }>(`captcha:${key}`);
-    console.log('Login captcha verification:', { key, captcha, storedCaptcha });
-    if (!storedCaptcha || storedCaptcha.code !== captcha.toLowerCase()) {
-      console.log('Captcha verification failed:', { stored: storedCaptcha?.code, input: captcha.toLowerCase() });
-      return NextResponse.json({ code: 1, msg: '验证码错误', data: null }, { status: 200 });
+    // 开发环境跳过验证码验证
+    const isDevEnvironment =
+      process.env.NODE_ENV === 'development' ||
+      process.env.SKIP_CAPTCHA === 'true' ||
+      captcha === 'dev';
+
+    if (!isDevEnvironment) {
+      // 验证验证码（生产环境）
+      console.log('🧪 生产环境验证码验证');
+      const storedCaptcha = await redisService.get<{ code: string }>(`captcha:${key}`);
+      console.log('Login captcha verification:', {
+        key,
+        captcha,
+        storedCaptcha,
+        isDev: isDevEnvironment,
+      });
+
+      if (!storedCaptcha || storedCaptcha.code !== captcha.toLowerCase()) {
+        console.log('Captcha verification failed:', {
+          stored: storedCaptcha?.code,
+          input: captcha.toLowerCase(),
+        });
+        return NextResponse.json({ code: 1, msg: '验证码错误', data: null }, { status: 200 });
+      }
+    } else {
+      console.log('🧪 开发环境跳过验证码验证');
     }
 
     // 查找用户

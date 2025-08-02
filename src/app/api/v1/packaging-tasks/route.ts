@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(total / pageSize);
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: {
         list: tasks,
         total,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       data: newTask,
       msg: '创建包装任务成功',
     });

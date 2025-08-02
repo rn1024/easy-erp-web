@@ -31,7 +31,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     }
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取供应商详情成功',
       data: supplier,
     });
@@ -132,7 +132,7 @@ export const PUT = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '供应商更新成功',
       data: supplier,
     });
@@ -179,7 +179,7 @@ export const DELETE = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '供应商删除成功',
       data: null,
     });

@@ -36,7 +36,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     ]);
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data: {
         list: categories,
@@ -93,7 +93,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '创建成功',
       data: category,
     });

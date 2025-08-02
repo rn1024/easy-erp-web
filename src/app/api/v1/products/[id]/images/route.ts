@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     });
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data: images,
     });
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     return NextResponse.json({
-      code: 200,
+      code: 0,
       msg: '图片上传成功',
       data: createdImages,
     });
