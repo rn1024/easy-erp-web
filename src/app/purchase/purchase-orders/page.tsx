@@ -135,9 +135,13 @@ const PurchaseOrdersPage: React.FC = () => {
   // 删除采购订单
   const { run: deletePurchaseOrder } = useRequest(deletePurchaseOrderApi, {
     manual: true,
-    onSuccess: () => {
-      message.success('删除成功');
-      refreshPurchaseOrders();
+    onSuccess: (response: any) => {
+      if (response?.code === 0) {
+        message.success('删除成功');
+        refreshPurchaseOrders();
+      } else {
+        message.error(response?.msg || '删除失败');
+      }
     },
     onError: (error: any) => {
       message.error(error.response?.data?.msg || '删除失败');

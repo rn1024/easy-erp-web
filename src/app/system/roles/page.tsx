@@ -87,21 +87,20 @@ const RolesPage: React.FC = () => {
 
   const { data: permissionsData, loading: permissionsLoading } = useRequest(getPermissionsApi);
 
-  const { run: handleDelete } = useRequest(
-    async (id: string) => {
-      await deleteRoleByIdApi(id);
-      message.success('角色删除成功');
-    },
-    {
-      manual: true,
-      onSuccess: () => {
+  const { run: handleDelete } = useRequest(deleteRoleByIdApi, {
+    manual: true,
+    onSuccess: (response) => {
+      if (response?.data?.code === 0) {
+        message.success('角色删除成功');
         refresh();
-      },
-      onError: (error: any) => {
-        message.error(error.response?.data?.msg || '删除失败');
-      },
-    }
-  );
+      } else {
+        message.error(response?.data?.msg || '删除失败');
+      }
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.msg || '删除失败');
+    },
+  });
 
   const { run: fetchRoleDetail } = useRequest(
     async (id: string) => {

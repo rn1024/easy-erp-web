@@ -127,13 +127,17 @@ const DeliveryRecordsPage: React.FC = () => {
     },
     {
       manual: true,
-      onSuccess: () => {
-        message.success(editingRecord ? '更新成功' : '创建成功');
-        setIsModalVisible(false);
-        setEditingRecord(null);
-        form.resetFields();
-        setProductItems([]);
-        refreshRecords();
+      onSuccess: (response: any) => {
+        if (response?.code === 0) {
+          message.success(editingRecord ? '更新成功' : '创建成功');
+          setIsModalVisible(false);
+          setEditingRecord(null);
+          form.resetFields();
+          setProductItems([]);
+          refreshRecords();
+        } else {
+          message.error(response?.msg || '操作失败');
+        }
       },
       onError: (error) => {
         message.error(error.message || '操作失败');
@@ -144,9 +148,13 @@ const DeliveryRecordsPage: React.FC = () => {
   // 删除发货记录
   const { run: handleDelete } = useRequest(deleteShipmentRecordApi, {
     manual: true,
-    onSuccess: () => {
-      message.success('删除成功');
-      refreshRecords();
+    onSuccess: (response: any) => {
+      if (response?.code === 0) {
+        message.success('删除成功');
+        refreshRecords();
+      } else {
+        message.error(response?.msg || '删除失败');
+      }
     },
     onError: (error) => {
       message.error(error.message || '删除失败');

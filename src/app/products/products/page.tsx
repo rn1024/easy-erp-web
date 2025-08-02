@@ -87,21 +87,20 @@ const ProductManagement: React.FC = () => {
     getProductCategoriesApi({ page: 1, pageSize: 100 })
   );
 
-  const { run: handleDelete } = useRequest(
-    async (id: string) => {
-      await deleteProductApi(id);
-      message.success('删除产品成功');
-    },
-    {
-      manual: true,
-      onSuccess: () => {
+  const { run: handleDelete } = useRequest(deleteProductApi, {
+    manual: true,
+    onSuccess: (response) => {
+      if (response?.data?.code === 0) {
+        message.success('删除产品成功');
         refresh();
-      },
-      onError: (error: any) => {
-        message.error(error?.response?.data?.msg || '删除失败');
-      },
-    }
-  );
+      } else {
+        message.error(response?.data?.msg || '删除失败');
+      }
+    },
+    onError: (error: any) => {
+      message.error(error?.response?.data?.msg || '删除失败');
+    },
+  });
 
   const { run: fetchProductDetail } = useRequest(
     async (id: string) => {

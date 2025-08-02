@@ -186,10 +186,14 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
   // 提交供货记录
   const { run: submitRecord, loading: submitLoading } = useRequest(submitSupplyRecord, {
     manual: true,
-    onSuccess: () => {
-      message.success('供货记录提交成功！');
-      // 可以选择刷新数据或跳转到成功页面
-      window.location.reload();
+    onSuccess: (response: any) => {
+      if (response?.code === 0) {
+        message.success('供货记录提交成功！');
+        // 可以选择刷新数据或跳转到成功页面
+        window.location.reload();
+      } else {
+        message.error(response?.msg || '提交失败');
+      }
     },
     onError: (error: any) => {
       // 检查是否是产品冲突错误

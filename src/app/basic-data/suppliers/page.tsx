@@ -21,6 +21,7 @@ import SupplierFormModal from './components/supplier-form-modal';
 // APIs接口
 import {
   getSuppliers,
+  getSupplier,
   deleteSupplier as deleteSupplierApi,
   type Supplier,
   type SuppliersParams,
@@ -59,8 +60,8 @@ const SuppliersPage: React.FC = () => {
 
   const { loading: deleting, run: deleteSupplier } = useRequest(deleteSupplierApi, {
     manual: true,
-    onSuccess: (response: any) => {
-      if (response?.data?.code === 200) {
+    onSuccess: (response) => {
+      if (response?.data?.code === 0) {
         message.success('删除供应商成功');
         refresh();
       } else {
@@ -90,10 +91,27 @@ const SuppliersPage: React.FC = () => {
     });
   }, [searchForm]);
 
-  const handleOpenModal = useCallback((supplier?: Supplier) => {
-    setEditingSupplier(supplier || null);
+  const handleOpenModal = useCallback(async (supplier?: Supplier) => {
+    if (supplier?.id) {
+      try {
+        // 获取完整的供应商详情数据
+        const response = await getSupplier(supplier.id);
+        if (response?.data?.code === 0) {
+          setEditingSupplier(response.data.data);
+        } else {
+          message.error('获取供应商详情失败');
+          return;
+        }
+      } catch (error) {
+        console.error('获取供应商详情失败:', error);
+        message.error('获取供应商详情失败');
+        return;
+      }
+    } else {
+      setEditingSupplier(null);
+    }
     setModalVisible(true);
-  }, []);
+  }, [message]);
 
   const closeModal = useCallback(
     (reload?: boolean) => {

@@ -59,22 +59,28 @@ const SupplierFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
   useEffect(() => {
     if (open) {
       if (entity) {
-        form.setFieldsValue({
-          nickname: entity.nickname,
-          contactPerson: entity.contactPerson,
-          contactPhone: entity.contactPhone,
-          companyName: entity.companyName,
-          creditCode: entity.creditCode,
-          bankName: entity.bankName,
-          bankAccount: entity.bankAccount,
-          bankAddress: entity.bankAddress,
-          productionDays: entity.productionDays,
-          deliveryDays: entity.deliveryDays,
-          remark: entity.remark,
-        });
+        // 确保在下一个事件循环中设置表单值，避免时序问题
+        setTimeout(() => {
+          form.setFieldsValue({
+            nickname: entity.nickname,
+            contactPerson: entity.contactPerson,
+            contactPhone: entity.contactPhone,
+            companyName: entity.companyName,
+            creditCode: entity.creditCode,
+            bankName: entity.bankName,
+            bankAccount: entity.bankAccount,
+            bankAddress: entity.bankAddress,
+            productionDays: entity.productionDays,
+            deliveryDays: entity.deliveryDays,
+            remark: entity.remark,
+          });
+        }, 0);
       } else {
         form.resetFields();
       }
+    } else {
+      // 模态框关闭时重置表单
+      form.resetFields();
     }
   }, [open, entity, form]);
 

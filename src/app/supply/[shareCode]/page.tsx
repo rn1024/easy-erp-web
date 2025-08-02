@@ -44,21 +44,25 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
   const { run: verify, loading } = useRequest(verifyShareLink, {
     manual: true,
     onSuccess: (response) => {
-      const data = response.data;
-      setShareInfo(data.shareInfo);
+      if (response?.code === 0) {
+        const data = response.data;
+        setShareInfo(data.shareInfo);
 
-      // 保存用户token到localStorage，用于后续API调用
-      if (data.userToken) {
-        localStorage.setItem(`supply_token_${shareCode}`, data.userToken);
+        // 保存用户token到localStorage，用于后续API调用
+        if (data.userToken) {
+          localStorage.setItem(`supply_token_${shareCode}`, data.userToken);
+        }
+
+        message.success('验证成功，正在跳转...');
+
+        // 延迟跳转以显示成功消息
+        setTimeout(() => {
+          const targetUrl = `/supply/${shareCode}/dashboard?extractCode=${extractCode || presetExtractCode}`;
+          router.push(targetUrl);
+        }, 1000);
+      } else {
+        message.error(response?.msg || '验证失败');
       }
-
-      message.success('验证成功，正在跳转...');
-
-      // 延迟跳转以显示成功消息
-      setTimeout(() => {
-        const targetUrl = `/supply/${shareCode}/dashboard?extractCode=${extractCode || presetExtractCode}`;
-        router.push(targetUrl);
-      }, 1000);
     },
     onError: (error: any) => {
       if (error.message.includes('提取码')) {

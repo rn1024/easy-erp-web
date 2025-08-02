@@ -77,13 +77,17 @@ const AccountsPage: React.FC = () => {
 
   const { run: handleDelete } = useRequest(dAccount, {
     manual: true,
-    onSuccess: (response: any) => {
+    onSuccess: (response) => {
       if (response?.data?.code === 0) {
         message.success('删除成功');
         refresh();
       } else {
         message.error(response?.data?.msg || '删除失败');
       }
+    },
+    onError: (error) => {
+      console.error('删除失败:', error);
+      message.error('删除失败');
     },
   });
 
