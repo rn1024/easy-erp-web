@@ -148,10 +148,29 @@ jobs:
             npm run db:generate
             echo "✅ Prisma客户端生成完成"
 
-            # 8. 数据库迁移
-            echo "🗄️  执行数据库迁移..."
-            npm run db:sync-migrate
-            echo "✅ 数据库迁移完成"
+            # 7.5. 检查并初始化数据库
+            echo "🗄️  检查数据库初始化状态..."
+            if npm run db:sync-migrate 2>&1 | grep -q "No pending migrations"; then
+              echo "✅ 数据库已存在迁移记录"
+              # 检查是否有基础数据
+              if node -e "const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.role.count().then(count => { if(count === 0) { console.log('NEED_SEED'); process.exit(1); } else { console.log('DATA_EXISTS'); } }).catch(() => { console.log('NEED_SEED'); process.exit(1); }).finally(() => prisma.\$disconnect());"; then
+                echo "✅ 数据库已有基础数据"
+              else
+                echo "🌱 数据库需要初始化种子数据..."
+                npm run db:seed
+                echo "✅ 数据库种子数据初始化完成"
+              fi
+            else
+              echo "🗄️  执行数据库迁移..."
+              npm run db:sync-migrate
+              echo "✅ 数据库迁移完成"
+              echo "🌱 初始化数据库种子数据..."
+              npm run db:seed
+              echo "✅ 数据库种子数据初始化完成"
+            fi
+
+            # 8. 数据库准备完成
+            echo "✅ 数据库准备完成"
 
             # 9. 构建应用（使用standalone模式）
             echo "🔨 开始构建应用..."
