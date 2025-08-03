@@ -59,7 +59,7 @@ const customUpload = async (file: File): Promise<string> => {
 const formSubmit = async (entity: Shop | null, formData: ShopFormData) => {
   // 区分是更新还是新增
   if (entity && entity.id) {
-    return await updateShop(entity.id, formData);
+    return await updateShop(entity.id.toString(), formData);
   }
   return await createShop(formData);
 };

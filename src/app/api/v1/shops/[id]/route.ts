@@ -15,7 +15,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     }
 
     const shop = await prisma.shop.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
       include: {
         operator: {
           select: {
@@ -56,7 +56,7 @@ export const PUT = withAuth(async (request: NextRequest, user: any) => {
 
     // 检查店铺是否存在
     const existingShop = await prisma.shop.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     if (!existingShop) {
@@ -68,7 +68,7 @@ export const PUT = withAuth(async (request: NextRequest, user: any) => {
       const duplicateShop = await prisma.shop.findFirst({
         where: {
           nickname,
-          id: { not: id },
+          id: { not: parseInt(id) },
         },
       });
 
@@ -79,7 +79,7 @@ export const PUT = withAuth(async (request: NextRequest, user: any) => {
 
     // 更新店铺
     const shop = await prisma.shop.update({
-      where: { id },
+      where: { id: parseInt(id) },
       data: {
         ...(nickname && { nickname }),
         ...(avatarUrl !== undefined && { avatarUrl }),
@@ -119,7 +119,7 @@ export const DELETE = withAuth(async (request: NextRequest, user: any) => {
 
     // 检查店铺是否存在
     const existingShop = await prisma.shop.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     if (!existingShop) {
@@ -128,7 +128,7 @@ export const DELETE = withAuth(async (request: NextRequest, user: any) => {
 
     // 检查店铺是否有关联数据
     const relatedData = await prisma.productInfo.findFirst({
-      where: { shopId: id },
+      where: { shopId: parseInt(id) },
     });
 
     if (relatedData) {
@@ -140,7 +140,7 @@ export const DELETE = withAuth(async (request: NextRequest, user: any) => {
 
     // 删除店铺
     await prisma.shop.delete({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     return NextResponse.json({

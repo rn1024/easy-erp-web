@@ -148,7 +148,7 @@ const ShopsPage: React.FC = () => {
           <Button type="text" icon={<EditOutlined />} onClick={() => handleEditClick(record)} />
           <Popconfirm
             title="确定删除此店铺吗？"
-            onConfirm={() => handleDelete(record.id)}
+            onConfirm={() => handleDelete(record.id.toString())}
             okText="确定"
             cancelText="取消"
           >
