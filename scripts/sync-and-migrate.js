@@ -75,22 +75,22 @@ class SyncAndMigrate {
         return false;
       }
 
-      // 检查_prisma_migrations表是否存在
-      const tableCheck = await this.prisma.$queryRaw`
+      // 首先检查表是否存在
+      const tableExists = await this.prisma.$queryRaw`
         SELECT COUNT(*) as count FROM information_schema.tables 
         WHERE table_schema = DATABASE() AND table_name = '_prisma_migrations';
       `;
-
-      if (tableCheck[0].count === 0) {
+      
+      if (tableExists[0].count === 0) {
         console.log('⚠️  _prisma_migrations表不存在，需要同步');
         return true;
       }
-
-      // 检查迁移记录数量
+      
+      // 表存在，检查记录数量
       const recordCount = await this.prisma.$queryRaw`
         SELECT COUNT(*) as count FROM _prisma_migrations;
       `;
-
+      
       if (recordCount[0].count === 0) {
         console.log('⚠️  迁移记录为空，需要同步');
         return true;
@@ -108,6 +108,9 @@ class SyncAndMigrate {
     console.log('🔄 同步迁移记录...');
 
     try {
+      // 首先确保_prisma_migrations表存在
+      await this.ensureMigrationTable();
+      
       const syncSQL = fs.readFileSync(this.syncFile, 'utf8');
 
       // 分割SQL语句并逐个执行
@@ -116,13 +119,56 @@ class SyncAndMigrate {
         .map((s) => s.trim())
         .filter((s) => s.length > 0 && !s.startsWith('--'));
 
-      for (const statement of statements) {
-        await this.prisma.$executeRawUnsafe(statement);
+      console.log(`📝 准备执行 ${statements.length} 条SQL语句`);
+
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i];
+        try {
+          console.log(`🔧 执行语句 ${i + 1}/${statements.length}`);
+          await this.prisma.$executeRawUnsafe(statement);
+        } catch (statementError) {
+          console.warn(`⚠️  语句执行失败 (${i + 1}/${statements.length}):`, statementError.message);
+          // 对于CREATE TABLE IF NOT EXISTS和INSERT IGNORE，某些错误是可以接受的
+          if (
+            (statement.includes('CREATE TABLE IF NOT EXISTS') && statementError.message.includes('already exists')) ||
+            (statement.includes('INSERT IGNORE') && statementError.message.includes('Duplicate entry'))
+          ) {
+            console.log('ℹ️  忽略可接受的错误');
+            continue;
+          }
+          throw statementError;
+        }
       }
 
       console.log('✅ 迁移记录同步完成');
     } catch (error) {
       throw new Error(`迁移记录同步失败: ${error.message}`);
+    }
+  }
+
+  async ensureMigrationTable() {
+    console.log('🔧 确保_prisma_migrations表存在...');
+    try {
+      await this.prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS _prisma_migrations (
+          id VARCHAR(36) NOT NULL,
+          checksum VARCHAR(64) NOT NULL,
+          finished_at DATETIME(3) NULL,
+          migration_name VARCHAR(255) NOT NULL,
+          logs TEXT NULL,
+          rolled_back_at DATETIME(3) NULL,
+          started_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+          applied_steps_count INT UNSIGNED NOT NULL DEFAULT 0,
+          PRIMARY KEY (id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+      console.log('✅ _prisma_migrations表已确保存在');
+    } catch (error) {
+      console.warn('⚠️  创建迁移表失败:', error.message);
+      // 如果表已存在，这个错误是可以接受的
+      if (!error.message.includes('already exists')) {
+        throw error;
+      }
     }
   }
 

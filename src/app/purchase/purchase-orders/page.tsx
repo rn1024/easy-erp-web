@@ -638,6 +638,7 @@ const PurchaseOrdersPage: React.FC = () => {
           purchaseOrderId={supplyRecordsRecord.id}
           orderNumber={supplyRecordsRecord.orderNumber}
           onClose={closeSupplyRecordsModal}
+          onRefresh={refreshPurchaseOrders}
         />
       )}
     </>

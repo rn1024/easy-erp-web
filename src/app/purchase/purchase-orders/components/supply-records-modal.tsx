@@ -20,6 +20,7 @@ import {
   Progress,
   Descriptions,
   Alert,
+  Spin,
 } from 'antd';
 import {
   EyeOutlined,
@@ -33,8 +34,10 @@ import { ColumnsType } from 'antd/es/table';
 import {
   getSupplyRecordsApi,
   disableSupplyRecordApi,
-  SupplyStatistics,
+  getSupplierHistoryRecordsApi,
+  checkAndUpdateOrderStatusApi,
   SupplyRecord,
+  SupplyStatistics,
 } from '@/services/supply';
 
 const { Text, Title } = Typography;
@@ -45,6 +48,7 @@ interface SupplyRecordsModalProps {
   purchaseOrderId: string;
   orderNumber: string;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
 const SupplyRecordsModal: React.FC<SupplyRecordsModalProps> = ({
@@ -52,9 +56,31 @@ const SupplyRecordsModal: React.FC<SupplyRecordsModalProps> = ({
   purchaseOrderId,
   orderNumber,
   onClose,
+  onRefresh,
 }) => {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [detailRecord, setDetailRecord] = useState<SupplyRecord | null>(null);
+  const [supplierHistoryRecords, setSupplierHistoryRecords] = useState<SupplyRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // 获取供应商历史记录
+  const fetchSupplierHistory = async (supplierId: string) => {
+    setHistoryLoading(true);
+    try {
+      const response = await getSupplierHistoryRecordsApi(supplierId);
+      if (response.data.code === 0) {
+        setSupplierHistoryRecords(response.data.data || []);
+      } else {
+        console.warn('获取供应商历史记录失败:', response.data.msg);
+        setSupplierHistoryRecords([]);
+      }
+    } catch (error: any) {
+      console.warn('获取供应商历史记录失败:', error.message);
+      setSupplierHistoryRecords([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   // 获取供货记录列表和统计
   const {
@@ -64,15 +90,33 @@ const SupplyRecordsModal: React.FC<SupplyRecordsModalProps> = ({
   } = useRequest(() => getSupplyRecordsApi(purchaseOrderId), {
     ready: open && !!purchaseOrderId,
     refreshDeps: [open, purchaseOrderId],
+    onSuccess: (data) => {
+      // 获取供应商历史记录（如果有供应商信息）
+      const records = data?.data?.data?.records;
+      if (records?.length > 0 && records[0]?.supplierInfo?.id) {
+        fetchSupplierHistory(records[0].supplierInfo.id);
+      }
+    },
   });
 
   // 失效供货记录
   const { run: disableRecord, loading: disableLoading } = useRequest(disableSupplyRecordApi, {
     manual: true,
-    onSuccess: () => {
+    onSuccess: async () => {
       message.success('供货记录已失效');
       refreshRecords();
       setDetailRecord(null);
+      
+      // 检查并更新采购订单状态
+      if (purchaseOrderId) {
+        try {
+          await checkAndUpdateOrderStatusApi(purchaseOrderId);
+          // 刷新采购订单列表
+          onRefresh?.();
+        } catch (error) {
+          console.warn('检查订单状态失败:', error);
+        }
+      }
     },
     onError: (error: any) => {
       message.error(error.response?.data?.msg || '失效操作失败');
@@ -392,6 +436,83 @@ const SupplyRecordsModal: React.FC<SupplyRecordsModalProps> = ({
               </Table.Summary>
             )}
           />
+        </Card>
+      )}
+
+      {/* 供应商历史记录 */}
+      {detailRecord && detailRecord.supplierInfo && (
+        <Card
+          title={<Text strong>供应商历史记录</Text>}
+          size="small"
+          style={{ marginTop: 16 }}
+        >
+          {historyLoading ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <Spin tip="加载供应商历史记录..." />
+            </div>
+          ) : supplierHistoryRecords.length > 0 ? (
+            <Table
+              dataSource={supplierHistoryRecords}
+              columns={[
+                {
+                  title: '订单编号',
+                  dataIndex: ['purchaseOrder', 'orderNumber'],
+                  key: 'orderNumber',
+                  width: 150,
+                  render: (text) => text || '-',
+                },
+                {
+                  title: '供货金额',
+                  dataIndex: 'totalAmount',
+                  key: 'totalAmount',
+                  width: 120,
+                  render: (amount) => (
+                    <Text style={{ color: '#f50' }}>¥{Number(amount).toFixed(2)}</Text>
+                  ),
+                },
+                {
+                  title: '产品数量',
+                  dataIndex: 'itemCount',
+                  key: 'itemCount',
+                  width: 100,
+                  render: (count) => `${count}个`,
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'status',
+                  key: 'status',
+                  width: 80,
+                  render: (status) => getStatusTag(status),
+                },
+                {
+                  title: '创建时间',
+                  dataIndex: 'createdAt',
+                  key: 'createdAt',
+                  width: 150,
+                  render: (date) => new Date(date).toLocaleDateString(),
+                },
+                {
+                  title: '备注',
+                  dataIndex: 'remark',
+                  key: 'remark',
+                  ellipsis: true,
+                  render: (text) => text || '-',
+                },
+              ]}
+              rowKey="id"
+              size="small"
+              pagination={{
+                pageSize: 5,
+                showSizeChanger: false,
+                showQuickJumper: false,
+              }}
+              scroll={{ y: 200 }}
+            />
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: '#999' }}>
+              暂无历史记录
+            </div>
+          )}
         </Card>
       )}
 

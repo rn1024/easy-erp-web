@@ -220,3 +220,25 @@ export const getSupplyStatsApi = async (purchaseOrderIds: string[]) => {
     return { data: { code: 0, data: [], msg: '获取统计信息失败' } };
   }
 };
+
+// 获取供应商历史供应记录
+export const getSupplierHistoryRecordsApi = async (supplierId: string) => {
+  try {
+    const response = await request.get(`/suppliers/${supplierId}/supply-history`);
+    return response;
+  } catch (error: any) {
+    console.error('获取供应商历史记录失败:', error);
+    throw new Error(error?.response?.data?.msg || '获取供应商历史记录失败');
+  }
+};
+
+// 检查并更新采购订单状态
+export const checkAndUpdateOrderStatusApi = async (purchaseOrderId: string) => {
+  try {
+    const response = await request.post(`/purchase-orders/${purchaseOrderId}/check-status`);
+    return response;
+  } catch (error: any) {
+    console.error('检查订单状态失败:', error);
+    throw new Error(error?.response?.data?.msg || '检查订单状态失败');
+  }
+};

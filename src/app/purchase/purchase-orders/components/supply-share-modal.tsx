@@ -166,7 +166,7 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
   // 分享历史表格列定义
   const historyColumns = [
     {
-      title: '分享码',
+      title: '分享密钥',
       dataIndex: 'shareCode',
       key: 'shareCode',
       width: 120,
