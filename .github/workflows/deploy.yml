@@ -207,7 +207,7 @@ jobs:
               echo "✅ 端口3008空闲"
             fi
 
-                        # 12. 配置Nginx（如果配置文件存在）
+            # 12. 配置Nginx（如果配置文件存在）
             if [ -f "nginx/erp.samuelcn.com.conf" ]; then
               echo "🌐 配置Nginx..."
               mkdir -p /etc/nginx/sites-available
@@ -469,7 +469,12 @@ jobs:
             echo "🌐 端口监听状态："
             netstat -tlnp | grep :3008 || echo "端口3008未监听"
 
+            echo "🐳 Docker容器状态："
+            docker ps -a | grep mysql || echo "MySQL容器未运行"
+
             echo "🔄 尝试重启应用："
             pm2 restart easy-erp-web
             sleep 10
             pm2 status
+
+            echo "📊 部署故障排查完成"
