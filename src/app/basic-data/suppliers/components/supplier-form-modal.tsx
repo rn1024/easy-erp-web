@@ -132,9 +132,10 @@ const SupplierFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
           remark: formData.remark,
         };
 
-        const res = await formSubmit(entity, submitData);
+        const res = await formSubmit(entity, formData);
         if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
-          message.success(entity ? '更新供应商成功' : '创建供应商成功');
+          message.success(entity ? '更新成功' : '创建成功');
+          setSubmittingFalse();
           closeModal(true);
         } else {
           // 错误信息已由统一拦截器处理，这里只需要停止loading状态

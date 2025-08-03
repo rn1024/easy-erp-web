@@ -86,10 +86,11 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
         setQuantity: formData.setQuantity || 1,
       };
 
-      const res = await formSubmit(entity, submitData);
-      if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
-        message.success(entity ? '更新产品成功' : '创建产品成功');
-        closeModal(true);
+      const res = await formSubmit(entity, formData);
+        if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
+          message.success(entity ? '更新成功' : '创建成功');
+          setSubmittingFalse();
+          closeModal(true);
       } else {
         message.error(get(res, 'msg') || '操作失败');
         setSubmittingFalse();

@@ -97,7 +97,7 @@ const ShopsPage: React.FC = () => {
     {
       title: 'ID',
       dataIndex: 'id',
-      width: 80,
+      width: 200,
       render: (_, record) => record.id,
     },
     {
@@ -123,8 +123,8 @@ const ShopsPage: React.FC = () => {
       dataIndex: 'name',
     },
     {
-      title: '国家/地区',
-      dataIndex: 'country',
+      title: '店铺负责人',
+      dataIndex: 'responsiblePerson',
       width: 120,
     },
     {

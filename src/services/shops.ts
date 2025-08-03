@@ -3,7 +3,7 @@ import type { ResType } from '@/types/api';
 
 // 店铺数据类型
 export interface Shop {
-  id: string;
+  id: number;
   nickname: string;
   avatarUrl?: string;
   responsiblePerson: string;

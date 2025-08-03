@@ -209,6 +209,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         const res = await formSubmit(entity, submitData);
         if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
           message.success(entity ? '更新成功' : '创建成功');
+          setSubmittingFalse();
           closeModal(true);
         } else {
           message.error(get(res, 'msg') || '操作失败');

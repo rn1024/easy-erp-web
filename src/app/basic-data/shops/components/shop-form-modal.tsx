@@ -208,6 +208,7 @@ const ShopFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
         const res = await formSubmit(entity, formData);
         if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
           message.success(entity ? '店铺更新成功' : '店铺创建成功');
+          setSubmittingFalse();
           closeModal(true);
         } else {
           message.error(get(res, 'msg') || '操作失败');

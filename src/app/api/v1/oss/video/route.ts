@@ -8,10 +8,6 @@ import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { existsSync, mkdirSync } from 'fs';
 
-
-
-
-
 // POST /api/v1/oss/video - 上传视频
 export async function POST(request: NextRequest) {
   try {
@@ -40,10 +36,7 @@ export async function POST(request: NextRequest) {
     // 验证文件大小（100MB）
     const maxSize = 100 * 1024 * 1024;
     if (file.size > maxSize) {
-      return NextResponse.json(
-        { code: 400, msg: '视频大小不能超过 100MB' },
-        { status: 400 }
-      );
+      return NextResponse.json({ code: 400, msg: '视频大小不能超过 100MB' }, { status: 400 });
     }
 
     // 生成唯一文件名
@@ -52,9 +45,16 @@ export async function POST(request: NextRequest) {
     const currentDate = new Date();
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
-    
+
     // 本地存储路径（实际项目中应该上传到OSS）
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'videos', year.toString(), month.toString());
+    const uploadDir = join(
+      process.cwd(),
+      'public',
+      'uploads',
+      'videos',
+      year.toString(),
+      month.toString()
+    );
     const filePath = join(uploadDir, fileName);
     const fileUrl = `/uploads/videos/${year}/${month}/${fileName}`;
 
@@ -98,10 +98,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (uploadError) {
       console.error('视频上传失败:', uploadError);
-      return NextResponse.json(
-        { code: 500, msg: '视频上传失败' },
-        { status: 500 }
-      );
+      return NextResponse.json({ code: 500, msg: '视频上传失败' }, { status: 500 });
     }
   } catch (error) {
     console.error('上传视频失败:', error);
@@ -138,16 +135,13 @@ export async function GET(request: NextRequest) {
         startsWith: 'video/',
       },
     };
-    
+
     if (category) {
       where.category = category;
     }
-    
+
     if (fileName) {
-      where.OR = [
-        { fileName: { contains: fileName } },
-        { originalName: { contains: fileName } },
-      ];
+      where.OR = [{ fileName: { contains: fileName } }, { originalName: { contains: fileName } }];
     }
 
     // 从数据库查询视频文件记录
