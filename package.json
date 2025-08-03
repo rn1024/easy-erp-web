@@ -34,6 +34,7 @@
     "db:seed:production": "NODE_ENV=production tsx prisma/seed-production.ts",
     "db:export": "node scripts/export-migrations.js",
     "db:sync-migrate": "node scripts/sync-and-migrate.js",
+    "db:init-empty": "node scripts/init-empty-database.js",
     "health:check": "bash scripts/health-check.sh",
     "health:check:quiet": "bash scripts/health-check.sh --quiet",
     "admin:fix": "tsx scripts/smart-admin-fix.ts",
