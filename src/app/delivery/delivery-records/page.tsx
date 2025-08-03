@@ -256,10 +256,11 @@ const DeliveryRecordsPage: React.FC = () => {
   // 表格列定义
   const columns: ProColumns<ShipmentRecordInfo>[] = [
     {
-      title: '发货ID',
-      dataIndex: 'id',
-      width: 120,
-      render: (_, record) => record.id.slice(-8),
+      title: '序号',
+      dataIndex: 'index',
+      valueType: 'index',
+      width: 50,
+      align: 'center',
     },
     {
       title: '店铺',

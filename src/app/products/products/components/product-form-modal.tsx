@@ -28,14 +28,16 @@ import { apiErrorMsg } from '@/utils/apiErrorMsg';
 /**
  * APIs
  */
-import { createProductApi, updateProductApi } from '@/services/products';
+import { createProductApi, updateProductApi, getProductCategoriesApi } from '@/services/products';
+import { getShops } from '@/services/shops';
 
 /**
  * Types
  */
 import type { ModalProps, FormProps } from 'antd';
 import type { IntlShape } from 'react-intl';
-import type { ProductInfo, ProductFormData } from '@/services/products';
+import type { ProductInfo, ProductFormData, ProductCategory } from '@/services/products';
+import type { Shop } from '@/services/shops';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -69,6 +71,10 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
   const [submitting, { setFalse: setSubmittingFalse, setTrue: setSubmittingTrue }] =
     useBoolean(false);
   const [form] = Form.useForm();
+  const [shops, setShops] = useState<Shop[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [shopsLoading, setShopsLoading] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   /**
    * Handlers
@@ -110,13 +116,50 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
   };
 
   /**
+   * Data Loading
+   */
+  const fetchShops = async () => {
+    try {
+      setShopsLoading(true);
+      const response = await getShops({ pageSize: 1000 });
+      if (response.data?.code === 0) {
+        setShops(response.data.data.list);
+      }
+    } catch (error) {
+      console.error('获取店铺列表失败:', error);
+    } finally {
+      setShopsLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      const response = await getProductCategoriesApi({ pageSize: 1000 });
+      if (response.data?.code === 0) {
+        setCategories(response.data.data.list);
+      }
+    } catch (error) {
+      console.error('获取产品分类列表失败:', error);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  /**
    * Effects
    */
   useEffect(() => {
     if (open) {
+      // 获取店铺和分类数据
+      fetchShops();
+      fetchCategories();
+      
       if (entity) {
         form.setFieldsValue({
           ...entity,
+          shopId: entity.shop?.id,
+          categoryId: entity.category?.id,
           weight: entity.weight?.toString(),
           packageWeight: entity.packageWeight?.toString(),
         });
@@ -174,9 +217,19 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
                 label="所属店铺"
                 rules={[{ required: true, message: '请选择店铺' }]}
               >
-                <Select placeholder="选择店铺">
-                  <Option value="test-shop-1">测试店铺1</Option>
-                  <Option value="test-shop-2">测试店铺2</Option>
+                <Select 
+                  placeholder="选择店铺"
+                  loading={shopsLoading}
+                  showSearch
+                  filterOption={(input, option) =>
+                     (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                   }
+                >
+                  {shops.map(shop => (
+                    <Option key={shop.id} value={shop.id}>
+                      {shop.nickname}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -186,8 +239,16 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
                 label="产品分类"
                 rules={[{ required: true, message: '请选择分类' }]}
               >
-                <Select placeholder="选择分类">
-                  {categoriesList.map((category: any) => (
+                <Select 
+                  placeholder="选择分类"
+                  loading={categoriesLoading}
+                  showSearch
+                  filterOption={(input, option) => {
+                    const label = option?.label || option?.children;
+                    return String(label).toLowerCase().includes(input.toLowerCase());
+                  }}
+                >
+                  {categories.map(category => (
                     <Option key={category.id} value={category.id}>
                       {category.name}
                     </Option>

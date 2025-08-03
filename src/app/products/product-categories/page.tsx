@@ -122,11 +122,12 @@ const ProductCategoriesPage: React.FC = () => {
   // 表格列配置
   const columns: ProColumns<ProductCategory>[] = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      width: 80,
-    },
-    {
+      title: '序号',
+      dataIndex: 'index',
+      valueType: 'index',
+      width: 50,
+      align: 'center',
+    },{
       title: '分类名称',
       dataIndex: 'name',
       width: 200,

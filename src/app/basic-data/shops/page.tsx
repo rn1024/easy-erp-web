@@ -95,10 +95,11 @@ const ShopsPage: React.FC = () => {
   // Table Columns
   const columns: ProColumns<Shop>[] = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      width: 200,
-      render: (_, record) => record.id,
+      title: '序号',
+      dataIndex: 'index',
+      valueType: 'index',
+      width: 50,
+      align: 'center',
     },
     {
       title: '店铺Logo',

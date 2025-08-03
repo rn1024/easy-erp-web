@@ -161,10 +161,11 @@ const PackagingTasksPage: React.FC = () => {
    */
   const columns: ProColumns<PackagingTaskInfo>[] = [
     {
-      title: '任务ID',
-      dataIndex: 'id',
-      width: 120,
-      render: (_, record) => record.id.slice(-8),
+      title: '序号',
+      dataIndex: 'index',
+      valueType: 'index',
+      width: 50,
+      align: 'center',
     },
     {
       title: '店铺',

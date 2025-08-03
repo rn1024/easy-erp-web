@@ -172,9 +172,11 @@ const AccountsPage: React.FC = () => {
   // Table Columns
   const columns: ProColumns<AccountsResponse>[] = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      width: 80,
+      title: '序号',
+      dataIndex: 'index',
+      valueType: 'index',
+      width: 50,
+      align: 'center',
     },
     {
       title: '账户名称',

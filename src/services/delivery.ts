@@ -25,8 +25,8 @@ export const shipmentRecordStatusOptions = [
 ];
 
 // 获取发货记录状态标签
-export const getShipmentRecordStatusLabel = (status: ShipmentRecordStatus) => {
-  const statusMap = {
+export const getShipmentRecordStatusLabel = (status: ShipmentRecordStatus | string) => {
+  const statusMap: Record<string, { label: string; color: string }> = {
     PENDING: { label: '待发货', color: 'blue' },
     SHIPPED: { label: '已发货', color: 'orange' },
     IN_TRANSIT: { label: '在途', color: 'purple' },
