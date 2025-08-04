@@ -320,13 +320,7 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="label" label="标签">
-                <Input placeholder="标签" />
-              </Form.Item>
-            </Col>
-          </Row>
+
 
           <Row gutter={16}>
             <Col span={8}>
@@ -365,7 +359,21 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
             </Col>
             <Col span={8}>
               <Form.Item name="labelFileUrl" label="标签文件">
-                <Input placeholder="标签文件URL" />
+                <Upload
+                  name="file"
+                  action="/api/v1/upload"
+                  listType="text"
+                  maxCount={1}
+                  onChange={(info) => {
+                    if (info.file.status === 'done') {
+                      form.setFieldsValue({
+                        labelFileUrl: info.file.response?.data?.url
+                      });
+                    }
+                  }}
+                >
+                  <Button icon={<UploadOutlined />}>上传标签文件</Button>
+                </Upload>
               </Form.Item>
             </Col>
           </Row>

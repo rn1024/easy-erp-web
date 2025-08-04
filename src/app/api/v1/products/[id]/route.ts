@@ -100,7 +100,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       weight,
       sku,
       asin,
-      label,
+
       codeFileUrl,
       styleInfo,
       accessoryInfo,
@@ -175,7 +175,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           ...(weight !== undefined && { weight: weight ? parseFloat(weight) : null }),
           ...(sku && { sku }),
           ...(asin !== undefined && { asin }),
-          ...(label !== undefined && { label }),
+
           ...(codeFileUrl !== undefined && { codeFileUrl }),
           ...(styleInfo !== undefined && { styleInfo }),
           ...(accessoryInfo !== undefined && { accessoryInfo }),

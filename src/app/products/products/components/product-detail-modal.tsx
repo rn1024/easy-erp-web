@@ -83,7 +83,7 @@ const ProductDetailModal: React.FC<Props> = ({ open, entity, closeModal }) => {
           <Descriptions.Item label="套装数量">{entity.setQuantity || '-'}</Descriptions.Item>
           <Descriptions.Item label="内部尺寸">{entity.internalSize || '-'}</Descriptions.Item>
           <Descriptions.Item label="外部尺寸">{entity.externalSize || '-'}</Descriptions.Item>
-          <Descriptions.Item label="标签">{entity.label || '-'}</Descriptions.Item>
+          
           <Descriptions.Item label="创建时间">
             {dayjs(entity.createdAt).format('YYYY-MM-DD HH:mm:ss')}
           </Descriptions.Item>

@@ -126,7 +126,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       externalSize,
       weight,
       sku,
-      label,
+
       codeFileUrl,
       imageUrl,
       styleInfo,
@@ -190,7 +190,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
           externalSize: externalSize || null,
           weight: weight ? parseFloat(weight) : null,
           sku,
-          label: label || null,
+
           codeFileUrl: codeFileUrl || null,
           styleInfo: styleInfo || null,
           accessoryInfo: accessoryInfo || null,

@@ -77,7 +77,7 @@ export interface ProductInfo {
   weight?: number;
   sku?: string;
   asin?: string;
-  label?: string;
+
   codeFileUrl?: string;
   styleInfo?: string;
   accessoryInfo?: string;
