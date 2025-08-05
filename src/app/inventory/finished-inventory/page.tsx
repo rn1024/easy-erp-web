@@ -155,8 +155,7 @@ const FinishedInventoryPage: React.FC = () => {
       width: 200,
       render: (_, record) => (
         <div>
-          <div>编码: {record.product.code || '无编码'}</div>
-          <div>SKU: {record.product.sku || '无SKU'}</div>
+          <div>产品名称: {record.product.name || '无名称'}</div>
           {record.product.specification && <div>规格: {record.product.specification}</div>}
           {record.product.color && <Tag color="blue">{record.product.color}</Tag>}
         </div>

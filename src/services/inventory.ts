@@ -26,6 +26,7 @@ export interface FinishedInventoryItem {
   };
   product: {
     id: string;
+    name: string;
     code: string;
     sku: string;
     specification?: string;
@@ -126,6 +127,7 @@ export interface SpareInventoryItem {
   };
   product: {
     id: string;
+    name: string;
     code: string;
     sku: string;
     specification?: string;

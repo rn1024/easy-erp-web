@@ -22,9 +22,7 @@ export interface PurchaseOrderItemInfo {
   quantity: number;
   unitPrice: number;
   amount: number; // 小计金额 (quantity * unitPrice)
-  taxRate: number; // 税率 (%)
-  taxAmount: number; // 税额 (amount * taxRate / 100)
-  totalAmount: number; // 含税总额 (amount + taxAmount)
+  totalAmount: number; // 总金额 (等于amount)
   remark?: string; // 明细备注
   createdAt: string;
   updatedAt: string;
@@ -90,7 +88,6 @@ export interface CreatePurchaseOrderItemData {
   productId: string;
   quantity: number;
   unitPrice: number;
-  taxRate: number;
   remark?: string;
 }
 
@@ -110,7 +107,6 @@ export interface UpdatePurchaseOrderItemData {
   productId: string;
   quantity: number;
   unitPrice: number;
-  taxRate: number;
   remark?: string;
 }
 

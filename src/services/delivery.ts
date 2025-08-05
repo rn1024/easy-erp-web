@@ -64,6 +64,15 @@ export interface ShipmentProductRecordInfo {
   };
 }
 
+// 发货文件信息接口
+export interface ShipmentFileInfo {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  fileType: string;
+}
+
 // 发货记录信息接口 (主表)
 export interface ShipmentRecordInfo {
   id: string;
@@ -78,6 +87,7 @@ export interface ShipmentRecordInfo {
   operatorId: string;
   createdAt: string;
   updatedAt: string;
+  shipmentFiles?: ShipmentFileInfo[]; // 发货文件列表
   shop?: {
     id: string;
     nickname: string;
@@ -100,6 +110,7 @@ export interface CreateShipmentRecordData {
   warehouseReceiptDeadline?: string;
   shippingDetails?: string;
   date: string;
+  shipmentFiles?: ShipmentFileInfo[]; // 发货文件列表
   products: {
     productId: string;
     forwarderId: string;
@@ -119,6 +130,7 @@ export interface UpdateShipmentRecordData {
   shippingDetails?: string;
   date?: string;
   status?: ShipmentRecordStatus;
+  shipmentFiles?: ShipmentFileInfo[]; // 发货文件列表
   products?: {
     id?: string; // 产品记录ID，如果存在则更新，否则创建
     productId: string;

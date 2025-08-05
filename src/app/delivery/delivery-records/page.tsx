@@ -52,6 +52,8 @@ import UniversalProductItemsTable, {
   type ProductOption,
   type ForwarderOption,
 } from '@/components/universal-product-items-table';
+import ShipmentFileUploader from '@/components/shipment-file-uploader';
+import type { ShipmentFileInfo } from '@/services/delivery';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -64,6 +66,7 @@ const DeliveryRecordsPage: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<ShipmentRecordInfo | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<ShipmentRecordInfo | null>(null);
   const [productItems, setProductItems] = useState<UniversalProductItem[]>([]);
+  const [shipmentFiles, setShipmentFiles] = useState<ShipmentFileInfo[]>([]);
 
   // 搜索参数
   const [searchParams, setSearchParams] = useState<ShipmentRecordQueryParams>({
@@ -134,6 +137,7 @@ const DeliveryRecordsPage: React.FC = () => {
           setEditingRecord(null);
           form.resetFields();
           setProductItems([]);
+          setShipmentFiles([]);
           refreshRecords();
         } else {
           message.error(response?.msg || '操作失败');
@@ -221,10 +225,14 @@ const DeliveryRecordsPage: React.FC = () => {
           quantity: product.totalBoxes, // 保持兼容性
         })) || [];
       setProductItems(items);
+      
+      // 设置文件数据
+      setShipmentFiles(record.shipmentFiles || []);
     } else {
       setEditingRecord(null);
       form.resetFields();
       setProductItems([]);
+      setShipmentFiles([]);
     }
     setIsModalVisible(true);
   };
@@ -241,6 +249,7 @@ const DeliveryRecordsPage: React.FC = () => {
       ...values,
       date: values.date?.format('YYYY-MM-DD'),
       warehouseReceiptDeadline: values.warehouseReceiptDeadline?.format('YYYY-MM-DD'),
+      shipmentFiles: shipmentFiles,
       products: productItems.map((item) => ({
         productId: item.productId,
         forwarderId: item.forwarderId || undefined,
@@ -451,6 +460,7 @@ const DeliveryRecordsPage: React.FC = () => {
           setEditingRecord(null);
           form.resetFields();
           setProductItems([]);
+          setShipmentFiles([]);
         }}
         onOk={() => form.submit()}
         confirmLoading={submitLoading}
@@ -531,6 +541,15 @@ const DeliveryRecordsPage: React.FC = () => {
             <TextArea rows={3} placeholder="输入运输详情" />
           </Form.Item>
 
+          <Form.Item label="发货文件">
+            <ShipmentFileUploader
+              value={shipmentFiles}
+              onChange={setShipmentFiles}
+              disabled={false}
+              maxCount={5}
+            />
+          </Form.Item>
+
           <div style={{ marginBottom: 16 }}>
             <Alert
               message="发货记录：管理发货产品的详细信息，货代为可选字段，支持FBA货件编码管理"
@@ -605,6 +624,18 @@ const DeliveryRecordsPage: React.FC = () => {
                 >
                   {selectedRecord.shippingDetails}
                 </div>
+              </div>
+            )}
+
+            {selectedRecord.shipmentFiles && selectedRecord.shipmentFiles.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <strong>发货文件：</strong>
+                <ShipmentFileUploader
+                  value={selectedRecord.shipmentFiles}
+                  onChange={() => {}} // 详情模式不允许编辑
+                  disabled={true}
+                  maxCount={5}
+                />
               </div>
             )}
 

@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
       // 验证产品明细
       for (const item of items) {
-        if (!item.productId || !item.quantity || !item.unitPrice || item.taxRate === undefined) {
+        if (!item.productId || !item.quantity || !item.unitPrice) {
           return NextResponse.json({ code: 400, msg: '产品明细信息不完整' }, { status: 400 });
         }
         if (item.quantity <= 0 || item.unitPrice <= 0) {
@@ -156,8 +156,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (items) {
       calculatedItems = items.map((item: any) => {
         const amount = item.quantity * item.unitPrice;
-        const taxAmount = amount * (item.taxRate / 100);
-        const totalAmount = amount + taxAmount;
+        const totalAmount = amount; // 移除税率计算，总金额等于小计金额
 
         return {
           id: item.id || undefined, // 如果有ID则是更新，否则是新增
@@ -165,8 +164,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           quantity: parseInt(item.quantity),
           unitPrice: parseFloat(item.unitPrice),
           amount: parseFloat(amount.toFixed(2)),
-          taxRate: parseFloat(item.taxRate),
-          taxAmount: parseFloat(taxAmount.toFixed(2)),
           totalAmount: parseFloat(totalAmount.toFixed(2)),
           remark: item.remark || null,
         };
@@ -208,8 +205,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             amount: item.amount,
-            taxRate: item.taxRate,
-            taxAmount: item.taxAmount,
             totalAmount: item.totalAmount,
             remark: item.remark,
           })),

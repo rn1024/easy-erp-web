@@ -218,9 +218,9 @@ const SpareInventoryPage: React.FC = () => {
       width: 200,
       render: (_, record) => (
         <div>
+          <div>产品名称: {record.product.name || '无名称'}</div>
+          <div>规格: {record.product.specification || '无规格'}</div>
           <div>编码: {record.product.code || '无编码'}</div>
-          <div>SKU: {record.product.sku || '无SKU'}</div>
-          {record.product.specification && <div>规格: {record.product.specification}</div>}
           {record.product.color && <Tag color="blue">{record.product.color}</Tag>}
         </div>
       ),
@@ -443,7 +443,7 @@ const SpareInventoryPage: React.FC = () => {
             >
               {productData.map((product: any) => (
                 <Option key={product.id} value={product.id}>
-                  {product.code || '无编码'} - {product.specification}
+                  {product.name || '无名称'} {product.specification || '无规格'} {product.code || '无编码'}
                 </Option>
               ))}
             </Select>
