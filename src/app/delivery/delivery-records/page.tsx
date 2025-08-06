@@ -106,6 +106,7 @@ const DeliveryRecordsPage: React.FC = () => {
     productsData?.map((product: any) => ({
       id: product.id,
       code: product.code,
+      name: product.name,
       sku: product.sku,
       specification: product.specification,
       category: product.category,
@@ -225,7 +226,7 @@ const DeliveryRecordsPage: React.FC = () => {
           quantity: product.totalBoxes, // 保持兼容性
         })) || [];
       setProductItems(items);
-      
+
       // 设置文件数据
       setShipmentFiles(record.shipmentFiles || []);
     } else {

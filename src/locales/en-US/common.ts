@@ -132,6 +132,23 @@ const enUSCommon = {
   m: {
     exportTips: `Exporting. Please check 'System Management - Downloads' later`,
   },
+  /**
+   * Product Image
+   */
+  'product.image.uploadHint': 'Click or drag images to this area to upload',
+  'product.image.uploadLimit': 'Support JPG, PNG, GIF formats, single image no more than 10MB, up to {maxCount} images',
+  'product.image.count': '{count} / {maxCount} images',
+  'product.image.setCoverSuccess': 'Cover image set successfully',
+  'product.image.setCoverFailed': 'Failed to set cover image',
+  'product.image.sortSuccess': 'Sort order updated successfully',
+  'product.image.sortFailed': 'Failed to update sort order',
+  /**
+   * Upload and Delete
+   */
+  'upload.success': 'Upload successful',
+  'upload.failed': 'Upload failed',
+  'delete.success': 'Delete successful',
+  'delete.failed': 'Delete failed',
 };
 
 export default enUSCommon;

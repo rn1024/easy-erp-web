@@ -121,6 +121,24 @@ const zhCNCommon = {
   m: {
     exportTips: '导出中，稍后请至"系统管理-下载管理"查看',
   },
+  /**
+   * Product Image
+   */
+  'product.image.uploadHint': '点击或拖拽图片到此区域上传',
+  'product.image.uploadLimit': '支持 JPG、PNG、GIF 格式，单张图片不超过 10MB，最多 {maxCount} 张',
+  'product.image.count': '{count} / {maxCount} 张图片',
+  'product.image.setCoverSuccess': '封面设置成功',
+  'product.image.setCoverFailed': '设置封面失败',
+  'product.image.sortSuccess': '排序更新成功',
+  'product.image.sortFailed': '排序更新失败',
+  /**
+   * Upload and Delete
+   */
+  'upload.success': '上传成功',
+  'upload.failed': '上传失败',
+  'delete.success': '删除成功',
+  'delete.failed': '删除失败',
+
 };
 
 export default zhCNCommon;

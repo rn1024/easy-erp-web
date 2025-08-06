@@ -22,6 +22,7 @@ const { Text } = Typography;
 export interface ProductOption {
   id: string;
   code?: string;
+  name?: string;
   sku?: string;
   specification?: string;
   category?: {
@@ -204,11 +205,7 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
                 <Option key={product.id} value={product.id}>
                   <div>
                     <div>
-                      {product.code || '无编码'} - {product.specification}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#999' }}>
-                      SKU: {product.sku || '无SKU'}
-                      {product.category && ` | ${product.category.name}`}
+                      {product.name || '无名称'} - {product.specification || '无规格'}
                     </div>
                   </div>
                 </Option>
@@ -220,8 +217,10 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
         const product = productsData.find((p) => p.id === value);
         return product ? (
           <div>
-            <div>{product.code || '无编码'}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>{product.specification}</div>
+            <div>{product.name || '无名称'}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              {product.specification || '无规格'}
+            </div>
           </div>
         ) : (
           '-'
@@ -413,12 +412,6 @@ const UniversalProductItemsTable: React.FC<UniversalProductItemsTableProps> = ({
                       <Option key={forwarder.id} value={forwarder.id}>
                         <div>
                           <div>{forwarder.nickname}</div>
-                          {forwarder.contactPerson && (
-                            <div style={{ fontSize: '12px', color: '#999' }}>
-                              {forwarder.contactPerson}
-                              {forwarder.contactPhone && ` | ${forwarder.contactPhone}`}
-                            </div>
-                          )}
                         </div>
                       </Option>
                     ))}

@@ -81,6 +81,10 @@ const ProductManagement: React.FC = () => {
     refresh,
   } = useRequest(() => getProductsApi(searchParams), {
     refreshDeps: [searchParams],
+    onError: (error) => {
+      console.error('产品数据加载失败:', error);
+      message.error('加载产品数据失败');
+    },
   });
 
   const { data: categoriesData } = useRequest(() =>
@@ -116,6 +120,24 @@ const ProductManagement: React.FC = () => {
     }
   );
 
+  const { run: fetchProductForEdit } = useRequest(
+    async (id: string) => {
+      const res = await getProductApi(id);
+      console.log('🔍 fetchProductForEdit - API响应:', res);
+      console.log('🔍 fetchProductForEdit - 产品数据:', res.data.data);
+      console.log('🔍 fetchProductForEdit - shop数据:', res.data.data?.shop);
+      console.log('🔍 fetchProductForEdit - category数据:', res.data.data?.category);
+      setEditingProduct(res.data.data);
+      setDrawerVisible(true);
+    },
+    {
+      manual: true,
+      onError: (error: any) => {
+        message.error(error?.response?.data?.msg || '获取产品信息失败');
+      },
+    }
+  );
+
   /**
    * Event Handlers
    */
@@ -125,8 +147,7 @@ const ProductManagement: React.FC = () => {
   };
 
   const handleEditClick = (product: ProductInfo) => {
-    setEditingProduct(product);
-    setDrawerVisible(true);
+    fetchProductForEdit(product.id);
   };
 
   const handleViewClick = (product: ProductInfo) => {
@@ -311,7 +332,7 @@ const ProductManagement: React.FC = () => {
       title: '重量(g)',
       dataIndex: 'weight',
       width: 80,
-      render: (_, record: ProductInfo) => record.weight ? `${record.weight}g` : '-',
+      render: (_, record: ProductInfo) => (record.weight ? `${record.weight}g` : '-'),
     },
     {
       title: '包装类型',

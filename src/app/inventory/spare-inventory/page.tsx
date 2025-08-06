@@ -443,7 +443,8 @@ const SpareInventoryPage: React.FC = () => {
             >
               {productData.map((product: any) => (
                 <Option key={product.id} value={product.id}>
-                  {product.name || '无名称'} {product.specification || '无规格'} {product.code || '无编码'}
+                  {product.name || '无名称'} {product.specification || '无规格'}{' '}
+                  {product.code || '无编码'}
                 </Option>
               ))}
             </Select>

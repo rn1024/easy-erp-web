@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Upload, Image, Button, Card, Space, App, Popconfirm, Tooltip, Badge } from 'antd';
 import {
   UploadOutlined,
@@ -10,7 +10,7 @@ import {
   DragOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
-import { uploadBatchFiles } from '@/services/common';
+import { uploadFile } from '@/services/common';
 import { DndContext, closestCenter, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -183,62 +183,95 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
   const [uploading, setUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const { message } = App.useApp();
   const intl: IntlShape = useIntl();
+  const loadingRef = useRef(false);
+  const lastProductIdRef = useRef<string>('');
+  const hasLoadedRef = useRef(false);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
   // 同步外部value
   useEffect(() => {
-    setImages(value);
+    if (JSON.stringify(value) !== JSON.stringify(images)) {
+      setImages(value);
+    }
   }, [value]);
 
   // 触发onChange回调
-  const triggerChange = (newImages: ProductImage[]) => {
+  const triggerChange = useCallback((newImages: ProductImage[]) => {
     setImages(newImages);
     onChange?.(newImages);
-  };
+  }, [onChange]);
 
   // 加载产品图片
-  const loadImages = async () => {
+  const loadImages = useCallback(async () => {
+    // 检查productId是否有效（不为空且不为空字符串）
+    if (!productId || productId.trim() === '' || loadingRef.current) {
+      return;
+    }
+
+    // 如果已经加载过相同的productId，则不重复加载
+    if (lastProductIdRef.current === productId && hasLoadedRef.current) {
+      return;
+    }
+
     try {
+      loadingRef.current = true;
+      lastProductIdRef.current = productId;
+      setLoading(true);
+      
       const response = await getProductImagesApi(productId);
       if (response.data.code === 0 || response.data.code === 200) {
         triggerChange(response.data.data);
+        hasLoadedRef.current = true;
       }
     } catch (error) {
       console.error('加载产品图片失败:', error);
+      message.error('加载产品图片失败');
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
     }
-  };
+  }, [productId, triggerChange, message]);
 
-  // 初始加载
+  // 重置加载状态当productId改变时
   useEffect(() => {
-    if (productId && value.length === 0) {
+    if (lastProductIdRef.current !== productId) {
+      hasLoadedRef.current = false;
+      lastProductIdRef.current = '';
+    }
+  }, [productId]);
+
+  // 初始加载 - 只在新增模式下（没有外部value）才自动加载
+  useEffect(() => {
+    if (productId && productId.trim() !== '' && !disabled && !hasLoadedRef.current && (!value || value.length === 0)) {
       loadImages();
     }
-  }, [productId, value.length]);
+  }, [productId, disabled, loadImages, value]);
 
   // 自定义上传处理
-  const customUpload = async (options: any) => {
+  const customUpload = useCallback(async (options: any) => {
     const { file, onSuccess, onError } = options;
 
     try {
       setUploading(true);
 
-      // 调用批量上传API
-      const uploadResponse = await uploadBatchFiles([file], 'image');
+      // 调用单文件上传API
+      const uploadResponse = await uploadFile(file, 'image');
 
       if (
         (uploadResponse.data.code === 0 || uploadResponse.data.code === 200) &&
-        uploadResponse.data.data.length > 0
+        uploadResponse.data.data
       ) {
-        const uploadedFile = uploadResponse.data.data[0];
+        const uploadedFile = uploadResponse.data.data;
 
         // 添加到产品图片
         const imageData = {
           imageUrl: uploadedFile.fileUrl,
-          fileName: uploadedFile.fileName,
+          fileName: file.name, // 使用原始文件名
           fileSize: file.size, // 使用原始文件的大小
           sortOrder: images.length + 1,
           isCover: images.length === 0, // 第一张自动设为封面
@@ -268,10 +301,10 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
     } finally {
       setUploading(false);
     }
-  };
+  }, [productId, images, triggerChange, message, intl]);
 
   // 删除图片
-  const handleDelete = async (imageId: string) => {
+  const handleDelete = useCallback(async (imageId: string) => {
     try {
       await deleteProductImageApi(productId, imageId);
       const newImages = images.filter((img) => img.id !== imageId);
@@ -281,10 +314,10 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
       console.error('删除图片失败:', error);
       message.error(intl.formatMessage({ id: 'delete.failed' }, { defaultMessage: '删除失败' }));
     }
-  };
+  }, [productId, images, triggerChange, message, intl]);
 
   // 设置封面图
-  const handleSetCover = async (imageId: string) => {
+  const handleSetCover = useCallback(async (imageId: string) => {
     try {
       await setCoverImageApi(productId, imageId);
       const newImages = images.map((img) => ({
@@ -307,16 +340,16 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
         )
       );
     }
-  };
+  }, [productId, images, triggerChange, message, intl]);
 
   // 预览图片
-  const handlePreview = (imageUrl: string) => {
+  const handlePreview = useCallback((imageUrl: string) => {
     setPreviewImage(imageUrl);
     setPreviewOpen(true);
-  };
+  }, []);
 
   // 拖拽排序
-  const handleDragEnd = async (event: any) => {
+  const handleDragEnd = useCallback(async (event: any) => {
     const { active, over } = event;
 
     if (active.id !== over?.id) {
@@ -350,7 +383,7 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
         );
       }
     }
-  };
+  }, [productId, images, triggerChange, message, intl]);
 
   // 上传属性
   const uploadProps = {

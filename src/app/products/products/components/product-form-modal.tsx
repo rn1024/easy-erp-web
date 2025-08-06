@@ -1,41 +1,33 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
-import { FormattedMessage, useIntl } from 'react-intl';
 import {
   App,
   Button,
   Modal,
   Form,
   Input,
-  Space,
   Select,
   Row,
   Col,
   InputNumber,
   Upload,
-  Divider,
 } from 'antd';
 import { useEffect, useState } from 'react';
-import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { UploadOutlined } from '@ant-design/icons';
 import ProductImageUploader from '@/components/product-image-uploader';
 import AccessoryImageUploader from '@/components/accessory-image-uploader';
-
-/**
- * Utils
- */
-import { apiErrorMsg } from '@/utils/apiErrorMsg';
 
 /**
  * APIs
  */
 import { createProductApi, updateProductApi, getProductCategoriesApi } from '@/services/products';
 import { getShops } from '@/services/shops';
+import { uploadFile } from '@/services/common';
 
 /**
  * Types
  */
 import type { ModalProps, FormProps } from 'antd';
-import type { IntlShape } from 'react-intl';
 import type { ProductInfo, ProductFormData, ProductCategory } from '@/services/products';
 import type { Shop } from '@/services/shops';
 
@@ -55,15 +47,13 @@ type Props = {
   open: boolean;
   entity: ProductInfo | null;
   closeModal: (reload?: boolean) => void;
-  categoriesList?: any[];
 };
 
-const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categoriesList = [] }) => {
+const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
   /**
    * Hooks
    */
   const { message } = App.useApp();
-  const intl: IntlShape = useIntl();
 
   /**
    * State
@@ -154,23 +144,33 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
       // 获取店铺和分类数据
       fetchShops();
       fetchCategories();
-      
-      if (entity) {
+    } else {
+      setSubmittingFalse();
+      form.resetFields();
+    }
+  }, [open]);
+
+  // 单独处理表单数据回填，确保在数据加载完成后执行
+  useEffect(() => {
+    if (open && entity) {
+      // 等待店铺和分类数据加载完成后再回填
+      if (!shopsLoading && !categoriesLoading && shops.length > 0 && categories.length > 0) {
         form.setFieldsValue({
           ...entity,
           shopId: entity.shop?.id,
           categoryId: entity.category?.id,
           weight: entity.weight?.toString(),
           packageWeight: entity.packageWeight?.toString(),
+          // 回填产品图片和配件图片
+          productImages: entity.images || [],
+          accessoryImages: entity.accessoryImages || [],
         });
-      } else {
-        form.resetFields();
       }
-    } else {
-      setSubmittingFalse();
+    } else if (open && !entity) {
+      // 新增模式：重置表单
       form.resetFields();
     }
-  }, [open, entity, form]);
+  }, [open, entity, form, shopsLoading, categoriesLoading, shops.length, categories.length]);
 
   /**
    * ModalProps
@@ -360,26 +360,57 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
             <Col span={8}>
               <Form.Item name="labelFileUrl" label="标签文件">
                 <Upload
-                  name="file"
-                  action="/api/v1/upload"
-                  listType="text"
-                  maxCount={1}
-                  onChange={(info) => {
-                    if (info.file.status === 'done') {
-                      form.setFieldsValue({
-                        labelFileUrl: info.file.response?.data?.url
-                      });
+                  customRequest={async (options) => {
+                    const { file, onSuccess, onError } = options;
+                    try {
+                      const response = await uploadFile(file as File, 'label');
+                      if (response.data.code === 0 || response.data.code === 200) {
+                        form.setFieldsValue({
+                          labelFileUrl: response.data.data.fileUrl
+                        });
+                        onSuccess?.(response.data.data);
+                        message.success('标签文件上传成功');
+                      } else {
+                        throw new Error(response.data.msg || '上传失败');
+                      }
+                    } catch (error: any) {
+                      onError?.(error);
+                      message.error(error.message || '标签文件上传失败');
                     }
                   }}
+                  beforeUpload={(file) => {
+                    const isPDF = file.type === 'application/pdf';
+                    const isRAR = file.type === 'application/x-rar-compressed' || file.name.toLowerCase().endsWith('.rar');
+                    
+                    if (!isPDF && !isRAR) {
+                      message.error('只能上传 PDF 或 RAR 文件!');
+                      return false;
+                    }
+                    
+                    const isLt50M = file.size / 1024 / 1024 < 50;
+                    if (!isLt50M) {
+                      message.error('文件大小不能超过 50MB!');
+                      return false;
+                    }
+                    
+                    return true;
+                  }}
+                  accept=".pdf,.rar"
+                  listType="text"
+                  maxCount={1}
+                  showUploadList={true}
                 >
                   <Button icon={<UploadOutlined />}>上传标签文件</Button>
                 </Upload>
+                <div style={{ marginTop: 4, fontSize: 12, color: '#999' }}>
+                  支持 PDF、RAR 格式，单个文件不超过 50MB
+                </div>
               </Form.Item>
             </Col>
           </Row>
 
           {/* 产品图片上传 */}
-          <Form.Item label="产品图片">
+          <Form.Item name="productImages" label="产品图片">
             <ProductImageUploader
               productId={entity?.id || ''}
               disabled={!entity?.id}
@@ -393,7 +424,7 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
           </Form.Item>
 
           {/* 配件图片上传 */}
-          <Form.Item label="配件图片">
+          <Form.Item name="accessoryImages" label="配件图片">
             <AccessoryImageUploader
               productId={entity?.id || ''}
               disabled={!entity?.id}

@@ -213,7 +213,7 @@ const InventoryFormModal: React.FC<Props> = ({
           >
             {productData.map((product: any) => (
               <Option key={product.id} value={product.id}>
-                {product.name || '无名称'} {product.specification ? `- ${product.specification}` : ''}
+                {product.name} - {product.specification}
               </Option>
             ))}
           </Select>

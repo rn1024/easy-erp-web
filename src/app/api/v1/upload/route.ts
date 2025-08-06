@@ -34,6 +34,32 @@ const FILE_CONFIG = {
     maxSize: 5 * 1024 * 1024, // 5MB
     folder: 'avatars',
   },
+  // 前端需要的文件类型
+  accessory: {
+    allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    maxSize: 10 * 1024 * 1024, // 10MB
+    folder: 'accessories',
+  },
+  label: {
+    allowedTypes: [
+      'application/pdf',
+      'application/x-rar-compressed',
+      'application/vnd.rar',
+      'application/rar',
+    ],
+    maxSize: 50 * 1024 * 1024, // 50MB
+    folder: 'labels',
+  },
+  shipment: {
+    allowedTypes: [
+      'application/pdf',
+      'application/x-rar-compressed',
+      'application/zip',
+      'application/x-zip-compressed',
+    ],
+    maxSize: 50 * 1024 * 1024, // 50MB
+    folder: 'shipments',
+  },
 };
 
 // 确保上传目录存在
@@ -129,132 +155,7 @@ async function uploadHandler(request: NextRequest) {
   }
 }
 
-// POST /api/v1/upload/batch - 批量文件上传
-async function batchUploadHandler(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    const type = (formData.get('type') as string) || 'image';
-    const currentUser = (request as any).user;
 
-    // 获取所有文件
-    const files: File[] = [];
-    for (const [key, value] of formData.entries()) {
-      if (key.startsWith('files') && value instanceof File) {
-        files.push(value);
-      }
-    }
-
-    if (files.length === 0) {
-      return ApiResponse.validationError({ files: ['请选择要上传的文件'] }, '文件不能为空');
-    }
-
-    // 限制批量上传数量
-    if (files.length > 10) {
-      return ApiResponse.validationError({ files: ['单次最多上传10个文件'] }, '文件数量超限');
-    }
-
-    // 验证文件类型配置
-    const config = FILE_CONFIG[type as keyof typeof FILE_CONFIG];
-    if (!config) {
-      return ApiResponse.validationError({ type: ['不支持的文件类型'] }, '文件类型错误');
-    }
-
-    const uploadResults: any[] = [];
-    const errors: any[] = [];
-
-    // 并行上传文件
-    const uploadPromises = files.map(async (file, index) => {
-      try {
-        // 验证单个文件
-        if (!config.allowedTypes.includes(file.type)) {
-          throw new Error(`文件 ${file.name} 格式不支持`);
-        }
-
-        if (file.size > config.maxSize) {
-          const maxSizeMB = Math.round(config.maxSize / 1024 / 1024);
-          throw new Error(`文件 ${file.name} 大小超过 ${maxSizeMB}MB`);
-        }
-
-        // 生成文件信息
-        const fileExtension = file.name.split('.').pop() || '';
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = `${config.folder}/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${fileName}`;
-
-        // 上传文件
-        const fileBuffer = Buffer.from(await file.arrayBuffer());
-        let fileUrl: string;
-
-        try {
-          fileUrl = await uploadToLocal(fileBuffer, filePath);
-        } catch (uploadError) {
-          throw new Error(uploadError instanceof Error ? uploadError.message : '上传失败');
-        }
-
-        // 生成文件信息
-        const fileInfo = {
-          id: uuidv4(),
-          originalName: file.name,
-          fileName,
-          filePath,
-          fileUrl,
-          fileSize: file.size,
-          fileType: file.type,
-          category: type,
-          uploader: currentUser?.username || 'unknown',
-          uploaderId: currentUser?.accountId || 'unknown',
-          uploadTime: new Date().toISOString(),
-          index,
-        };
-
-        return { success: true, data: fileInfo };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : '上传失败',
-          fileName: file.name,
-          index,
-        };
-      }
-    });
-
-    const results = await Promise.allSettled(uploadPromises);
-
-    // 分离成功和失败的结果
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        if (result.value.success) {
-          uploadResults.push(result.value.data);
-        } else {
-          errors.push({
-            error: result.value.error,
-            fileName: result.value.fileName,
-            index: result.value.index,
-          });
-        }
-      } else {
-        errors.push({
-          error: result.reason?.message || '上传失败',
-          fileName: files[index].name,
-          index,
-        });
-      }
-    });
-
-    return ApiResponse.success(
-      {
-        successful: uploadResults,
-        failed: errors,
-        total: files.length,
-        successCount: uploadResults.length,
-        failCount: errors.length,
-      },
-      `批量上传完成：成功 ${uploadResults.length} 个，失败 ${errors.length} 个`
-    );
-  } catch (error) {
-    console.error('Batch upload error:', error);
-    return ApiResponse.serverError('批量上传失败');
-  }
-}
 
 // GET /api/v1/upload/[id] - 简化版文件信息获取
 async function getUploadInfoHandler(request: NextRequest) {
@@ -275,13 +176,6 @@ async function getUploadInfoHandler(request: NextRequest) {
   }
 }
 
-// 根据路径分发不同的处理器
-export async function POST(request: NextRequest) {
-  const url = new URL(request.url);
-  if (url.pathname.endsWith('/batch')) {
-    return withAuth(batchUploadHandler)(request);
-  }
-  return withAuth(uploadHandler)(request);
-}
+export const POST = withAuth(uploadHandler);
 
 export const GET = withAuth(getUploadInfoHandler);

@@ -68,6 +68,7 @@ const PackagingTaskFormModal: React.FC<PackagingTaskFormModalProps> = ({
     (product) => ({
       id: product.id,
       code: product.code,
+      name: product.name,
       sku: product.sku,
       specification: product.specification,
       category: product.category,
