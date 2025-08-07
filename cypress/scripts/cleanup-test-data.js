@@ -5,8 +5,8 @@
  * 用于清理E2E测试产生的数据，保持环境干净
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // 测试数据文件路径
 const testDataDir = path.join(__dirname, '..', 'fixtures');

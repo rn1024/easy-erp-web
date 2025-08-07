@@ -59,7 +59,7 @@ export class PackagingTaskPage extends BasePage {
       checkQuantityInput: 'input[name="checkedQuantity"]',
       passedQuantityInput: 'input[name="passedQuantity"]',
       failedQuantityInput: 'input[name="failedQuantity"]',
-      checkRemarkTextarea: 'textarea[name="checkRemark"],
+      checkRemarkTextarea: 'textarea[name="checkRemark"]',
       
       // 状态标识
       pendingStatus: '.status-pending',

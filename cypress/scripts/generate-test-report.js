@@ -5,9 +5,9 @@
  * 生成详细的测试执行报告和统计分析
  */
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
 
 // 报告配置
 const REPORT_DIR = path.join(__dirname, '..', 'reports');
