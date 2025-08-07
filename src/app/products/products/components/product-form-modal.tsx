@@ -47,9 +47,10 @@ type Props = {
   open: boolean;
   entity: ProductInfo | null;
   closeModal: (reload?: boolean) => void;
+  categoriesList?: ProductCategory[];
 };
 
-const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
+const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categoriesList }) => {
   /**
    * Hooks
    */
@@ -62,9 +63,10 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
     useBoolean(false);
   const [form] = Form.useForm();
   const [shops, setShops] = useState<Shop[]>([]);
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [shopsLoading, setShopsLoading] = useState(false);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  
+  // 使用传入的categoriesList或空数组
+  const categories = categoriesList || [];
 
   /**
    * Handlers
@@ -122,28 +124,15 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      setCategoriesLoading(true);
-      const response = await getProductCategoriesApi({ pageSize: 1000 });
-      if (response.data?.code === 0) {
-        setCategories(response.data.data.list);
-      }
-    } catch (error) {
-      console.error('获取产品分类列表失败:', error);
-    } finally {
-      setCategoriesLoading(false);
-    }
-  };
+  // fetchCategories函数已移除，现在使用传入的categoriesList
 
   /**
    * Effects
    */
   useEffect(() => {
     if (open) {
-      // 获取店铺和分类数据
+      // 获取店铺数据
       fetchShops();
-      fetchCategories();
     } else {
       setSubmittingFalse();
       form.resetFields();
@@ -153,8 +142,8 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
   // 单独处理表单数据回填，确保在数据加载完成后执行
   useEffect(() => {
     if (open && entity) {
-      // 等待店铺和分类数据加载完成后再回填
-      if (!shopsLoading && !categoriesLoading && shops.length > 0 && categories.length > 0) {
+      // 等待店铺数据加载完成后再回填
+      if (!shopsLoading && shops.length > 0) {
         form.setFieldsValue({
           ...entity,
           shopId: entity.shop?.id,
@@ -170,7 +159,7 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
       // 新增模式：重置表单
       form.resetFields();
     }
-  }, [open, entity, form, shopsLoading, categoriesLoading, shops.length, categories.length]);
+  }, [open, entity, form, shopsLoading, shops.length, categories.length]);
 
   /**
    * ModalProps
@@ -241,7 +230,6 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal }) => {
               >
                 <Select 
                   placeholder="选择分类"
-                  loading={categoriesLoading}
                   showSearch
                   filterOption={(input, option) => {
                     const label = option?.label || option?.children;
