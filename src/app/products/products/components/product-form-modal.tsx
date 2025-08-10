@@ -20,7 +20,7 @@ import AccessoryImageUploader from '@/components/accessory-image-uploader';
 /**
  * APIs
  */
-import { createProductApi, updateProductApi, getProductCategoriesApi } from '@/services/products';
+import { createProductApi, updateProductApi, getProductCategoriesApi, uploadProductImagesApi } from '@/services/products';
 import { getShops } from '@/services/shops';
 import { uploadFile } from '@/services/common';
 
@@ -84,11 +84,40 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
         setQuantity: formData.setQuantity || 1,
       };
 
-      const res = await formSubmit(entity, formData);
-        if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
-          message.success(entity ? '更新成功' : '创建成功');
-          setSubmittingFalse();
-          closeModal(true);
+      const res = await formSubmit(entity, submitData);
+      if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
+        // 如果是新增产品且有临时图片，需要将图片关联到新创建的产品
+        if (!entity && res.data.data?.id) {
+          const newProductId = res.data.data.id;
+          const productImages = formData.productImages || [];
+          const accessoryImages = formData.accessoryImages || [];
+          
+          // 保存产品图片
+          if (productImages.length > 0) {
+            const tempImages = productImages.filter((img: any) => img.id?.startsWith('temp-'));
+            if (tempImages.length > 0) {
+              try {
+                const imageData = tempImages.map((img: any) => ({
+                  imageUrl: img.imageUrl,
+                  fileName: img.fileName,
+                  fileSize: img.fileSize,
+                  sortOrder: img.sortOrder,
+                  isCover: img.isCover,
+                }));
+                await uploadProductImagesApi(newProductId, imageData);
+              } catch (imageError) {
+                console.error('保存产品图片失败:', imageError);
+                // 不阻止产品创建成功的提示
+              }
+            }
+          }
+          
+          // 配件图片已经通过uploadBatchFiles上传，不需要额外处理
+        }
+        
+        message.success(entity ? '更新成功' : '创建成功');
+        setSubmittingFalse();
+        closeModal(true);
       } else {
         message.error(get(res, 'msg') || '操作失败');
         setSubmittingFalse();
@@ -401,28 +430,18 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
           <Form.Item name="productImages" label="产品图片">
             <ProductImageUploader
               productId={entity?.id || ''}
-              disabled={!entity?.id}
+              disabled={false}
               maxCount={10}
             />
-            {!entity?.id && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
-                请先保存产品信息后再上传图片
-              </div>
-            )}
           </Form.Item>
 
           {/* 配件图片上传 */}
           <Form.Item name="accessoryImages" label="配件图片">
             <AccessoryImageUploader
               productId={entity?.id || ''}
-              disabled={!entity?.id}
+              disabled={false}
               maxCount={20}
             />
-            {!entity?.id && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
-                请先保存产品信息后再上传配件图片
-              </div>
-            )}
           </Form.Item>
 
           <Form.Item name="styleInfo" label="款式信息">

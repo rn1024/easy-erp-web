@@ -301,44 +301,62 @@ const PurchaseOrdersPage: React.FC = () => {
       ),
     },
     {
-      title: '产品',
-      width: 200,
+      title: '产品明细',
+      width: 300,
       render: (_, record) => {
         const items = record.items || [];
-        const itemCount = items.length;
-        const firstItem = items[0];
 
-        if (itemCount === 0) {
+        if (items.length === 0) {
           return <span style={{ color: '#ccc' }}>暂无产品</span>;
         }
 
         return (
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar
-              src={firstItem?.product?.imageUrl}
-              icon={<ProductOutlined />}
-              size="small"
-              style={{ marginRight: 8 }}
-            />
-            <div>
-              <div style={{ fontWeight: 'bold' }}>
-                {itemCount > 1 ? `${itemCount}个产品` : firstItem?.product?.code}
-              </div>
-              {itemCount === 1 ? (
-                <>
-                  <div style={{ color: '#666', fontSize: '12px' }}>
-                    {firstItem?.product?.specification || firstItem?.product?.sku}
+          <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+            {items.map((item: any, index: number) => (
+              <div key={index} style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                marginBottom: index < items.length - 1 ? '8px' : '0',
+                padding: '4px 0',
+                borderBottom: index < items.length - 1 ? '1px solid #f0f0f0' : 'none'
+              }}>
+                <Avatar
+                  src={item?.product?.imageUrl}
+                  icon={<ProductOutlined />}
+                  size="small"
+                  style={{ marginRight: 8, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ 
+                    fontWeight: 'bold', 
+                    fontSize: '13px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {item?.product?.name || item?.product?.code || '产品未命名'}
                   </div>
-                  <div style={{ color: '#999', fontSize: '12px' }}>
-                    {firstItem?.product?.category?.name}
+                  <div style={{ 
+                    color: '#666', 
+                    fontSize: '11px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    SKU: {item?.product?.sku || '无'}
                   </div>
-                </>
-              ) : (
-                <div style={{ color: '#666', fontSize: '12px' }}>
-                  {firstItem?.product?.code} 等{itemCount}个
                 </div>
-              )}
-            </div>
+                <div style={{ 
+                  marginLeft: '8px',
+                  fontWeight: 'bold',
+                  color: '#1890ff',
+                  fontSize: '12px',
+                  flexShrink: 0
+                }}>
+                  ×{item?.quantity || 0}
+                </div>
+              </div>
+            ))}
           </div>
         );
       },

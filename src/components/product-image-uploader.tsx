@@ -277,17 +277,36 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
           isCover: images.length === 0, // 第一张自动设为封面
         };
 
-        const response = await uploadProductImagesApi(productId, [imageData]);
+        // 如果有productId，则调用API保存到数据库；否则只保存到本地状态
+        if (productId && productId.trim() !== '') {
+          const response = await uploadProductImagesApi(productId, [imageData]);
 
-        if (response.data.code === 0 || response.data.code === 200) {
-          const newImages = [...images, ...response.data.data];
+          if (response.data.code === 0 || response.data.code === 200) {
+            const newImages = [...images, ...response.data.data];
+            triggerChange(newImages);
+            onSuccess(response.data.data[0]);
+            message.success(
+              intl.formatMessage({ id: 'upload.success' }, { defaultMessage: '上传成功' })
+            );
+          } else {
+            throw new Error(response.data.msg || '上传失败');
+          }
+        } else {
+          // 新增产品模式：临时保存到本地状态
+          const tempImage: ProductImage = {
+            id: `temp-${Date.now()}`,
+            imageUrl: imageData.imageUrl,
+            fileName: imageData.fileName,
+            fileSize: imageData.fileSize,
+            sortOrder: imageData.sortOrder,
+            isCover: imageData.isCover,
+          };
+          const newImages = [...images, tempImage];
           triggerChange(newImages);
-          onSuccess(response.data.data[0]);
+          onSuccess(tempImage);
           message.success(
             intl.formatMessage({ id: 'upload.success' }, { defaultMessage: '上传成功' })
           );
-        } else {
-          throw new Error(response.data.msg || '上传失败');
         }
       } else {
         throw new Error(uploadResponse.data.msg || '上传失败');
@@ -306,10 +325,18 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
   // 删除图片
   const handleDelete = useCallback(async (imageId: string) => {
     try {
-      await deleteProductImageApi(productId, imageId);
-      const newImages = images.filter((img) => img.id !== imageId);
-      triggerChange(newImages);
-      message.success(intl.formatMessage({ id: 'delete.success' }, { defaultMessage: '删除成功' }));
+      // 如果是临时图片（新增产品模式），直接从本地状态删除
+      if (imageId.startsWith('temp-') || !productId || productId.trim() === '') {
+        const newImages = images.filter((img) => img.id !== imageId);
+        triggerChange(newImages);
+        message.success(intl.formatMessage({ id: 'delete.success' }, { defaultMessage: '删除成功' }));
+      } else {
+        // 已保存的图片，调用API删除
+        await deleteProductImageApi(productId, imageId);
+        const newImages = images.filter((img) => img.id !== imageId);
+        triggerChange(newImages);
+        message.success(intl.formatMessage({ id: 'delete.success' }, { defaultMessage: '删除成功' }));
+      }
     } catch (error: any) {
       console.error('删除图片失败:', error);
       message.error(intl.formatMessage({ id: 'delete.failed' }, { defaultMessage: '删除失败' }));

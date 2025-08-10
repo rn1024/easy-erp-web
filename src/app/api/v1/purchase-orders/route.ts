@@ -124,15 +124,42 @@ export async function GET(request: NextRequest) {
             name: true,
           },
         },
-        // 产品明细通过独立API查询：GET /api/v1/product-items?relatedType=PURCHASE_ORDER&relatedId=orderId
       },
       orderBy: [{ urgent: 'desc' }, { createdAt: 'desc' }],
       skip,
       take: pageSize,
     });
 
-    // 获取每个订单的最新审批记录
+    // 获取每个订单的产品明细
     const orderIds = list.map((order) => order.id);
+    const productItems = await prisma.productItem.findMany({
+      where: {
+        relatedType: 'PURCHASE_ORDER',
+        relatedId: { in: orderIds },
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            asin: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // 将产品明细按订单ID分组
+    const itemsByOrderId = productItems.reduce((acc, item) => {
+      if (!acc[item.relatedId]) {
+        acc[item.relatedId] = [];
+      }
+      acc[item.relatedId].push(item);
+      return acc;
+    }, {} as Record<string, typeof productItems>);
+
+    // 获取每个订单的最新审批记录
     const latestApprovals = await Promise.all(
       orderIds.map(async (orderId) => {
         const latestApproval = await prisma.approvalRecord.findFirst({
@@ -156,12 +183,14 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // 将审批记录关联到对应的订单
+    // 将审批记录和产品明细关联到对应的订单
     const listWithApprovals = list.map((order) => {
       const approvalData = latestApprovals.find((item) => item.orderId === order.id);
+      const orderItems = itemsByOrderId[order.id] || [];
       return {
         ...order,
         latestApproval: approvalData?.approval || null,
+        items: orderItems,
       };
     });
 
