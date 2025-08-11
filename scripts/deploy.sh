@@ -341,6 +341,33 @@ install_dependencies() {
     log "依赖安装完成"
 }
 
+# 优化文件权限
+optimize_file_permissions() {
+    log "🔧 优化文件权限..."
+    
+    # 确保uploads目录存在
+    mkdir -p "$PROJECT_DIR/public/uploads"
+    
+    # 设置文件权限
+    log "设置文件权限 (644/755)..."
+    find "$PROJECT_DIR/public/uploads" -type f -exec chmod 644 {} \; 2>/dev/null || true
+    find "$PROJECT_DIR/public/uploads" -type d -exec chmod 755 {} \; 2>/dev/null || true
+    
+    # 设置所有者（如果需要）
+    log "设置文件所有者..."
+    chown -R www-data:www-data "$PROJECT_DIR/public/uploads" 2>/dev/null || {
+        warn "无法设置www-data所有者，可能需要手动配置"
+    }
+    
+    # 验证权限设置
+    if [ -d "$PROJECT_DIR/public/uploads" ]; then
+        local dir_perms=$(stat -c "%a" "$PROJECT_DIR/public/uploads" 2>/dev/null || stat -f "%A" "$PROJECT_DIR/public/uploads" 2>/dev/null || echo "unknown")
+        log "uploads目录权限: $dir_perms"
+    fi
+    
+    log "✅ 文件权限优化完成"
+}
+
 # 构建项目
 build_project() {
     log "构建项目..."
@@ -370,6 +397,9 @@ build_project() {
     npm run build
 
     log "项目构建完成"
+    
+    # 优化文件权限
+    optimize_file_permissions
 }
 
 # 配置环境变量

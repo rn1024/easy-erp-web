@@ -80,6 +80,16 @@ const uploadToLocal = async (fileBuffer: Buffer, filePath: string): Promise<stri
   // 写入文件
   await fs.promises.writeFile(fullPath, fileBuffer);
 
+  // 仅在生产环境执行权限修复
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      fs.chmodSync(fullPath, 0o644); // 文件权限
+      fs.chmodSync(dir, 0o755); // 目录权限
+    } catch (error) {
+      console.warn('权限设置失败:', error);
+    }
+  }
+
   // 返回访问URL
   return `/uploads/${filePath}`;
 };
