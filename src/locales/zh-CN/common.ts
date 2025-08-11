@@ -139,6 +139,38 @@ const zhCNCommon = {
   'delete.success': '删除成功',
   'delete.failed': '删除失败',
 
+  /**
+   * Product
+   */
+  product: {
+    image: {
+      title: '产品图片',
+      upload: '上传图片',
+      delete: '删除图片',
+      preview: '预览图片',
+      cover: '封面图片',
+      setCover: '设为封面',
+    },
+  },
+
+  /**
+   * Upload
+   */
+  p: {
+    us: {
+      msg: {
+        uploading: '上传中...',
+      },
+      ph: {
+        upload: '点击或拖拽文件到此区域上传',
+        uploadType: '支持的文件类型',
+      },
+      b: {
+        downloadTemplate: '下载模板',
+      },
+    },
+  },
+
 };
 
 export default zhCNCommon;

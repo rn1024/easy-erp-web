@@ -149,6 +149,38 @@ const enUSCommon = {
   'upload.failed': 'Upload failed',
   'delete.success': 'Delete successful',
   'delete.failed': 'Delete failed',
+
+  /**
+   * Product Images
+   */
+  product: {
+    image: {
+      title: 'Product Images',
+      upload: 'Upload Image',
+      delete: 'Delete Image',
+      preview: 'Preview Image',
+      cover: 'Cover Image',
+      setCover: 'Set as Cover',
+    },
+  },
+
+  /**
+   * Upload related
+   */
+  p: {
+    us: {
+      msg: {
+        uploading: 'Uploading...',
+      },
+      ph: {
+        upload: 'Click or drag files to this area to upload',
+        uploadType: 'Supported file types',
+      },
+      b: {
+        downloadTemplate: 'Download Template',
+      },
+    },
+  },
 };
 
 export default enUSCommon;

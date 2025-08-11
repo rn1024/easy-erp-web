@@ -247,10 +247,10 @@ model ProductInfo {
 model ProductCost {
   id        String      @id @default(cuid())
   productId String
-  costInfo  String?
-  price     String?
-  unit      String?
-  supplier  String?
+  costInfo  String?     // 成本信息（文本输入）
+  price     String?     // 价格（文本输入）
+  unit      String?     // 单位（文本输入）
+  supplier  String?     // 供应商（文本输入）
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   product   ProductInfo @relation(fields: [productId], references: [id], onDelete: Cascade)
