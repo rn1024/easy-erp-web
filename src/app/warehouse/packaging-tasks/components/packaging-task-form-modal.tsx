@@ -1,33 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Modal,
-  Form,
-  Input,
-  Select,
-  Space,
-  message,
-  Row,
-  Col,
-  InputNumber,
-  Switch,
-  Alert,
-} from 'antd';
+import { Modal, Form, Select, message, Row, Col, InputNumber, Alert } from 'antd';
 import { useRequest } from 'ahooks';
-import type {
-  PackagingTaskInfo,
+import type { PackagingTaskInfo } from '@/services/packaging';
+import {
   CreatePackagingTaskData,
   UpdatePackagingTaskData,
   PackagingTaskType,
+  getPackagingTaskApi,
 } from '@/services/packaging';
 import { getShops } from '@/services/shops';
 import { getProductsApi } from '@/services/products';
-import {
-  getProductItemsApi,
-  type ProductItemInfo,
-  ProductItemRelatedType,
-} from '@/services/product-items';
 import UniversalProductItemsTable, {
   type UniversalProductItem,
   type ProductOption,
@@ -104,18 +88,21 @@ const PackagingTaskFormModal: React.FC<PackagingTaskFormModalProps> = ({
     }
   }, [visible, editingTask]);
 
-  // 加载产品明细
+  // 加载产品明细 - 现在从包装任务数据中获取
   const loadProductItems = async (taskId: string) => {
     try {
-      const response = await getProductItemsApi(ProductItemRelatedType.PACKAGING_TASK, taskId);
-      if (response?.data) {
-        const items: UniversalProductItem[] = response.data.map((item: ProductItemInfo) => ({
-          key: item.id,
-          productId: item.productId,
-          quantity: item.quantity,
-          completedQuantity: item.completedQuantity || undefined,
-          remark: item.remark,
-        }));
+      // 从包装任务详情中获取产品明细
+      const response = await getPackagingTaskApi(taskId);
+      if (response?.data?.items) {
+        const items: UniversalProductItem[] = response.data.items.map(
+          (item: any, index: number) => ({
+            key: `${item.productId}-${index}`,
+            productId: item.productId,
+            quantity: item.quantity,
+            completedQuantity: item.completedQuantity || undefined,
+            remark: item.remark,
+          })
+        );
         setProductItems(items);
       }
     } catch (error) {

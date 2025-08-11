@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { PackagingTaskStatus, PackagingTaskType } from '@/services/packaging';
+import { ProductItemRelatedType } from '@/services/product-items';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { shopId, type = PackagingTaskType.PACKAGING, progress = 0 } = body;
+    const { shopId, type = PackagingTaskType.PACKAGING, progress = 0, items } = body;
 
     if (!shopId) {
       return NextResponse.json(
@@ -98,28 +99,91 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 创建包装任务
-    const newTask = await prisma.packagingTask.create({
-      data: {
-        shopId,
-        type,
-        progress,
-        status: PackagingTaskStatus.PENDING,
-        operatorId: user.id,
-      },
-      include: {
-        shop: {
-          select: { id: true, nickname: true },
+    // 如果提供了产品明细，进行校验
+    if (items && !Array.isArray(items)) {
+      return NextResponse.json(
+        {
+          code: 400,
+          msg: '产品明细格式错误，必须是数组',
         },
-        operator: {
-          select: { id: true, name: true },
+        { status: 400 }
+      );
+    }
+
+    // 校验产品明细中的必填字段
+    if (items && items.length > 0) {
+      for (const item of items) {
+        if (!item.productId || !item.quantity) {
+          return NextResponse.json(
+            {
+              code: 400,
+              msg: '产品明细中缺少必填字段：productId 和 quantity',
+            },
+            { status: 400 }
+          );
+        }
+        if (typeof item.quantity !== 'number' || item.quantity <= 0) {
+          return NextResponse.json(
+            {
+              code: 400,
+              msg: '产品数量必须是大于0的数字',
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // 使用事务创建包装任务和产品明细
+    const result = await prisma.$transaction(async (tx) => {
+      // 创建包装任务
+      const newTask = await tx.packagingTask.create({
+        data: {
+          shopId,
+          type,
+          progress,
+          status: PackagingTaskStatus.PENDING,
+          operatorId: user.id,
         },
-      },
+        include: {
+          shop: {
+            select: { id: true, nickname: true },
+          },
+          operator: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      // 如果有产品明细，创建产品明细记录
+      if (items && items.length > 0) {
+        await Promise.all(
+          items.map((item: any) =>
+            tx.productItem.create({
+              data: {
+                relatedType: ProductItemRelatedType.PACKAGING_TASK,
+                relatedId: newTask.id,
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice || null,
+                amount: item.amount || null,
+                taxRate: item.taxRate || null,
+                taxAmount: item.taxAmount || null,
+                totalAmount: item.totalAmount || null,
+                completedQuantity: item.completedQuantity || null,
+                remark: item.remark || null,
+              },
+            })
+          )
+        );
+      }
+
+      return newTask;
     });
 
     return NextResponse.json({
       code: 0,
-      data: newTask,
+      data: result,
       msg: '创建包装任务成功',
     });
   } catch (error) {

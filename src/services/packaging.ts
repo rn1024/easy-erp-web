@@ -59,6 +59,14 @@ export interface PackagingTaskInfo {
   createdAt: string;
   updatedAt: string;
 
+  // 产品明细
+  items?: {
+    productId: string;
+    quantity: number;
+    completedQuantity?: number;
+    remark?: string;
+  }[];
+
   // 关联数据
   shop?: {
     id: string;
@@ -75,6 +83,12 @@ export interface CreatePackagingTaskData {
   shopId: string;
   type: PackagingTaskType;
   progress?: number;
+  items?: {
+    productId: string;
+    quantity: number;
+    completedQuantity?: number;
+    remark?: string;
+  }[];
 }
 
 // 更新包装任务数据接口
@@ -82,6 +96,12 @@ export interface UpdatePackagingTaskData {
   progress?: number;
   status?: PackagingTaskStatus;
   type?: PackagingTaskType;
+  items?: {
+    productId: string;
+    quantity: number;
+    completedQuantity?: number;
+    remark?: string;
+  }[];
 }
 
 // 包装任务查询参数接口
@@ -97,10 +117,12 @@ export interface PackagingTaskQueryParams {
 export const getPackagingTasksApi = (params: PackagingTaskQueryParams = {}) => {
   return axios<{
     list: PackagingTaskInfo[];
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
+    meta: {
+      page: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+    };
   }>('/packaging-tasks', {
     method: 'get',
     params,

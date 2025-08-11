@@ -25,7 +25,7 @@ import {
   getPackagingTaskStatusLabel,
 } from '@/services/packaging';
 import { getShops } from '@/services/shops';
-import { saveProductItemsApi, ProductItemRelatedType } from '@/services/product-items';
+// 移除不再需要的 saveProductItemsApi 和 ProductItemRelatedType 导入
 
 /**
  * Types
@@ -72,6 +72,11 @@ const PackagingTasksPage: React.FC = () => {
     refresh,
   } = useRequest(() => getPackagingTasksApi(searchParams), {
     refreshDeps: [searchParams],
+    onSuccess: (data) => {
+      console.log('包装任务数据:', data);
+      console.log('列表数据:', data?.data?.list);
+      console.log('数据长度:', data?.data?.list?.length);
+    },
   });
 
   const { data: shopsData } = useRequest(() => getShops({}));
@@ -108,35 +113,26 @@ const PackagingTasksPage: React.FC = () => {
     productItems: UniversalProductItem[]
   ) => {
     try {
-      let taskId: string;
-
       // 确保任务类型为包装
       const taskData = {
         ...data,
         type: PackagingTaskType.PACKAGING,
+        // 将产品明细直接包含在任务数据中
+        items: productItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          completedQuantity: item.completedQuantity,
+          remark: item.remark,
+        })),
       };
 
       if (editingTask) {
-        // 更新包装任务
+        // 更新包装任务（包含产品明细）
         await updatePackagingTaskApi(editingTask.id, taskData as UpdatePackagingTaskData);
-        taskId = editingTask.id;
       } else {
-        // 创建包装任务
-        const response = await createPackagingTaskApi(taskData as CreatePackagingTaskData);
-        taskId = response.data.id;
+        // 创建包装任务（包含产品明细）
+        await createPackagingTaskApi(taskData as CreatePackagingTaskData);
       }
-
-      // 保存产品明细
-        await saveProductItemsApi({
-          relatedType: ProductItemRelatedType.PACKAGING_TASK,
-          relatedId: taskId,
-          items: productItems.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            completedQuantity: item.completedQuantity,
-            remark: item.remark,
-          })),
-        });
 
       setIsModalVisible(false);
       setEditingTask(null);
@@ -252,8 +248,8 @@ const PackagingTasksPage: React.FC = () => {
     search: false,
     pagination: {
       current: Number(searchParams.page) || 1,
-      pageSize: Number(searchParams.pageSize) || 20,
-      total: tasksData?.data?.total || 0,
+      pageSize: Number(searchParams.pageSize) || 10,
+      total: tasksData?.data?.meta?.total || 0,
       showSizeChanger: true,
       showQuickJumper: true,
       showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
@@ -261,7 +257,7 @@ const PackagingTasksPage: React.FC = () => {
         setSearchParams({
           ...searchParams,
           page: page,
-          pageSize: pageSize || 20,
+          pageSize: pageSize || 10,
           type: PackagingTaskType.PACKAGING,
         });
       },
@@ -283,6 +279,13 @@ const PackagingTasksPage: React.FC = () => {
    * Data Processing
    */
   const shops = shopsData?.data?.data?.list || [];
+
+  // 调试信息
+  console.log('完整的tasksData:', tasksData);
+  console.log('tasksData?.data:', tasksData?.data);
+  console.log('ProTable dataSource:', tasksData?.data?.list);
+  console.log('ProTable loading:', loading);
+  console.log('ProTable total:', tasksData?.data?.meta?.total);
 
   return (
     <>
