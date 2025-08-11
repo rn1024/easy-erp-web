@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { UploadOutlined } from '@ant-design/icons';
 import ProductImageUploader from '@/components/product-image-uploader';
 import AccessoryImageUploader from '@/components/accessory-image-uploader';
+import ProductCostManager from '@/components/ProductCostManager';
 
 /**
  * APIs
@@ -64,6 +65,7 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
   const [form] = Form.useForm();
   const [shops, setShops] = useState<Shop[]>([]);
   const [shopsLoading, setShopsLoading] = useState(false);
+  const [productCosts, setProductCosts] = useState<any[]>([]);
   
   // 使用传入的categoriesList或空数组
   const categories = categoriesList || [];
@@ -85,6 +87,8 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
         // 确保图片数据包含在提交数据中
         productImages: formData.productImages || [],
         accessoryImages: formData.accessoryImages || [],
+        // 包含产品成本数据 - 修复字段名匹配问题
+        costs: productCosts,
       };
 
       const res = await formSubmit(entity, submitData);
@@ -127,6 +131,8 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
     }
   };
 
+  // 成本信息现在直接从产品信息中获取，无需单独API调用
+
   // fetchCategories函数已移除，现在使用传入的categoriesList
 
   /**
@@ -136,11 +142,18 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
     if (open) {
       // 获取店铺数据
       fetchShops();
+      // 如果是编辑模式，直接从entity中获取成本数据
+      if (entity && entity.costs) {
+        setProductCosts(entity.costs);
+      } else {
+        setProductCosts([]);
+      }
     } else {
       setSubmittingFalse();
       form.resetFields();
+      setProductCosts([]);
     }
-  }, [open]);
+  }, [open, entity]);
 
   // 单独处理表单数据回填，确保在数据加载完成后执行
   useEffect(() => {
@@ -428,6 +441,15 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
 
           <Form.Item name="remark" label="备注">
             <TextArea rows={3} placeholder="备注" />
+          </Form.Item>
+
+          {/* 成本信息 */}
+          <Form.Item label="成本信息">
+            <ProductCostManager 
+              productId={entity?.id || 'new'} 
+              costs={productCosts}
+              onCostsChange={setProductCosts}
+            />
           </Form.Item>
         </Form>
       </div>

@@ -11,6 +11,11 @@ import dayjs from 'dayjs';
 import { apiErrorMsg } from '@/utils/apiErrorMsg';
 
 /**
+ * Components
+ */
+import ProductCostManager from '@/components/ProductCostManager';
+
+/**
  * Types
  */
 import type { ModalProps } from 'antd';
@@ -165,6 +170,15 @@ const ProductDetailModal: React.FC<Props> = ({ open, entity, closeModal }) => {
             </div>
           </div>
         )}
+
+        <div className="mt-4">
+          <Divider orientation="left">成本信息</Divider>
+          <ProductCostManager 
+            productId={entity.id} 
+            costs={entity.costs || []} 
+            readonly={true} 
+          />
+        </div>
       </div>
     </Modal>
   );

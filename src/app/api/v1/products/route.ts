@@ -74,6 +74,11 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
               createdAt: 'asc'
             }
           },
+          costs: {
+            orderBy: {
+              createdAt: 'asc'
+            }
+          },
         },
         skip,
         take: pageSize,
@@ -144,6 +149,8 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       productImages,
       // 配件图片资源
       accessoryImages,
+      // 产品成本数据
+      costs,
     } = body;
 
     // 验证必填字段
@@ -235,6 +242,19 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
         });
       }
 
+      // 添加产品成本数据
+      if (costs && costs.length > 0) {
+        await tx.productCost.createMany({
+          data: costs.map((cost: any) => ({
+            productId: newProduct.id,
+            costInfo: cost.costInfo || '',
+            price: cost.price || '',
+            unit: cost.unit || '',
+            supplier: cost.supplier || '',
+          })),
+        });
+      }
+
       return newProduct;
     });
 
@@ -269,6 +289,11 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
           where: {
             entityType: 'PRODUCT_INFO'
           },
+          orderBy: {
+            createdAt: 'asc'
+          }
+        },
+        costs: {
           orderBy: {
             createdAt: 'asc'
           }

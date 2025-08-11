@@ -19,15 +19,15 @@ model Account {
   updatedAt              DateTime         @updatedAt
   roles                  AccountRole[]
   approvalRecords        ApprovalRecord[] @relation("ApprovalRecords")
+  exportRecords          ExportRecord[]   @relation("ExportOperator")
+  fileUploads            FileUpload[]     @relation("FileUploader")
   operatedForwarders     Forwarder[]      @relation("ForwarderOperator")
+  operatedPackagingTasks PackagingTask[]  @relation("PackagingTaskOperator")
   operatedProducts       ProductInfo[]    @relation("ProductOperator")
   operatedPurchases      PurchaseOrder[]  @relation("PurchaseOperator")
   operatedShipments      ShipmentRecord[] @relation("ShipmentOperator")
   operatedShops          Shop[]           @relation("ShopOperator")
   operatedSuppliers      Supplier[]       @relation("SupplierOperator")
-  operatedPackagingTasks PackagingTask[]  @relation("PackagingTaskOperator")
-  exportRecords          ExportRecord[]   @relation("ExportOperator")
-  fileUploads            FileUpload[]     @relation("FileUploader")
 
   @@map("accounts")
 }
@@ -117,8 +117,6 @@ model Log {
   @@map("logs")
 }
 
-
-
 model Shop {
   id                Int                 @id @default(autoincrement())
   nickname          String              @unique
@@ -130,13 +128,12 @@ model Shop {
   updatedAt         DateTime            @updatedAt
   financialReports  FinancialReport[]
   finishedInventory FinishedInventory[]
+  packagingTasks    PackagingTask[]
   products          ProductInfo[]
   purchaseOrders    PurchaseOrder[]
   shipmentRecords   ShipmentRecord[]
-  packagingTasks    PackagingTask[]
   operator          Account             @relation("ShopOperator", fields: [operatorId], references: [id])
   spareInventory    SpareInventory[]
-
 
   @@index([operatorId], map: "shops_operatorId_fkey")
   @@map("shops")
@@ -205,7 +202,6 @@ model ProductInfo {
   shopId                 Int
   categoryId             String
   code                   String?
-  name                   String?                 // 新增产品名称字段
   specification          String?
   color                  String?
   setQuantity            Int                     @default(1)
@@ -222,15 +218,16 @@ model ProductInfo {
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   asin                   String?
-  // 新增包装相关字段
-  packageType            String?                 // 包装类型
-  packageOuterSize       String?                 // 包装外尺寸
-  packageInnerSize       String?                 // 包装内尺寸
-  packageWeight          String?                 // 包装重量
-  outerBoxSize           String?                 // 外箱尺寸/装箱数
-  // 新增标签文件字段
-  labelFileUrl           String?                 // 产品标签PDF文件URL
+  name                   String?
+  labelFileUrl           String?
+  outerBoxSize           String?
+  packageInnerSize       String?
+  packageOuterSize       String?
+  packageType            String?
+  packageWeight          String?
+  entityResources        EntityResource[]
   finishedInventory      FinishedInventory[]
+  costs                  ProductCost[]
   images                 ProductImage[]
   category               ProductCategory         @relation(fields: [categoryId], references: [id])
   operator               Account                 @relation("ProductOperator", fields: [operatorId], references: [id])
@@ -239,13 +236,27 @@ model ProductInfo {
   shipmentProductRecords ShipmentProductRecord[]
   spareInventory         SpareInventory[]
   supplyRecordItems      SupplyRecordItem[]
-  entityResources        EntityResource[]        // 关联EntityResource
 
   @@index([shopId])
   @@index([categoryId])
   @@index([code])
   @@index([operatorId], map: "product_info_operatorId_fkey")
   @@map("product_info")
+}
+
+model ProductCost {
+  id        String      @id @default(cuid())
+  productId String
+  costInfo  String?
+  price     String?
+  unit      String?
+  supplier  String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  product   ProductInfo @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_costs")
 }
 
 model ProductImage {
@@ -380,16 +391,14 @@ model PackagingTask {
   operatorId String
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
-  shop       Shop                @relation(fields: [shopId], references: [id])
   operator   Account             @relation("PackagingTaskOperator", fields: [operatorId], references: [id])
+  shop       Shop                @relation(fields: [shopId], references: [id])
 
   @@index([shopId])
   @@index([status])
   @@index([operatorId])
   @@map("packaging_tasks")
 }
-
-
 
 model ShipmentRecord {
   id                        String                  @id @default(cuid())
@@ -515,6 +524,62 @@ model SupplyRecordItem {
   @@map("supply_record_items")
 }
 
+model ExportRecord {
+  id          String       @id @default(cuid())
+  status      ExportStatus @default(PENDING)
+  downloadUrl String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  completedAt DateTime?
+  exportType  String
+  fileName    String
+  fileSize    Int?
+  filters     Json?
+  operatorId  String
+  operator    Account      @relation("ExportOperator", fields: [operatorId], references: [id])
+
+  @@index([operatorId])
+  @@index([status])
+  @@index([exportType])
+  @@index([createdAt])
+  @@map("export_records")
+}
+
+model FileUpload {
+  id           String   @id @default(cuid())
+  originalName String
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  fileType     String
+  category     String
+  storage      String   @default("oss")
+  uploaderId   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  uploader     Account  @relation("FileUploader", fields: [uploaderId], references: [id])
+
+  @@index([uploaderId])
+  @@index([category])
+  @@index([fileType])
+  @@index([createdAt])
+  @@map("file_uploads")
+}
+
+model EntityResource {
+  id          String      @id @default(cuid())
+  entityType  String
+  entityId    String
+  resourceUrl String
+  fileName    String?
+  createdAt   DateTime    @default(now())
+  productInfo ProductInfo @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@index([entityId], map: "entity_resources_entityId_fkey")
+  @@map("entity_resources")
+}
+
 enum AccountStatus {
   ACTIVE
   INACTIVE
@@ -550,8 +615,6 @@ enum PurchaseOrderStatus {
   CANCELLED
 }
 
-
-
 enum ShipmentRecordStatus {
   PREPARING
   SHIPPED
@@ -569,62 +632,4 @@ enum PackagingTaskStatus {
 
 enum PackagingTaskType {
   PACKAGING
-}
-
-// 导出记录表
-model ExportRecord {
-  id          String       @id @default(cuid())
-  fileName    String
-  exportType  String       // 导出类型：products, purchase-orders, inventory等
-  status      ExportStatus @default(PENDING)
-  fileSize    Int?         // 文件大小（字节）
-  downloadUrl String?      // 下载链接
-  filters     Json?        // 导出时的筛选条件
-  operatorId  String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  completedAt DateTime?    // 完成时间
-  operator    Account      @relation("ExportOperator", fields: [operatorId], references: [id])
-
-  @@index([operatorId])
-  @@index([status])
-  @@index([exportType])
-  @@index([createdAt])
-  @@map("export_records")
-}
-
-// 文件上传记录表
-model FileUpload {
-  id           String    @id @default(cuid())
-  originalName String    // 原始文件名
-  fileName     String    // 存储文件名
-  fileUrl      String    // 文件访问URL
-  fileSize     Int       // 文件大小（字节）
-  fileType     String    // 文件MIME类型
-  category     String    // 文件分类：product, avatar, document等
-  storage      String    @default("oss") // 存储方式：oss, local等
-  uploaderId   String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  uploader     Account   @relation("FileUploader", fields: [uploaderId], references: [id])
-
-  @@index([uploaderId])
-  @@index([category])
-  @@index([fileType])
-  @@index([createdAt])
-  @@map("file_uploads")
-}
-
-// 通用资源关联表
-model EntityResource {
-  id         String      @id @default(cuid())
-  entityType String      // 实体类型，如 "PRODUCT_INFO"
-  entityId   String      // 实体ID
-  resourceUrl String     // 资源文件URL
-  fileName   String?     // 原始文件名
-  createdAt  DateTime    @default(now())
-  productInfo ProductInfo? @relation(fields: [entityId], references: [id], onDelete: Cascade)
-
-  @@index([entityType, entityId])
-  @@map("entity_resources")
 }

@@ -62,6 +62,18 @@ export interface AccessoryImage {
   updatedAt: string;
 }
 
+// 产品成本相关接口
+export interface ProductCost {
+  id: string;
+  productId: string;
+  costInfo?: string; // 成本信息
+  price?: string; // 价格
+  unit?: string; // 单位
+  supplier?: string; // 供应商
+  createdAt: string;
+  updatedAt: string;
+}
+
 // 产品信息相关接口
 export interface ProductInfo {
   id: string;
@@ -106,6 +118,7 @@ export interface ProductInfo {
   };
   images?: ProductImage[]; // 产品图片数组
   accessoryImages?: AccessoryImage[]; // 配件图片数组
+  costs?: ProductCost[]; // 产品成本数组
   _count?: {
     finishedInventory: number;
     spareInventory: number;

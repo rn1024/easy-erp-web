@@ -52,6 +52,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             createdAt: 'asc'
           }
         },
+        costs: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        },
       },
     });
 
@@ -117,6 +122,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       productImages,
       // 配件图片资源
       accessoryImages,
+      // 产品成本数据
+      costs,
     } = body;
 
     if (!id) {
@@ -240,6 +247,29 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         }
       }
 
+      // 处理产品成本数据
+      if (costs !== undefined) {
+        // 删除现有的成本数据
+        await tx.productCost.deleteMany({
+          where: {
+            productId: id,
+          },
+        });
+
+        // 添加新的成本数据
+        if (costs && costs.length > 0) {
+          await tx.productCost.createMany({
+            data: costs.map((cost: any) => ({
+              productId: id,
+              costInfo: cost.costInfo || '',
+              price: cost.price || '',
+              unit: cost.unit || '',
+              supplier: cost.supplier || '',
+            })),
+          });
+        }
+      }
+
       return updatedProduct;
     });
 
@@ -274,6 +304,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           where: {
             entityType: 'PRODUCT_INFO'
           },
+          orderBy: {
+            createdAt: 'asc'
+          }
+        },
+        costs: {
           orderBy: {
             createdAt: 'asc'
           }
