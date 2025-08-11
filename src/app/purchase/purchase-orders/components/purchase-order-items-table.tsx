@@ -60,7 +60,9 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
 
   // 计算单行金额
   const calculateRowAmounts = (quantity: number, unitPrice: number) => {
-    const amount = quantity * unitPrice;
+    const safeQuantity = Number(quantity) || 0;
+    const safeUnitPrice = Number(unitPrice) || 0;
+    const amount = safeQuantity * safeUnitPrice;
 
     return {
       amount: parseFloat(amount.toFixed(2)),
@@ -106,8 +108,8 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
         // 如果更新的是影响计算的字段，重新计算金额
         if (['quantity', 'unitPrice'].includes(field)) {
           const { amount } = calculateRowAmounts(
-            field === 'quantity' ? value : updatedItem.quantity,
-            field === 'unitPrice' ? value : updatedItem.unitPrice
+            field === 'quantity' ? (Number(value) || 0) : (Number(updatedItem.quantity) || 0),
+            field === 'unitPrice' ? (Number(value) || 0) : (Number(updatedItem.unitPrice) || 0)
           );
 
           updatedItem.amount = amount;
@@ -197,7 +199,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
       width: 120,
       render: (value, record) => {
         if (disabled) {
-          return `¥${value.toFixed(2)}`;
+          return `¥${(Number(value) || 0).toFixed(2)}`;
         }
 
         return (
@@ -217,7 +219,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
       dataIndex: 'amount',
       width: 120,
       align: 'right',
-      render: (value) => <Text strong>¥{value.toFixed(2)}</Text>,
+      render: (value) => <Text strong>¥{(Number(value) || 0).toFixed(2)}</Text>,
     },
     {
       title: '操作',
