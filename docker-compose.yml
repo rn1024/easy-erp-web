@@ -26,6 +26,22 @@ services:
     volumes:
       - redis_data:/data
 
+  # 如果使用Docker部署应用，添加以下配置
+  # easy-erp-web:
+  #   build: .
+  #   container_name: easy-erp-web
+  #   restart: always
+  #   ports:
+  #     - '3008:3008'
+  #   volumes:
+  #     - uploads_data:/app/public/uploads
+  #   environment:
+  #     - NODE_ENV=production
+  #   depends_on:
+  #     - mysql
+  #     - redis
+
 volumes:
   mysql_data:
   redis_data:
+  uploads_data:  # 用于持久化存储上传文件
