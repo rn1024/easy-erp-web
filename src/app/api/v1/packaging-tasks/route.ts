@@ -58,10 +58,12 @@ export async function GET(request: NextRequest) {
       code: 0,
       data: {
         list: tasks,
-        total,
-        page,
-        pageSize,
-        totalPages,
+        meta: {
+          total,
+          page,
+          limit: pageSize,
+          totalPages,
+        },
       },
       msg: '获取包装任务列表成功',
     });

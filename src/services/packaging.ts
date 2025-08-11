@@ -1,4 +1,5 @@
 import axios from './index';
+import type { ResType, PageResType } from '@/types/api';
 
 // 包装任务状态枚举
 export enum PackagingTaskStatus {
@@ -113,17 +114,12 @@ export interface PackagingTaskQueryParams {
   pageSize?: number;
 }
 
+// 包装任务查询参数接口别名
+export type PackagingTasksParams = PackagingTaskQueryParams;
+
 // 获取包装任务列表
-export const getPackagingTasksApi = (params: PackagingTaskQueryParams = {}) => {
-  return axios<{
-    list: PackagingTaskInfo[];
-    meta: {
-      page: number;
-      pageSize: number;
-      total: number;
-      totalPages: number;
-    };
-  }>('/packaging-tasks', {
+export const getPackagingTasksApi = (params: PackagingTasksParams = {}) => {
+  return axios<PageResType<PackagingTaskInfo>>('/packaging-tasks', {
     method: 'get',
     params,
   });

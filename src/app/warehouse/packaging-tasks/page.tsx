@@ -70,12 +70,22 @@ const PackagingTasksPage: React.FC = () => {
     data: tasksData,
     loading,
     refresh,
-  } = useRequest(() => getPackagingTasksApi(searchParams), {
+    error,
+  } = useRequest(() => {
+    console.log('🚀 开始请求包装任务数据，参数:', searchParams);
+    return getPackagingTasksApi(searchParams);
+  }, {
     refreshDeps: [searchParams],
     onSuccess: (data) => {
-      console.log('包装任务数据:', data);
-      console.log('列表数据:', data?.data?.list);
-      console.log('数据长度:', data?.data?.list?.length);
+      console.log('✅ 包装任务数据请求成功:', data);
+      console.log('📋 列表数据:', data?.data?.data?.list);
+      console.log('📊 数据长度:', data?.data?.data?.list?.length);
+      console.log('📄 分页信息:', data?.data?.data?.meta);
+    },
+    onError: (err: any) => {
+      console.error('❌ 包装任务数据请求失败:', err);
+      console.error('错误详情:', err.response?.data);
+      console.error('错误状态码:', err.response?.status);
     },
   });
 
@@ -242,14 +252,14 @@ const PackagingTasksPage: React.FC = () => {
    */
   const proTableProps: ProTableProps<PackagingTaskInfo, any> = {
     columns,
-    dataSource: tasksData?.data?.list || [],
+    dataSource: tasksData?.data?.data?.list || [],
     loading,
     rowKey: 'id',
     search: false,
     pagination: {
       current: Number(searchParams.page) || 1,
       pageSize: Number(searchParams.pageSize) || 10,
-      total: tasksData?.data?.meta?.total || 0,
+      total: tasksData?.data?.data?.meta?.total || 0,
       showSizeChanger: true,
       showQuickJumper: true,
       showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
@@ -283,9 +293,10 @@ const PackagingTasksPage: React.FC = () => {
   // 调试信息
   console.log('完整的tasksData:', tasksData);
   console.log('tasksData?.data:', tasksData?.data);
-  console.log('ProTable dataSource:', tasksData?.data?.list);
+  console.log('ProTable dataSource:', tasksData?.data?.data?.list);
   console.log('ProTable loading:', loading);
-  console.log('ProTable total:', tasksData?.data?.meta?.total);
+  console.log('ProTable total:', tasksData?.data?.data?.meta?.total);
+  console.log('ProTable error:', error);
 
   return (
     <>
