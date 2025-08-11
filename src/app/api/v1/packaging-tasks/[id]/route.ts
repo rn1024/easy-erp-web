@@ -17,11 +17,27 @@ export async function GET(
     }
 
     const { id } = params;
+    
+    if (!id) {
+      return NextResponse.json(
+        {
+          code: 400,
+          msg: '包装任务ID不能为空',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 查询包装任务详情
     const task = await prisma.packagingTask.findUnique({
       where: { id },
       include: {
-        shop: true,
-        operator: true,
+        shop: {
+          select: { id: true, nickname: true },
+        },
+        operator: {
+          select: { id: true, name: true },
+        },
       },
     });
 
@@ -35,9 +51,30 @@ export async function GET(
       );
     }
 
+    // 查询关联的产品明细
+    const productItems = await prisma.productItem.findMany({
+      where: {
+        relatedType: ProductItemRelatedType.PACKAGING_TASK,
+        relatedId: id,
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
     return NextResponse.json({
       code: 0,
-      data: task,
+      data: {
+        ...task,
+        items: productItems,
+      },
       msg: '获取包装任务详情成功',
     });
   } catch (error) {
