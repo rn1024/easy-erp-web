@@ -69,9 +69,16 @@ const ensureUploadDir = (dirPath: string) => {
   }
 };
 
+// 获取正确的上传根目录
+const getUploadRoot = () => {
+  // 统一使用项目根目录，无论开发环境还是生产环境
+  return process.cwd();
+};
+
 // 本地文件上传函数
 const uploadToLocal = async (fileBuffer: Buffer, filePath: string): Promise<string> => {
-  const fullPath = path.join(process.cwd(), 'public', 'uploads', filePath);
+  const uploadRoot = getUploadRoot();
+  const fullPath = path.join(uploadRoot, 'upload', filePath);
   const dir = path.dirname(fullPath);
 
   // 确保目录存在
@@ -91,7 +98,7 @@ const uploadToLocal = async (fileBuffer: Buffer, filePath: string): Promise<stri
   }
 
   // 返回访问URL
-  return `/uploads/${filePath}`;
+  return `/upload/${filePath}`;
 };
 
 // POST /api/v1/upload - 文件上传

@@ -238,6 +238,11 @@ jobs:
             # 8. 数据库准备完成
             echo "✅ 数据库准备完成"
 
+            # 8.5. 创建upload目录结构
+            echo "📁 创建upload目录结构..."
+            mkdir -p upload/{images,videos,documents,avatars,accessories,labels,shipments}
+            echo "✅ upload目录结构创建完成"
+
             # 9. 构建应用（使用standalone模式）
             echo "🔨 开始构建应用..."
             npm run build:standalone

@@ -52,21 +52,43 @@ const FILE_CONFIG = {
   },
 };
 
+// 获取正确的上传根目录
+const getUploadRoot = () => {
+  // 统一使用项目根目录，无论开发环境还是生产环境
+  return process.cwd();
+};
+
+// 确保上传目录存在
+const ensureUploadDir = (dirPath: string) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
 // 本地文件上传函数
 const uploadToLocal = async (fileBuffer: Buffer, filePath: string): Promise<string> => {
-  const fullPath = path.join(process.cwd(), 'public', 'uploads', filePath);
+  const uploadRoot = getUploadRoot();
+  const fullPath = path.join(uploadRoot, 'upload', filePath);
   const dir = path.dirname(fullPath);
 
   // 确保目录存在
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  ensureUploadDir(dir);
 
   // 写入文件
-  fs.writeFileSync(fullPath, fileBuffer);
+  await fs.promises.writeFile(fullPath, fileBuffer);
 
-  // 返回可访问的URL
-  return `/uploads/${filePath}`;
+  // 仅在生产环境执行权限修复
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      fs.chmodSync(fullPath, 0o644); // 文件权限
+      fs.chmodSync(dir, 0o755); // 目录权限
+    } catch (error) {
+      console.warn('权限设置失败:', error);
+    }
+  }
+
+  // 返回访问URL
+  return `/upload/${filePath}`;
 };
 
 // POST /api/v1/upload/batch - 批量文件上传
