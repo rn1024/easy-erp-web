@@ -113,6 +113,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       outerBoxSize,
       // 新增标签文件字段
       labelFileUrl,
+      // 产品图片数据
+      productImages,
       // 配件图片资源
       accessoryImages,
     } = body;
@@ -191,6 +193,30 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         },
       });
 
+      // 处理产品图片
+      if (productImages !== undefined) {
+        // 删除现有的产品图片
+        await tx.productImage.deleteMany({
+          where: {
+            productId: id,
+          },
+        });
+
+        // 添加新的产品图片
+        if (productImages && productImages.length > 0) {
+          await tx.productImage.createMany({
+            data: productImages.map((image: any, index: number) => ({
+              productId: id,
+              imageUrl: image.imageUrl,
+              fileName: image.fileName || null,
+              fileSize: image.fileSize || 0,
+              sortOrder: image.sortOrder || index + 1,
+              isCover: image.isCover || false,
+            })),
+          });
+        }
+      }
+
       // 处理配件图片资源
       if (accessoryImages !== undefined) {
         // 删除现有的配件图片资源
@@ -207,7 +233,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             data: accessoryImages.map((image: any) => ({
               entityType: 'PRODUCT_INFO',
               entityId: id,
-              resourceUrl: image.url,
+              resourceUrl: image.resourceUrl,
               fileName: image.fileName || null,
             })),
           });

@@ -6,7 +6,7 @@ type Props = {
   againstText?: string;
 };
 
-const ComponentTableCellDebate: React.FC<Props> = ({ forText, againstText }) => {
+const ComponentTableCellDebate = ({ forText, againstText }: Props): React.ReactNode => {
   if (!forText && !againstText) {
     return '-';
   }

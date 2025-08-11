@@ -18,7 +18,7 @@ type Props = {
   list: string[];
 };
 
-const ComponentTableCellMedia: React.FC<Props> = ({ list }) => {
+const ComponentTableCellMedia = ({ list }: Props): React.ReactNode => {
   if (!list) {
     return '-';
   }

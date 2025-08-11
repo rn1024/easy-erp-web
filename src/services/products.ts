@@ -150,6 +150,14 @@ export interface ProductFormData {
   packageWeight?: number;
   outerBoxSize?: string;
   labelFileUrl?: string;
+  // 产品图片数据
+  productImages?: {
+    imageUrl: string;
+    fileName: string;
+    fileSize: number;
+    sortOrder: number;
+    isCover: boolean;
+  }[];
   // 配件图片数据
   accessoryImages?: {
     resourceUrl: string;

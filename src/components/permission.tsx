@@ -55,13 +55,13 @@ const hasPermission = (
   return userPermissions.includes(requiredPermission);
 };
 
-const Permission: React.FC<Props> = ({
+const Permission = ({
   children,
   permission,
   permissions = [],
   requireAll = false,
   fallback = null,
-}) => {
+}: Props): JSX.Element | null => {
   const [userPermissions] = useLocalStorageState<string[]>('permissions', {
     defaultValue: [],
     listenStorageChange: true,
@@ -77,17 +77,17 @@ const Permission: React.FC<Props> = ({
 
   // 如果没有用户权限信息，返回fallback
   if (!userPermissions) {
-    return fallback;
+    return fallback as JSX.Element | null;
   }
 
   // 🔥 优先检查超级管理员身份，如果是超级管理员直接返回children
   if (isSuperAdmin(userPermissions, userRoles)) {
-    return children;
+    return children as JSX.Element;
   }
 
   // 如果没有指定权限要求，对于普通用户返回fallback
   if (requiredPermissions.length === 0) {
-    return fallback;
+    return fallback as JSX.Element | null;
   }
 
   // 检查权限
@@ -103,17 +103,17 @@ const Permission: React.FC<Props> = ({
     hasAccess = requiredPermissions.some((perm) => hasPermission(userPermissions, perm, userRoles));
   }
 
-  return hasAccess ? children : fallback;
+  return hasAccess ? (children as JSX.Element) : (fallback as JSX.Element | null);
 };
 
 /**
  * 超级管理员权限组件
  * 只有超级管理员才能看到的内容
  */
-export const SuperAdminPermission: React.FC<{
+export const SuperAdminPermission = ({ children, fallback = null }: {
   children: React.ReactNode;
   fallback?: React.ReactNode;
-}> = ({ children, fallback = null }) => {
+}): React.ReactNode => {
   const [userPermissions] = useLocalStorageState<string[]>('permissions', {
     defaultValue: [],
     listenStorageChange: true,

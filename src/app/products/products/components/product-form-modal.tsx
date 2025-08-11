@@ -20,7 +20,7 @@ import AccessoryImageUploader from '@/components/accessory-image-uploader';
 /**
  * APIs
  */
-import { createProductApi, updateProductApi, getProductCategoriesApi, uploadProductImagesApi } from '@/services/products';
+import { createProductApi, updateProductApi, getProductCategoriesApi } from '@/services/products';
 import { getShops } from '@/services/shops';
 import { uploadFile } from '@/services/common';
 
@@ -82,39 +82,13 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
         packageWeight: formData.packageWeight ? parseFloat(formData.packageWeight) : undefined,
         setQuantity: formData.setQuantity || 1,
+        // 确保图片数据包含在提交数据中
+        productImages: formData.productImages || [],
+        accessoryImages: formData.accessoryImages || [],
       };
 
       const res = await formSubmit(entity, submitData);
       if (get(res, 'data.code') === 0 || get(res, 'data.code') === 200) {
-        // 如果是新增产品且有临时图片，需要将图片关联到新创建的产品
-        if (!entity && res.data.data?.id) {
-          const newProductId = res.data.data.id;
-          const productImages = formData.productImages || [];
-          const accessoryImages = formData.accessoryImages || [];
-          
-          // 保存产品图片
-          if (productImages.length > 0) {
-            const tempImages = productImages.filter((img: any) => img.id?.startsWith('temp-'));
-            if (tempImages.length > 0) {
-              try {
-                const imageData = tempImages.map((img: any) => ({
-                  imageUrl: img.imageUrl,
-                  fileName: img.fileName,
-                  fileSize: img.fileSize,
-                  sortOrder: img.sortOrder,
-                  isCover: img.isCover,
-                }));
-                await uploadProductImagesApi(newProductId, imageData);
-              } catch (imageError) {
-                console.error('保存产品图片失败:', imageError);
-                // 不阻止产品创建成功的提示
-              }
-            }
-          }
-          
-          // 配件图片已经通过uploadBatchFiles上传，不需要额外处理
-        }
-        
         message.success(entity ? '更新成功' : '创建成功');
         setSubmittingFalse();
         closeModal(true);

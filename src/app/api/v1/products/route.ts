@@ -140,6 +140,8 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       outerBoxSize,
       // 新增标签文件字段
       labelFileUrl,
+      // 产品图片数据
+      productImages,
       // 配件图片资源
       accessoryImages,
     } = body;
@@ -207,13 +209,27 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
         },
       });
 
+      // 添加产品图片
+      if (productImages && productImages.length > 0) {
+        await tx.productImage.createMany({
+          data: productImages.map((image: any, index: number) => ({
+            productId: newProduct.id,
+            imageUrl: image.imageUrl,
+            fileName: image.fileName || null,
+            fileSize: image.fileSize || 0,
+            sortOrder: image.sortOrder || index + 1,
+            isCover: image.isCover || false,
+          })),
+        });
+      }
+
       // 添加配件图片资源
       if (accessoryImages && accessoryImages.length > 0) {
         await tx.entityResource.createMany({
           data: accessoryImages.map((image: any) => ({
             entityType: 'PRODUCT_INFO',
             entityId: newProduct.id,
-            resourceUrl: image.url,
+            resourceUrl: image.resourceUrl,
             fileName: image.fileName || null,
           })),
         });
