@@ -8,7 +8,6 @@ import {
   CreatePackagingTaskData,
   UpdatePackagingTaskData,
   PackagingTaskType,
-  getPackagingTaskApi,
 } from '@/services/packaging';
 import { getShops } from '@/services/shops';
 import { getProductsApi } from '@/services/products';
@@ -75,8 +74,21 @@ const PackagingTaskFormModal: React.FC<PackagingTaskFormModalProps> = ({
           progress: editingTask.progress || 0,
         });
 
-        // 加载产品明细
-        loadProductItems(editingTask.id);
+        // 直接使用editingTask中的items数据设置产品明细
+        if (editingTask.items && editingTask.items.length > 0) {
+          const items: UniversalProductItem[] = editingTask.items.map(
+            (item: any, index: number) => ({
+              key: `${item.productId}-${index}`,
+              productId: item.productId,
+              quantity: item.quantity,
+              completedQuantity: item.completedQuantity || undefined,
+              remark: item.remark,
+            })
+          );
+          setProductItems(items);
+        } else {
+          setProductItems([]);
+        }
       } else {
         // 新增模式
         resetForm();
@@ -88,29 +100,7 @@ const PackagingTaskFormModal: React.FC<PackagingTaskFormModalProps> = ({
     }
   }, [visible, editingTask]);
 
-  // 加载产品明细 - 现在从包装任务数据中获取
-  const loadProductItems = async (taskId: string) => {
-    try {
-      // 从包装任务详情中获取产品明细
-      const response = await getPackagingTaskApi(taskId);
-      if (response?.data?.items) {
-        const items: UniversalProductItem[] = response.data.items.map(
-          (item: any, index: number) => ({
-            key: `${item.productId}-${index}`,
-            productId: item.productId,
-            quantity: item.quantity,
-            completedQuantity: item.completedQuantity || undefined,
-            remark: item.remark,
-          })
-        );
-        setProductItems(items);
-      }
-    } catch (error) {
-      console.error('加载产品明细失败:', error);
-      // 不显示错误消息，继续使用空数组
-      setProductItems([]);
-    }
-  };
+  // 注意：不再需要loadProductItems函数，因为直接使用editingTask中的数据
 
   // 提交表单
   const handleSubmit = async () => {
