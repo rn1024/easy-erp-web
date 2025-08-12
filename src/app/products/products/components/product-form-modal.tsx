@@ -66,6 +66,7 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
   const [shops, setShops] = useState<Shop[]>([]);
   const [shopsLoading, setShopsLoading] = useState(false);
   const [productCosts, setProductCosts] = useState<any[]>([]);
+  const [labelFileList, setLabelFileList] = useState<any[]>([]);
   
   // 使用传入的categoriesList或空数组
   const categories = categoriesList || [];
@@ -82,7 +83,7 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
       const submitData: ProductFormData = {
         ...formData,
         weight: formData.weight ? parseFloat(formData.weight) : undefined,
-        packageWeight: formData.packageWeight ? parseFloat(formData.packageWeight) : undefined,
+        packageWeight: formData.packageWeight ? String(formData.packageWeight) : undefined,
         setQuantity: formData.setQuantity || 1,
         // 确保图片数据包含在提交数据中
         productImages: formData.productImages || [],
@@ -169,11 +170,27 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
           // 回填产品图片和配件图片
           productImages: entity.images || [],
           accessoryImages: entity.accessoryImages || [],
+          // 回填标签文件URL
+          labelFileUrl: entity.labelFileUrl || undefined,
         });
+        
+        // 设置标签文件列表用于Upload组件显示
+        if (entity.labelFileUrl) {
+          const fileName = entity.labelFileUrl.split('/').pop() || '标签文件';
+          setLabelFileList([{
+            uid: '-1',
+            name: fileName,
+            status: 'done',
+            url: entity.labelFileUrl,
+          }]);
+        } else {
+          setLabelFileList([]);
+        }
       }
     } else if (open && !entity) {
       // 新增模式：重置表单
       form.resetFields();
+      setLabelFileList([]);
     }
   }, [open, entity, form, shopsLoading, shops.length, categories.length]);
 
@@ -364,6 +381,14 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
             <Col span={8}>
               <Form.Item name="labelFileUrl" label="标签文件">
                 <Upload
+                  fileList={labelFileList}
+                  onChange={(info) => {
+                    setLabelFileList(info.fileList);
+                    // 如果文件被删除，清空表单字段
+                    if (info.fileList.length === 0) {
+                      form.setFieldsValue({ labelFileUrl: undefined });
+                    }
+                  }}
                   customRequest={async (options) => {
                     const { file, onSuccess, onError } = options;
                     try {
