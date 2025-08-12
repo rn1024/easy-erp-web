@@ -163,49 +163,65 @@ jobs:
             TABLE_COUNT=$(node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'\`.then(result => { console.log(result[0].count); process.exit(0); }).catch(err => { console.log('0'); process.exit(0); }).finally(() => prisma.\$disconnect());")
             echo "📊 数据库中共有 $TABLE_COUNT 个表"
             
-            # 根据表数量决定初始化策略
+            # 检查关键表是否存在（包括新增的 product_costs 表）
+            echo "🔍 检查关键表是否存在..."
+            CRITICAL_TABLES=("accounts" "roles" "permissions" "shops" "suppliers" "product_costs" "product_info" "purchase_orders")
+            MISSING_TABLES=()
+            
+            for table in "${CRITICAL_TABLES[@]}"; do
+              if ! node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '${table}'\`.then(result => { if(result[0].count === 0) { console.log('MISSING'); process.exit(1); } else { console.log('EXISTS'); process.exit(0); } }).catch(err => { console.log('ERROR'); process.exit(1); }).finally(() => prisma.\$disconnect());"; then
+                echo "⚠️  表 $table 不存在"
+                MISSING_TABLES+=("$table")
+              else
+                echo "✅ 表 $table 存在"
+              fi
+            done
+            
+            # 根据表数量和缺失表情况决定初始化策略
             if [ "$TABLE_COUNT" -eq "0" ]; then
               echo "🆕 检测到空数据库，执行完整初始化..."
               
-              # 执行数据库迁移部署
-              echo "📦 执行数据库迁移部署..."
-              npx prisma migrate deploy
+              # 对于空数据库，直接使用 db push 确保完整同步
+              echo "📦 使用 Prisma DB Push 初始化数据库..."
+              npx prisma db push --force-reset
               
-              # 验证关键表是否创建成功
-              echo "🔍 验证关键表创建..."
-              CRITICAL_TABLES=("accounts" "roles" "permissions" "shops" "suppliers")
-              for table in "${CRITICAL_TABLES[@]}"; do
-                if ! node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '${table}'\`.then(result => { if(result[0].count === 0) { console.error('表 ${table} 不存在'); process.exit(1); } else { console.log('✅ 表 ${table} 存在'); process.exit(0); } }).catch(err => { console.error('检查表失败:', err.message); process.exit(1); }).finally(() => prisma.\$disconnect());"; then
-                  echo "❌ 关键表 $table 创建失败"
-                  exit 1
-                fi
-              done
+            elif [ ${#MISSING_TABLES[@]} -gt 0 ]; then
+              echo "⚠️  检测到缺失表: ${MISSING_TABLES[*]}"
+              echo "🔧 使用 Prisma DB Push 强制同步数据库结构..."
               
-              echo "✅ 所有关键表创建成功"
+              # 使用 db push 强制同步 schema，确保所有表都被创建
+              npx prisma db push
               
-            elif [ "$TABLE_COUNT" -lt "25" ]; then
-              echo "⚠️  数据库表不完整（$TABLE_COUNT/29），尝试修复..."
+            elif [ "$TABLE_COUNT" -lt "29" ]; then
+              echo "⚠️  数据库表数量不完整（$TABLE_COUNT/29），强制同步..."
               
-              # 尝试使用db push强制同步
+              # 使用 db push 确保表结构完整
               echo "🔧 强制同步数据库结构..."
-              npx prisma db push --force-reset || npx prisma db push
-              
-              # 重新检查表数量
-              NEW_TABLE_COUNT=$(node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'\`.then(result => { console.log(result[0].count); process.exit(0); }).catch(err => { console.log('0'); process.exit(0); }).finally(() => prisma.\$disconnect());")
-              echo "📊 修复后数据库中共有 $NEW_TABLE_COUNT 个表"
-              
-              if [ "$NEW_TABLE_COUNT" -lt "25" ]; then
-                echo "❌ 数据库结构修复失败"
-                exit 1
-              fi
+              npx prisma db push
               
             else
               echo "✅ 数据库表结构完整（$TABLE_COUNT 个表）"
               
-              # 使用现有的迁移脚本确保最新状态
-              echo "🔄 确保数据库为最新状态..."
-              npm run db:init-empty
+              # 即使表数量正确，也要确保没有缺失关键表
+              if [ ${#MISSING_TABLES[@]} -eq 0 ]; then
+                echo "🔄 确保数据库为最新状态..."
+                npm run db:init-empty
+              else
+                echo "🔧 发现缺失关键表，执行同步..."
+                npx prisma db push
+              fi
             fi
+            
+            # 同步后重新验证关键表
+            echo "🔍 验证关键表创建结果..."
+            for table in "${CRITICAL_TABLES[@]}"; do
+              if ! node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '${table}'\`.then(result => { if(result[0].count === 0) { console.error('表 ${table} 仍然不存在'); process.exit(1); } else { console.log('✅ 表 ${table} 验证通过'); process.exit(0); } }).catch(err => { console.error('检查表失败:', err.message); process.exit(1); }).finally(() => prisma.\$disconnect());"; then
+                echo "❌ 关键表 $table 创建失败"
+                exit 1
+              fi
+            done
+            
+            echo "✅ 所有关键表验证通过"
             
             echo "✅ 数据库结构初始化完成"
             
@@ -225,13 +241,20 @@ jobs:
             ROLE_COUNT=$(node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.role.count().then(count => { console.log(count); process.exit(0); }).catch(err => { console.log('0'); process.exit(0); }).finally(() => prisma.\$disconnect());")
             ACCOUNT_COUNT=$(node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.account.count().then(count => { console.log(count); process.exit(0); }).catch(err => { console.log('0'); process.exit(0); }).finally(() => prisma.\$disconnect());")
             
+            # 验证关键表是否存在
+            PRODUCT_COSTS_EXISTS=$(node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'product_costs'\`.then(result => { console.log(result[0].count > 0 ? 'YES' : 'NO'); process.exit(0); }).catch(err => { console.log('NO'); process.exit(0); }).finally(() => prisma.\$disconnect());")
+            
             echo "📊 数据库最终状态:"
             echo "  - 表数量: $FINAL_TABLE_COUNT"
             echo "  - 角色数量: $ROLE_COUNT"
             echo "  - 账户数量: $ACCOUNT_COUNT"
+            echo "  - product_costs表: $PRODUCT_COSTS_EXISTS"
             
-            if [ "$FINAL_TABLE_COUNT" -lt "25" ] || [ "$ROLE_COUNT" -eq "0" ]; then
+            if [ "$FINAL_TABLE_COUNT" -lt "29" ] || [ "$ROLE_COUNT" -eq "0" ] || [ "$PRODUCT_COSTS_EXISTS" = "NO" ]; then
               echo "❌ 数据库状态验证失败"
+              if [ "$PRODUCT_COSTS_EXISTS" = "NO" ]; then
+                echo "❌ product_costs 表缺失"
+              fi
               exit 1
             fi
 
