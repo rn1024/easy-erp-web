@@ -109,8 +109,8 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
         // 如果更新的是影响计算的字段，重新计算金额
         if (['quantity', 'unitPrice'].includes(field)) {
           const { amount } = calculateRowAmounts(
-            field === 'quantity' ? Number(value) || 0 : Number(updatedItem.quantity) || 0,
-            field === 'unitPrice' ? Number(value) || 0 : Number(updatedItem.unitPrice) || 0
+            field === 'quantity' ? (Number(value) || 0) : (Number(updatedItem.quantity) || 0),
+            field === 'unitPrice' ? (Number(value) || 0) : (Number(updatedItem.unitPrice) || 0)
           );
 
           updatedItem.amount = amount;
