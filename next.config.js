@@ -18,8 +18,10 @@ const nextConfig = {
 
   // 构建优化
   compiler: {
-    // 在生产环境移除 console
-    removeConsole: process.env.NODE_ENV === 'production',
+    // 在生产环境移除 console，但保留 error 和 warn
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
   },
 
   // 优化构建输出

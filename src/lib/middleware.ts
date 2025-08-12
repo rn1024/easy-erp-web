@@ -220,6 +220,7 @@ export const withAuth = (handler: (request: NextRequest, user: any) => Promise<N
       // 验证令牌
       const tokenPayload = verifyRequestToken(request);
       if (!tokenPayload) {
+        console.warn(`[AUTH] 令牌验证失败 - URL: ${request.url}`);
         return ApiResponseHelper.unauthorized('令牌无效或已过期');
       }
 
@@ -244,6 +245,7 @@ export const withAuth = (handler: (request: NextRequest, user: any) => Promise<N
       });
 
       if (!user || user.status !== 'ACTIVE') {
+        console.warn(`[AUTH] 用户不存在或已禁用 - UserID: ${tokenPayload.id}, URL: ${request.url}`);
         return ApiResponseHelper.unauthorized('用户不存在或已被禁用');
       }
 
@@ -259,7 +261,9 @@ export const withAuth = (handler: (request: NextRequest, user: any) => Promise<N
 
       return handler(request, userWithPermissions);
     } catch (error: any) {
-      console.error('Auth middleware error:', error);
+      console.error(`[AUTH] 认证中间件错误 - URL: ${request.url}`);
+      console.error(`[AUTH] 错误详情:`, error);
+      console.error(`[AUTH] 错误堆栈:`, error.stack);
       return ApiResponseHelper.serverError('认证失败');
     }
   };
@@ -275,6 +279,7 @@ export const withPermission = (requiredPermissions: string[]) => {
       );
 
       if (!hasPermission) {
+        console.warn(`[PERMISSION] 权限不足 - UserID: ${user.id}, Required: [${requiredPermissions.join(', ')}], User Permissions: [${user.permissions.join(', ')}], URL: ${request.url}`);
         return ApiResponseHelper.forbidden('权限不足');
       }
 

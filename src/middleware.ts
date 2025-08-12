@@ -50,15 +50,13 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 记录访问日志（仅在开发环境）
-  if (process.env.NODE_ENV === 'development') {
-    const ip = getClientIP(request);
-    const userAgent = request.headers.get('user-agent') || 'unknown';
-    // eslint-disable-next-line no-console
-    console.log(
-      `[${new Date().toISOString()}] ${request.method} ${pathname} - IP: ${ip} - UA: ${userAgent.substring(0, 100)}`
-    );
-  }
+  // 记录访问日志（包括API请求）
+  const ip = getClientIP(request);
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+  // eslint-disable-next-line no-console
+  console.log(
+    `[${new Date().toISOString()}] ${request.method} ${pathname} - IP: ${ip} - UA: ${userAgent.substring(0, 100)}`
+  );
 
   return response;
 }
@@ -68,7 +66,6 @@ export const config = {
   matcher: [
     /*
      * 匹配所有路径除了：
-     * - api/* (所有API路由)
      * - _next/static (静态文件)
      * - _next/image (图片优化)
      * - favicon.ico (网站图标)
@@ -76,6 +73,6 @@ export const config = {
      * - upload/* (新上传文件目录)
      * - 静态资源文件
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|uploads|upload|.*\.(?:svg|png|jpg|jpeg|gif|webp|pdf|rar|zip)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|uploads|upload|.*\.(?:svg|png|jpg|jpeg|gif|webp|pdf|rar|zip)$).*)',
   ],
 };
