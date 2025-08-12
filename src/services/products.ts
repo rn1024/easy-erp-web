@@ -123,7 +123,7 @@ export interface ProductInfo {
     finishedInventory: number;
     spareInventory: number;
     purchaseOrders?: number;
-
+  
     deliveryRecords?: number;
   };
 }

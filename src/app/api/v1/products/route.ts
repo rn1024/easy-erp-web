@@ -7,6 +7,7 @@ import { withAuth } from '@/lib/middleware';
 // GET /api/v1/products - 获取产品列表
 export const GET = withAuth(async (request: NextRequest, user: any) => {
   try {
+    console.log('=== 产品列表API开始 ===');
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '10');
@@ -15,6 +16,8 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     const code = searchParams.get('code');
     const sku = searchParams.get('sku');
     const asin = searchParams.get('asin');
+    
+    console.log('查询参数:', { page, pageSize, shopId, categoryId, code, sku, asin });
 
     const skip = (page - 1) * pageSize;
 
@@ -39,6 +42,9 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     }
 
     // 获取产品信息列表和总数
+    console.log('数据库查询条件:', where);
+    console.log('分页参数:', { skip, take: pageSize });
+    
     const [products, total] = await Promise.all([
       prisma.productInfo.findMany({
         where,
@@ -88,6 +94,17 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
       }),
       prisma.productInfo.count({ where }),
     ]);
+    
+    console.log('查询结果:', {
+      productsCount: products.length,
+      total,
+      firstProductCosts: products[0]?.costs || 'no products',
+      sampleProduct: products[0] ? {
+        id: products[0].id,
+        name: products[0].name,
+        costsLength: products[0].costs?.length || 0
+      } : 'no products'
+    });
 
     return NextResponse.json({
       code: 0,
@@ -103,7 +120,11 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
       },
     });
   } catch (error) {
-    console.error('获取产品信息列表失败:', error);
+    console.error('=== 产品列表API错误 ===');
+    console.error('错误详情:', error);
+    console.error('错误堆栈:', error instanceof Error ? error.stack : 'Unknown error');
+    console.error('错误消息:', error instanceof Error ? error.message : String(error));
+    
     return NextResponse.json(
       {
         code: 500,
