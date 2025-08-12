@@ -34,6 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         product: {
           select: {
             id: true,
+            name: true,
             code: true,
             specification: true,
             sku: true,
@@ -165,6 +166,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         product: {
           select: {
             id: true,
+            name: true,
             code: true,
             specification: true,
             sku: true,

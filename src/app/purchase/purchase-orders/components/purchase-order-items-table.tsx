@@ -22,6 +22,7 @@ export interface PurchaseOrderItem {
 export interface ProductOption {
   id: string;
   code?: string;
+  name?: string;
   sku?: string;
   specification?: string;
   category?: {
@@ -108,8 +109,8 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
         // 如果更新的是影响计算的字段，重新计算金额
         if (['quantity', 'unitPrice'].includes(field)) {
           const { amount } = calculateRowAmounts(
-            field === 'quantity' ? (Number(value) || 0) : (Number(updatedItem.quantity) || 0),
-            field === 'unitPrice' ? (Number(value) || 0) : (Number(updatedItem.unitPrice) || 0)
+            field === 'quantity' ? Number(value) || 0 : Number(updatedItem.quantity) || 0,
+            field === 'unitPrice' ? Number(value) || 0 : Number(updatedItem.unitPrice) || 0
           );
 
           updatedItem.amount = amount;
@@ -146,7 +147,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
         if (disabled) {
           const product = productsData.find((p) => p.id === value);
           return product
-            ? `${product.code || '无编码'} - ${product.specification || product.sku || '无SKU'}`
+            ? `${product.name || '无名称'} ${product.specification || '无规格'}`
             : value;
         }
 
@@ -166,7 +167,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
           >
             {productsData.map((product) => (
               <Option key={product.id} value={product.id}>
-                {product.code || '无编码'} - {product.specification || product.sku || '无SKU'}
+                {product.name || '无名称'} {product.specification || '无规格'}
               </Option>
             ))}
           </Select>

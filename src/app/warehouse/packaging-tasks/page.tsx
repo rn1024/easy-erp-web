@@ -205,6 +205,31 @@ const PackagingTasksPage: React.FC = () => {
       },
     },
     {
+      title: '产品明细',
+      dataIndex: 'items',
+      width: 200,
+      render: (_, record) => {
+        if (!record.items || record.items.length === 0) {
+          return <span style={{ color: '#999' }}>暂无产品</span>;
+        }
+        return (
+          <div>
+            {record.items.slice(0, 2).map((item: any, index: number) => (
+              <div key={index} style={{ fontSize: '12px', lineHeight: '16px' }}>
+                <span style={{ fontWeight: 500 }}>{item.product?.name || '未知产品'}</span>
+                <span style={{ color: '#666', marginLeft: 4 }}>×{item.quantity}</span>
+              </div>
+            ))}
+            {record.items.length > 2 && (
+              <div style={{ fontSize: '12px', color: '#999' }}>
+                等{record.items.length}个产品
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       title: '操作员',
       dataIndex: ['operator'],
       render: (_, record) => record.operator?.name || '-',

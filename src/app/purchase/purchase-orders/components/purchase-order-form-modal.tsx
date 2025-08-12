@@ -96,6 +96,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
   const productOptions: ProductOption[] = productsData.map((product: any) => ({
     id: product.id,
     code: product.code,
+    name: product.name,
     sku: product.sku,
     specification: product.specification,
     category: product.category,

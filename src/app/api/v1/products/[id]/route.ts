@@ -64,10 +64,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ code: 404, msg: '产品信息不存在' }, { status: 404 });
     }
 
+    // 为产品添加 accessoryImages 字段映射
+    const productWithAccessoryImages = {
+      ...product,
+      accessoryImages: product.entityResources || []
+    };
+
     return NextResponse.json({
       code: 0,
       msg: '产品更新成功',
-      data: product,
+      data: productWithAccessoryImages,
     });
   } catch (error) {
     console.error('获取产品信息详情失败:', error);
@@ -316,10 +322,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       },
     });
 
+    // 为产品添加 accessoryImages 字段映射
+    const productWithAccessoryImages = {
+      ...productWithRelations,
+      accessoryImages: productWithRelations?.entityResources || []
+    };
+
     return NextResponse.json({
       code: 0,
       msg: '更新成功',
-      data: productWithRelations,
+      data: productWithAccessoryImages,
     });
   } catch (error) {
     console.error('更新产品信息失败:', error);

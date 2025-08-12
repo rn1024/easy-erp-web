@@ -48,6 +48,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
           product: {
             select: {
               id: true,
+              name: true,
               code: true,
               specification: true,
               sku: true,
@@ -172,6 +173,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
         product: {
           select: {
             id: true,
+            name: true,
             code: true,
             specification: true,
             sku: true,

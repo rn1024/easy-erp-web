@@ -157,7 +157,6 @@ const FinishedInventoryPage: React.FC = () => {
         <div>
           <div>产品名称: {record.product.name || '无名称'}</div>
           {record.product.specification && <div>规格: {record.product.specification}</div>}
-          {record.product.color && <Tag color="blue">{record.product.color}</Tag>}
         </div>
       ),
     },

@@ -52,12 +52,39 @@ export async function GET(request: NextRequest) {
       take: pageSize,
     });
 
+    // 为每个任务查询关联的产品明细
+    const tasksWithItems = await Promise.all(
+      tasks.map(async (task) => {
+        const productItems = await prisma.productItem.findMany({
+          where: {
+            relatedType: ProductItemRelatedType.PACKAGING_TASK,
+            relatedId: task.id,
+          },
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        });
+        
+        return {
+          ...task,
+          items: productItems,
+        };
+      })
+    );
+
     const totalPages = Math.ceil(total / pageSize);
 
     return NextResponse.json({
       code: 0,
       data: {
-        list: tasks,
+        list: tasksWithItems,
         meta: {
           total,
           page,

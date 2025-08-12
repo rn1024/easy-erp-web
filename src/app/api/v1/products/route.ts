@@ -106,11 +106,17 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
       } : 'no products'
     });
 
+    // 为每个产品添加 accessoryImages 字段映射
+    const productsWithAccessoryImages = products.map(product => ({
+      ...product,
+      accessoryImages: product.entityResources || []
+    }));
+
     return NextResponse.json({
       code: 0,
       msg: '获取成功',
       data: {
-        list: products,
+        list: productsWithAccessoryImages,
         meta: {
           page,
           pageSize,
