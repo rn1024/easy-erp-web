@@ -144,6 +144,41 @@ node scripts/check-db.js
 - 表数量统计
 - 管理员账户状态
 
+### 7. 🔗 `check-database-connection.sh` - 全面数据库连接检查
+
+**用途**: 全面的数据库连接检查脚本，用于部署过程中的数据库连接验证
+
+**使用方法**:
+
+```bash
+# 在项目根目录执行
+./scripts/check-database-connection.sh
+```
+
+**检查项目**:
+
+1. ✅ 检查 `.env` 文件是否存在
+2. ✅ 验证 `DATABASE_URL` 环境变量格式
+3. ✅ 解析数据库连接信息
+4. ✅ 检查数据库服务状态
+5. ✅ 测试 MySQL 客户端连接
+6. ✅ 测试 Prisma 数据库连接
+
+**特性**:
+
+- 彩色输出和详细日志
+- 自动诊断和错误提示
+- 支持 MySQL 客户端和 Prisma 连接测试
+- 集成到 GitHub Actions 部署流程
+- 失败时提供详细的故障排除信息
+
+**在部署中的使用**:
+
+该脚本已集成到 `.github/workflows/deploy.yml` 中：
+- **部署阶段**: 部署前验证数据库连接
+- **验证阶段**: 部署后确认数据库连接正常
+- **故障排除**: 部署失败时自动执行数据库诊断
+
 ## 🚀 快速开始
 
 ### 运行完整测试套件
@@ -165,8 +200,11 @@ node scripts/performance-test.js
 ### 数据库维护
 
 ```bash
-# 检查数据库状态
+# 快速检查数据库状态
 node scripts/check-db.js
+
+# 全面数据库连接检查（推荐用于部署前检查）
+./scripts/check-database-connection.sh
 
 # 优化数据库索引
 node scripts/optimize-database.js
@@ -184,6 +222,9 @@ node scripts/optimize-database.js
 如果测试失败，请检查：
 
 1. 开发服务器是否启动 (`pnpm dev`)
-2. 数据库连接是否正常 (`node scripts/check-db.js`)
+2. 数据库连接是否正常：
+   - 快速检查：`node scripts/check-db.js`
+   - 全面检查：`./scripts/check-database-connection.sh`
 3. 测试账户是否存在
 4. 环境变量配置是否正确
+5. 如果是部署相关问题，查看 GitHub Actions 日志中的数据库连接检查结果
