@@ -45,21 +45,30 @@ jobs:
     steps:
       - name: Deploy to ECS via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+          OSS_REGION: ${{ secrets.OSS_REGION }}
+          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.PORT }}
+          envs: DATABASE_URL,REDIS_URL,JWT_SECRET,OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET,OSS_BUCKET,OSS_REGION,OSS_ENDPOINT
           script: |
-            # 设置环境变量
-            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            export REDIS_URL="${{ secrets.REDIS_URL }}"
-            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            export OSS_ACCESS_KEY_ID="${{ secrets.OSS_ACCESS_KEY_ID }}"
-            export OSS_ACCESS_KEY_SECRET="${{ secrets.OSS_ACCESS_KEY_SECRET }}"
-            export OSS_BUCKET="${{ secrets.OSS_BUCKET }}"
-            export OSS_REGION="${{ secrets.OSS_REGION }}"
+            # 验证环境变量是否正确传递
+            echo "🔍 验证环境变量传递..."
+            if [ -z "$DATABASE_URL" ]; then
+              echo "❌ DATABASE_URL 环境变量未正确传递"
+              exit 1
+            fi
+            echo "✅ 环境变量传递验证成功"
             
             # 进入项目目录
             PROJECT_DIR="/www/wwwroot/easy-erp-web"
@@ -76,7 +85,7 @@ jobs:
               echo "📦 首次克隆代码仓库..."
               cd ..
               rm -rf easy-erp-web
-              git clone https://github.com/samuelcn/easy-erp-web.git
+              git clone https://github.com/rn1024/easy-erp-web.git
               cd easy-erp-web
               echo "✅ 代码克隆完成"
             fi
@@ -84,14 +93,14 @@ jobs:
             # 创建.env文件并写入环境变量
             echo "⚙️  配置环境变量..."
             cat > .env << EOF
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            REDIS_URL=${{ secrets.REDIS_URL }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            OSS_ACCESS_KEY_ID=${{ secrets.OSS_ACCESS_KEY_ID }}
-            OSS_ACCESS_KEY_SECRET=${{ secrets.OSS_ACCESS_KEY_SECRET }}
-            OSS_BUCKET=${{ secrets.OSS_BUCKET }}
-            OSS_REGION=${{ secrets.OSS_REGION }}
-            OSS_ENDPOINT=${{ secrets.OSS_ENDPOINT }}
+            DATABASE_URL=$DATABASE_URL
+            REDIS_URL=$REDIS_URL
+            JWT_SECRET=$JWT_SECRET
+            OSS_ACCESS_KEY_ID=$OSS_ACCESS_KEY_ID
+            OSS_ACCESS_KEY_SECRET=$OSS_ACCESS_KEY_SECRET
+            OSS_BUCKET=$OSS_BUCKET
+            OSS_REGION=$OSS_REGION
+            OSS_ENDPOINT=$OSS_ENDPOINT
             NEXT_PUBLIC_APP_URL=https://erp.samuelcn.com
             OSS_PATH_PREFIX=template
             NODE_ENV=production
