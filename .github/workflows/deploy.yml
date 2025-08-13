@@ -66,6 +66,21 @@ jobs:
             mkdir -p "$PROJECT_DIR"
             cd "$PROJECT_DIR" || exit 1
             
+            # 拉取最新代码
+            echo "📥 拉取最新代码..."
+            if [ -d ".git" ]; then
+              git fetch origin
+              git reset --hard origin/main
+              echo "✅ 代码更新完成"
+            else
+              echo "📦 首次克隆代码仓库..."
+              cd ..
+              rm -rf easy-erp-web
+              git clone https://github.com/samuelcn/easy-erp-web.git
+              cd easy-erp-web
+              echo "✅ 代码克隆完成"
+            fi
+            
             # 确保脚本存在并可执行
             if [ ! -f "scripts/deploy-to-ecs.sh" ]; then
               echo "❌ 部署脚本不存在: scripts/deploy-to-ecs.sh"
