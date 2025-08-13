@@ -109,41 +109,35 @@ echo "🔍 检查数据库表结构..."
 TABLE_COUNT=$(node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'\`.then(result => { console.log(result[0].count); process.exit(0); }).catch(err => { console.log('0'); process.exit(0); }).finally(() => prisma.\$disconnect());")
 echo "📊 数据库中共有 $TABLE_COUNT 个表"
 
-# 动态获取Schema中定义的所有表
+# 动态获取Schema中定义的所有表（使用更可靠的方法）
 get_schema_tables() {
   echo "🔍 从Prisma Schema中提取表名..."
-  local schema_tables=()
   
-  # 解析schema.prisma文件，提取所有model定义的表名
+  # 使用更简单可靠的方法：直接从schema文件提取@@map指令
   if [ -f "prisma/schema.prisma" ]; then
-    # 提取model定义并转换为表名（支持@@map映射）
+    # 提取所有@@map指令中的表名
+    local schema_tables=()
     while IFS= read -r line; do
-      # 匹配 model 定义行
-      if [[ $line =~ ^[[:space:]]*model[[:space:]]+([A-Za-z0-9_]+) ]]; then
-        model_name="${BASH_REMATCH[1]}"
-        # 默认表名为model名的小写+复数形式，但需要检查是否有@@map
-        table_name=$(echo "$model_name" | sed 's/\([A-Z]\)/_\L\1/g' | sed 's/^_//' | tr '[:upper:]' '[:lower:]')
-        
-        # 读取model内容直到遇到下一个model或文件结束
-        model_content=""
-        while IFS= read -r model_line && [[ ! $model_line =~ ^[[:space:]]*model[[:space:]] ]] && [[ ! $model_line =~ ^[[:space:]]*enum[[:space:]] ]]; do
-          model_content+="$model_line\n"
-          if [[ $model_line =~ @@map\(\"([^\"]+)\"\) ]]; then
-            table_name="${BASH_REMATCH[1]}"
-          fi
-        done
-        
+      if [[ $line =~ @@map\(\"([^\"]+)\"\) ]]; then
+        table_name="${BASH_REMATCH[1]}"
         schema_tables+=("$table_name")
-        echo "  📋 发现表: $table_name (来自模型: $model_name)"
+        echo "  📋 发现表: $table_name"
       fi
     done < "prisma/schema.prisma"
+    
+    # 如果没有找到@@map，使用备用方法
+    if [ ${#schema_tables[@]} -eq 0 ]; then
+      echo "⚠️  未找到@@map指令，使用备用方法..."
+      # 使用node.js直接查询数据库获取表名
+      schema_tables=($(node -e "const { PrismaClient } = require('./generated/prisma'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE_TABLE'\`.then(result => { const tables = result.map(row => row.table_name || row.TABLE_NAME); console.log(tables.join(' ')); process.exit(0); }).catch(err => { console.error('获取表列表失败:', err.message); process.exit(1); }).finally(() => prisma.\$disconnect());" 2>/dev/null || echo ""))
+    fi
+    
+    # 返回表名数组
+    printf '%s\n' "${schema_tables[@]}"
   else
     echo "❌ 未找到prisma/schema.prisma文件"
     return 1
   fi
-  
-  # 返回表名数组
-  printf '%s\n' "${schema_tables[@]}"
 }
 
 # 获取数据库中当前存在的表
@@ -215,13 +209,18 @@ create_backup() {
   echo "💾 创建数据库备份..."
   local backup_file="/tmp/erp_backup_$(date +%Y%m%d_%H%M%S).sql"
   
-  # 从DATABASE_URL提取连接信息
-  if [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:]+):([0-9]+)/(.+) ]]; then
+  # 从DATABASE_URL提取连接信息（支持URL编码的密码）
+  if [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:/]+):([0-9]+)/(.+) ]]; then
     DB_USER="${BASH_REMATCH[1]}"
-    DB_PASS="${BASH_REMATCH[2]}"
+    DB_PASS_ENCODED="${BASH_REMATCH[2]}"
     DB_HOST="${BASH_REMATCH[3]}"
     DB_PORT="${BASH_REMATCH[4]}"
     DB_NAME="${BASH_REMATCH[5]}"
+    
+    # URL解码密码（处理%40等编码字符）
+    DB_PASS=$(echo "$DB_PASS_ENCODED" | sed 's/%40/@/g' | sed 's/%21/!/g' | sed 's/%23/#/g' | sed 's/%24/$/g' | sed 's/%25/%/g' | sed 's/%26/\&/g' | sed 's/%2B/+/g')
+    
+    echo "🔍 数据库连接信息: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
     
     if mysqldump -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$backup_file" 2>/dev/null; then
       echo "$backup_file" > "/tmp/latest_backup_path"
@@ -232,7 +231,8 @@ create_backup() {
       return 1
     fi
   else
-    echo "❌ 无法解析DATABASE_URL"
+    echo "❌ 无法解析DATABASE_URL: $DATABASE_URL"
+    echo "🔍 期望格式: mysql://user:password@host:port/database"
     return 1
   fi
 }
@@ -249,12 +249,15 @@ rollback_deployment() {
     local backup_file=$(cat "/tmp/latest_backup_path")
     if [ -f "$backup_file" ]; then
       echo "🔄 恢复数据库备份..."
-      if [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:]+):([0-9]+)/(.+) ]]; then
+      if [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:/]+):([0-9]+)/(.+) ]]; then
         DB_USER="${BASH_REMATCH[1]}"
-        DB_PASS="${BASH_REMATCH[2]}"
+        DB_PASS_ENCODED="${BASH_REMATCH[2]}"
         DB_HOST="${BASH_REMATCH[3]}"
         DB_PORT="${BASH_REMATCH[4]}"
         DB_NAME="${BASH_REMATCH[5]}"
+        
+        # URL解码密码（处理%40等编码字符）
+        DB_PASS=$(echo "$DB_PASS_ENCODED" | sed 's/%40/@/g' | sed 's/%21/!/g' | sed 's/%23/#/g' | sed 's/%24/$/g' | sed 's/%25/%/g' | sed 's/%26/\&/g' | sed 's/%2B/+/g')
         
         mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$backup_file" 2>/dev/null || {
           echo "❌ 数据库恢复失败"
@@ -327,9 +330,18 @@ create_missing_tables() {
 verify_table_creation() {
   local expected_tables=("$@")
   echo "🔍 验证表创建结果..."
+  echo "📋 期望创建的表: ${expected_tables[*]}"
   
   # 重新获取当前表列表
+  echo "📋 获取当前数据库表列表..."
   local current_tables_after=($(get_current_tables))
+  if [ $? -ne 0 ] || [ ${#current_tables_after[@]} -eq 0 ]; then
+    echo "❌ 无法获取当前数据库表列表"
+    rollback_deployment
+    exit 1
+  fi
+  echo "📊 当前数据库有 ${#current_tables_after[@]} 个表: ${current_tables_after[*]}"
+  
   declare -A current_table_map_after
   for table in "${current_tables_after[@]}"; do
     current_table_map_after["$table"]=1
@@ -349,46 +361,70 @@ verify_table_creation() {
   done
   
   if [ "$verification_failed" = true ]; then
-    echo "❌ 部分表创建失败: ${failed_tables[*]}"
+    echo "❌ 部分表创建失败，缺失 ${#failed_tables[@]} 个表: ${failed_tables[*]}"
     echo "🔄 尝试强制重置并重新创建..."
     
     # 创建备份（如果还没有）
     if [ ! -f "/tmp/latest_backup_path" ]; then
+      echo "💾 创建数据库备份..."
       create_backup
+      if [ $? -ne 0 ]; then
+        echo "❌ 备份失败，无法继续强制重置"
+        rollback_deployment
+        exit 1
+      fi
+      echo "✅ 备份创建成功"
+    else
+      echo "✅ 备份文件已存在"
     fi
     
     # 强制重置
+    echo "🔄 执行强制数据库重置..."
     if npx prisma db push --force-reset; then
       echo "✅ 强制重置成功"
       
       # 再次验证
       echo "🔍 重新验证表创建..."
       local final_tables=($(get_current_tables))
+      if [ $? -ne 0 ] || [ ${#final_tables[@]} -eq 0 ]; then
+        echo "❌ 重置后无法获取表列表"
+        rollback_deployment
+        exit 1
+      fi
+      echo "📊 重置后数据库有 ${#final_tables[@]} 个表: ${final_tables[*]}"
+      
       declare -A final_table_map
       for table in "${final_tables[@]}"; do
         final_table_map["$table"]=1
       done
       
       local final_failed=false
+      local final_failed_tables=()
       for table in "${expected_tables[@]}"; do
         if [[ -n "${final_table_map[$table]}" ]]; then
           echo "✅ 表最终创建成功: $table"
         else
           echo "❌ 表最终创建失败: $table"
           final_failed=true
+          final_failed_tables+=("$table")
         fi
       done
       
       if [ "$final_failed" = true ]; then
-        echo "❌ 强制重置后仍有表创建失败，开始回滚..."
+        echo "❌ 强制重置后仍有 ${#final_failed_tables[@]} 个表创建失败: ${final_failed_tables[*]}"
+        echo "🔄 开始回滚部署..."
         rollback_deployment
         exit 1
+      else
+        echo "✅ 所有表最终创建成功"
       fi
     else
       echo "❌ 强制重置失败，开始回滚..."
       rollback_deployment
       exit 1
     fi
+  else
+    echo "✅ 所有表验证成功"
   fi
 }
 
