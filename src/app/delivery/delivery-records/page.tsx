@@ -632,7 +632,13 @@ const DeliveryRecordsPage: React.FC = () => {
               <div style={{ marginBottom: 16 }}>
                 <strong>发货文件：</strong>
                 <ShipmentFileUploader
-                  value={selectedRecord.shipmentFiles}
+                  value={selectedRecord.shipmentFiles.map((sf: any) => ({
+                    id: sf.fileUpload.id,
+                    fileName: sf.fileUpload.originalName || sf.fileUpload.fileName,
+                    fileUrl: sf.fileUpload.fileUrl,
+                    fileSize: sf.fileUpload.fileSize,
+                    fileType: sf.fileUpload.fileType,
+                  }))}
                   onChange={() => {}} // 详情模式不允许编辑
                   disabled={true}
                   maxCount={5}

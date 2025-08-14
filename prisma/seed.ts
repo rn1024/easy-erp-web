@@ -811,6 +811,72 @@ async function main() {
   });
   console.log('✓ 创建发货记录产品明细');
 
+  // 创建测试文件上传记录
+  const fileUpload1 = await prisma.fileUpload.create({
+    data: {
+      originalName: '发货清单_美国FBA_20241225.pdf',
+      fileName: 'shipment_list_us_fba_20241225.pdf',
+      fileUrl: '/uploads/shipment/shipment_list_us_fba_20241225.pdf',
+      fileSize: 1024000, // 1MB
+      fileType: 'application/pdf',
+      category: 'shipment',
+      storage: 'local',
+      uploaderId: adminAccount.id,
+    },
+  });
+
+  const fileUpload2 = await prisma.fileUpload.create({
+    data: {
+      originalName: '装箱单_美国FBA_20241225.xlsx',
+      fileName: 'packing_list_us_fba_20241225.xlsx',
+      fileUrl: '/uploads/shipment/packing_list_us_fba_20241225.xlsx',
+      fileSize: 512000, // 512KB
+      fileType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      category: 'shipment',
+      storage: 'local',
+      uploaderId: adminAccount.id,
+    },
+  });
+
+  const fileUpload3 = await prisma.fileUpload.create({
+    data: {
+      originalName: '运输标签_德国FBA_20241226.pdf',
+      fileName: 'shipping_label_de_fba_20241226.pdf',
+      fileUrl: '/uploads/shipment/shipping_label_de_fba_20241226.pdf',
+      fileSize: 768000, // 768KB
+      fileType: 'application/pdf',
+      category: 'shipment',
+      storage: 'local',
+      uploaderId: adminAccount.id,
+    },
+  });
+
+  const createdFileUploads = [fileUpload1, fileUpload2, fileUpload3];
+  console.log('✓ 创建测试文件上传记录');
+
+  // 文件记录已经在上面创建并存储在 createdFileUploads 数组中
+
+  // 为发货记录关联文件
+  await prisma.shipmentRecordFile.createMany({
+    data: [
+      // 第一条发货记录关联前两个文件
+      {
+        shipmentRecordId: createdShipmentRecords[0].id,
+        fileUploadId: createdFileUploads[0].id, // 发货清单
+      },
+      {
+        shipmentRecordId: createdShipmentRecords[0].id,
+        fileUploadId: createdFileUploads[1].id, // 装箱单
+      },
+      // 第二条发货记录关联第三个文件
+      {
+        shipmentRecordId: createdShipmentRecords[1].id,
+        fileUploadId: createdFileUploads[2].id, // 运输标签
+      },
+    ],
+  });
+  console.log('✓ 创建发货记录文件关联');
+
   console.log('\n🎉 ERP数据库初始化完成！');
   console.log('📋 默认管理员账户信息:');
   console.log(`   用户名: admin`);
