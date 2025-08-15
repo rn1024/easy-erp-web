@@ -80,22 +80,7 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          shipmentFiles: {
-            include: {
-              fileUpload: {
-                select: {
-                  id: true,
-                  originalName: true,
-                  fileName: true,
-                  fileUrl: true,
-                  fileSize: true,
-                  fileType: true,
-                  category: true,
-                  createdAt: true,
-                },
-              },
-            },
-          },
+
         },
         skip,
         take: pageSize,
@@ -142,7 +127,7 @@ export async function POST(request: NextRequest) {
       shippingDetails,
       date,
       products,
-      shipmentFiles,
+      shipmentFile,
     } = body;
 
     // 数据验证
@@ -167,16 +152,9 @@ export async function POST(request: NextRequest) {
     const productIds = products.map((p) => p.productId);
     const forwarderIds = products.map((p) => p.forwarderId).filter(Boolean); // 过滤空值
 
-    // 验证文件是否存在
-    let foundFiles: any[] = [];
-    if (shipmentFiles && Array.isArray(shipmentFiles) && shipmentFiles.length > 0) {
-      const fileIds = shipmentFiles.map((f) => f.id || f.fileUploadId).filter(Boolean);
-      if (fileIds.length > 0) {
-        foundFiles = await prisma.fileUpload.findMany({ where: { id: { in: fileIds } } });
-        if (foundFiles.length !== fileIds.length) {
-          return NextResponse.json({ message: 'Some files not found' }, { status: 404 });
-        }
-      }
+    // 文件URL验证（可选）
+    if (shipmentFile && typeof shipmentFile !== 'string') {
+      return NextResponse.json({ message: 'Invalid shipment file format' }, { status: 400 });
     }
 
     const [foundProducts, foundForwarders] = await Promise.all([
@@ -213,6 +191,7 @@ export async function POST(request: NextRequest) {
           date: new Date(date),
           status: 'PREPARING',
           operatorId: user.id,
+          shipmentFile: shipmentFile || null,
         },
       });
 
@@ -232,22 +211,7 @@ export async function POST(request: NextRequest) {
         )
       );
 
-      // 创建文件关联记录
-      let shipmentFileRecords: any[] = [];
-      if (foundFiles.length > 0) {
-        shipmentFileRecords = await Promise.all(
-          foundFiles.map((file) =>
-            tx.shipmentRecordFile.create({
-              data: {
-                shipmentRecordId: shipmentRecord.id,
-                fileUploadId: file.id,
-              },
-            })
-          )
-        );
-      }
-
-      return { shipmentRecord, shipmentProducts, shipmentFileRecords };
+      return { shipmentRecord, shipmentProducts };
     });
 
     // 获取完整的记录信息
@@ -288,22 +252,7 @@ export async function POST(request: NextRequest) {
             },
           },
         },
-        shipmentFiles: {
-          include: {
-            fileUpload: {
-              select: {
-                id: true,
-                originalName: true,
-                fileName: true,
-                fileUrl: true,
-                fileSize: true,
-                fileType: true,
-                category: true,
-                createdAt: true,
-              },
-            },
-          },
-        },
+
       },
     });
 

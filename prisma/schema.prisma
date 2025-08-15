@@ -411,11 +411,11 @@ model ShipmentRecord {
   shippingDetails           String?                 @db.Text
   date                      DateTime                @db.Date
   status                    ShipmentRecordStatus    @default(PREPARING)
+  shipmentFile              String?                 // 发货文件URL
   operatorId                String
   createdAt                 DateTime                @default(now())
   updatedAt                 DateTime                @updatedAt
   shipmentProducts          ShipmentProductRecord[]
-  shipmentFiles             ShipmentRecordFile[]
   operator                  Account                 @relation("ShipmentOperator", fields: [operatorId], references: [id])
   shop                      Shop                    @relation(fields: [shopId], references: [id])
 
@@ -559,7 +559,6 @@ model FileUpload {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   uploader            Account              @relation("FileUploader", fields: [uploaderId], references: [id])
-  shipmentRecordFiles ShipmentRecordFile[]
 
   @@index([uploaderId])
   @@index([category])
@@ -582,20 +581,7 @@ model EntityResource {
   @@map("entity_resources")
 }
 
-model ShipmentRecordFile {
-  id               String         @id @default(cuid())
-  shipmentRecordId String
-  fileUploadId     String
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  shipmentRecord   ShipmentRecord @relation(fields: [shipmentRecordId], references: [id], onDelete: Cascade)
-  fileUpload       FileUpload     @relation(fields: [fileUploadId], references: [id], onDelete: Cascade)
 
-  @@unique([shipmentRecordId, fileUploadId])
-  @@index([shipmentRecordId])
-  @@index([fileUploadId])
-  @@map("shipment_record_files")
-}
 
 enum AccountStatus {
   ACTIVE

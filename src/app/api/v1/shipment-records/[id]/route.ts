@@ -53,22 +53,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             },
           },
         },
-        shipmentFiles: {
-          include: {
-            fileUpload: {
-              select: {
-                id: true,
-                originalName: true,
-                fileName: true,
-                fileUrl: true,
-                fileSize: true,
-                fileType: true,
-                category: true,
-                createdAt: true,
-              },
-            },
-          },
-        },
+
       },
     });
 
@@ -107,7 +92,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       date,
       status,
       products,
-      shipmentFiles,
+      shipmentFile,
     } = body;
 
     // 检查记录是否存在
@@ -125,11 +110,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // 如果提供了产品数据，验证产品数据
     if (products && Array.isArray(products)) {
       for (const product of products) {
-        if (
-          !product.productId ||
-          !product.totalBoxes ||
-          product.totalBoxes <= 0
-        ) {
+        if (!product.productId || !product.totalBoxes || product.totalBoxes <= 0) {
           return NextResponse.json({ message: 'Invalid product data' }, { status: 400 });
         }
       }
@@ -137,7 +118,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       // 验证所有产品和货代是否存在
       const productIds = products.map((p) => p.productId);
       const forwarderIds = products.map((p) => p.forwarderId).filter(Boolean); // 过滤空值
-      
+
       // 去重处理
       const uniqueProductIds = [...new Set(productIds)];
       const uniqueForwarderIds = [...new Set(forwarderIds)];
@@ -158,16 +139,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    // 验证文件是否存在
-    let foundFiles: any[] = [];
-    if (shipmentFiles && Array.isArray(shipmentFiles)) {
-      const fileIds = shipmentFiles.map((f) => f.id || f.fileUploadId).filter(Boolean);
-      if (fileIds.length > 0) {
-        foundFiles = await prisma.fileUpload.findMany({ where: { id: { in: fileIds } } });
-        if (foundFiles.length !== fileIds.length) {
-          return NextResponse.json({ message: 'Some files not found' }, { status: 404 });
-        }
-      }
+    // 文件URL验证（可选）
+    if (shipmentFile && typeof shipmentFile !== 'string') {
+      return NextResponse.json({ message: 'Invalid shipment file format' }, { status: 400 });
     }
 
     // 使用事务更新发货记录和产品明细
@@ -191,6 +165,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       if (shippingDetails !== undefined) updateData.shippingDetails = shippingDetails || null;
       if (date !== undefined) updateData.date = new Date(date);
       if (status !== undefined) updateData.status = status;
+      if (shipmentFile !== undefined) updateData.shipmentFile = shipmentFile || null;
 
       // 更新发货记录主表
       const updatedRecord = await tx.shipmentRecord.update({
@@ -224,27 +199,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         }
       }
 
-      // 如果提供了文件数据，更新文件关联
-      if (shipmentFiles !== undefined && Array.isArray(shipmentFiles)) {
-        // 删除现有的文件关联记录
-        await tx.shipmentRecordFile.deleteMany({
-          where: { shipmentRecordId: params.id },
-        });
 
-        // 创建新的文件关联记录
-        if (foundFiles.length > 0) {
-          await Promise.all(
-            foundFiles.map((file) =>
-              tx.shipmentRecordFile.create({
-                data: {
-                  shipmentRecordId: params.id,
-                  fileUploadId: file.id,
-                },
-              })
-            )
-          );
-        }
-      }
 
       return updatedRecord;
     });
@@ -287,22 +242,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             },
           },
         },
-        shipmentFiles: {
-          include: {
-            fileUpload: {
-              select: {
-                id: true,
-                originalName: true,
-                fileName: true,
-                fileUrl: true,
-                fileSize: true,
-                fileType: true,
-                category: true,
-                createdAt: true,
-              },
-            },
-          },
-        },
+
       },
     });
 

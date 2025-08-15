@@ -856,26 +856,8 @@ async function main() {
 
   // 文件记录已经在上面创建并存储在 createdFileUploads 数组中
 
-  // 为发货记录关联文件
-  await prisma.shipmentRecordFile.createMany({
-    data: [
-      // 第一条发货记录关联前两个文件
-      {
-        shipmentRecordId: createdShipmentRecords[0].id,
-        fileUploadId: createdFileUploads[0].id, // 发货清单
-      },
-      {
-        shipmentRecordId: createdShipmentRecords[0].id,
-        fileUploadId: createdFileUploads[1].id, // 装箱单
-      },
-      // 第二条发货记录关联第三个文件
-      {
-        shipmentRecordId: createdShipmentRecords[1].id,
-        fileUploadId: createdFileUploads[2].id, // 运输标签
-      },
-    ],
-  });
-  console.log('✓ 创建发货记录文件关联');
+  // 注意：shipmentFile现在是直接存储在shipment_records表中的URL字符串
+  console.log('✓ 发货记录文件已通过shipmentFile字段直接关联');
 
   console.log('\n🎉 ERP数据库初始化完成！');
   console.log('📋 默认管理员账户信息:');

@@ -53,7 +53,7 @@ import UniversalProductItemsTable, {
   type ForwarderOption,
 } from '@/components/universal-product-items-table';
 import ShipmentFileUploader from '@/components/shipment-file-uploader';
-import type { ShipmentFileInfo } from '@/services/delivery';
+// import type { ShipmentFileInfo } from '@/services/delivery'; // 不再需要
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -66,7 +66,7 @@ const DeliveryRecordsPage: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<ShipmentRecordInfo | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<ShipmentRecordInfo | null>(null);
   const [productItems, setProductItems] = useState<UniversalProductItem[]>([]);
-  const [shipmentFiles, setShipmentFiles] = useState<ShipmentFileInfo[]>([]);
+  const [shipmentFile, setShipmentFile] = useState<string | undefined>(undefined);
 
   // 搜索参数
   const [searchParams, setSearchParams] = useState<ShipmentRecordQueryParams>({
@@ -138,7 +138,7 @@ const DeliveryRecordsPage: React.FC = () => {
           setEditingRecord(null);
           form.resetFields();
           setProductItems([]);
-          setShipmentFiles([]);
+          setShipmentFile(undefined);
           refreshRecords();
         } else {
           message.error(response?.msg || '操作失败');
@@ -213,6 +213,7 @@ const DeliveryRecordsPage: React.FC = () => {
         shippingDetails: record.shippingDetails,
         date: dayjs(record.date),
         status: record.status,
+        shipmentFile: record.shipmentFile, // 添加shipmentFile字段回填
       });
 
       // 转换产品数据
@@ -228,12 +229,12 @@ const DeliveryRecordsPage: React.FC = () => {
       setProductItems(items);
 
       // 设置文件数据
-      setShipmentFiles(record.shipmentFiles || []);
+      setShipmentFile(record.shipmentFile || undefined);
     } else {
       setEditingRecord(null);
       form.resetFields();
       setProductItems([]);
-      setShipmentFiles([]);
+      setShipmentFile(undefined);
     }
     setIsModalVisible(true);
   };
@@ -250,7 +251,7 @@ const DeliveryRecordsPage: React.FC = () => {
       ...values,
       date: values.date?.format('YYYY-MM-DD'),
       warehouseReceiptDeadline: values.warehouseReceiptDeadline?.format('YYYY-MM-DD'),
-      shipmentFiles: shipmentFiles,
+      shipmentFile: form.getFieldValue('shipmentFile'),
       products: productItems.map((item) => ({
         productId: item.productId,
         forwarderId: item.forwarderId || undefined,
@@ -461,7 +462,7 @@ const DeliveryRecordsPage: React.FC = () => {
           setEditingRecord(null);
           form.resetFields();
           setProductItems([]);
-          setShipmentFiles([]);
+          setShipmentFile(undefined);
         }}
         onOk={() => form.submit()}
         confirmLoading={submitLoading}
@@ -542,12 +543,11 @@ const DeliveryRecordsPage: React.FC = () => {
             <TextArea rows={3} placeholder="输入运输详情" />
           </Form.Item>
 
-          <Form.Item label="发货文件">
+          <Form.Item name="shipmentFile" label="发货文件">
             <ShipmentFileUploader
-              value={shipmentFiles}
-              onChange={setShipmentFiles}
+              value={form.getFieldValue('shipmentFile')}
+              onChange={(fileUrl) => form.setFieldsValue({ shipmentFile: fileUrl })}
               disabled={false}
-              maxCount={5}
             />
           </Form.Item>
 
@@ -628,21 +628,14 @@ const DeliveryRecordsPage: React.FC = () => {
               </div>
             )}
 
-            {selectedRecord.shipmentFiles && selectedRecord.shipmentFiles.length > 0 && (
+            {selectedRecord.shipmentFile && (
               <div style={{ marginBottom: 16 }}>
                 <strong>发货文件：</strong>
-                <ShipmentFileUploader
-                  value={selectedRecord.shipmentFiles.map((sf: any) => ({
-                    id: sf.fileUpload.id,
-                    fileName: sf.fileUpload.originalName || sf.fileUpload.fileName,
-                    fileUrl: sf.fileUpload.fileUrl,
-                    fileSize: sf.fileUpload.fileSize,
-                    fileType: sf.fileUpload.fileType,
-                  }))}
-                  onChange={() => {}} // 详情模式不允许编辑
-                  disabled={true}
-                  maxCount={5}
-                />
+                <div style={{ marginTop: 8, color: '#1890ff' }}>
+                  <a href={selectedRecord.shipmentFile} target="_blank" rel="noopener noreferrer">
+                    查看发货文件
+                  </a>
+                </div>
               </div>
             )}
 
