@@ -126,7 +126,7 @@ jobs:
             # 检查数据库连接检查脚本是否存在
             if [ -f "scripts/check-database-connection.sh" ]; then
               chmod +x scripts/check-database-connection.sh
-              ./scripts/check-database-connection.sh
+                ./scripts/check-database-connection.sh
             else
               echo "❌ 数据库连接检查脚本不存在: scripts/check-database-connection.sh"
               exit 1
