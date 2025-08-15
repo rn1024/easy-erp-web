@@ -126,7 +126,18 @@ jobs:
             # 检查数据库连接检查脚本是否存在
             if [ -f "scripts/check-database-connection.sh" ]; then
               chmod +x scripts/check-database-connection.sh
-                ./scripts/check-database-connection.sh
+              echo "⏱️  执行数据库连接检查（最大等待60秒）..."
+              if timeout 60 ./scripts/check-database-connection.sh; then
+                echo "✅ 数据库连接检查完成"
+              else
+                exit_code=$?
+                if [ $exit_code -eq 124 ]; then
+                  echo "❌ 数据库连接检查超时（60秒）"
+                else
+                  echo "❌ 数据库连接检查失败"
+                fi
+                exit 1
+              fi
             else
               echo "❌ 数据库连接检查脚本不存在: scripts/check-database-connection.sh"
               exit 1
@@ -157,6 +168,7 @@ jobs:
           sleep 30
 
       - name: Remote health check
+        timeout-minutes: 4
         run: |
           echo "🔍 远程健康检查..."
 
@@ -191,6 +203,7 @@ jobs:
           fi
 
       - name: Database connection verification
+        timeout-minutes: 3
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
@@ -198,6 +211,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.PORT }}
+          command_timeout: 2m
           script: |
             echo "🔗 验证数据库连接..."
             
@@ -214,6 +228,7 @@ jobs:
             fi
 
       - name: Functional verification
+        timeout-minutes: 2
         run: |
           echo "🧪 功能接口验证..."
 
@@ -238,6 +253,7 @@ jobs:
           done
 
       - name: Performance check
+        timeout-minutes: 1
         run: |
           echo "⚡ 性能检查..."
 
@@ -268,6 +284,7 @@ jobs:
 
       - name: Troubleshoot on failure
         if: failure()
+        timeout-minutes: 5
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
@@ -275,6 +292,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.PORT }}
+          command_timeout: 4m
           script: |
             echo "🔍 故障排查..."
             
@@ -305,7 +323,8 @@ jobs:
             echo "🔗 数据库连接测试："
             if [ -f "scripts/check-database-connection.sh" ]; then
               chmod +x scripts/check-database-connection.sh
-              ./scripts/check-database-connection.sh || echo "⚠️  数据库连接检查失败，但继续收集其他诊断信息"
+              # 为故障排查阶段的数据库检查设置更短的超时时间
+              timeout 60 ./scripts/check-database-connection.sh || echo "⚠️  数据库连接检查失败或超时，但继续收集其他诊断信息"
             else
               echo "❌ 数据库连接检查脚本不存在"
             fi

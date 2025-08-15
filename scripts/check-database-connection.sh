@@ -106,12 +106,17 @@ test_mysql_connection() {
         return 0
     fi
     
-    # 测试连接
-    if mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "SELECT 1 as connection_test;" "$DB_NAME" >/dev/null 2>&1; then
+    # 测试连接（设置15秒超时）
+    if timeout 15 mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "SELECT 1 as connection_test;" "$DB_NAME" >/dev/null 2>&1; then
         log "✅ MySQL客户端连接测试成功"
         return 0
     else
-        error "MySQL客户端连接测试失败"
+        local exit_code=$?
+        if [ $exit_code -eq 124 ]; then
+            error "❌ MySQL客户端连接测试超时（15秒）"
+        else
+            error "❌ MySQL客户端连接测试失败"
+        fi
         
         # 提供诊断信息
         info "诊断信息:"
@@ -174,13 +179,18 @@ async function testConnection() {
 testConnection();
 EOF
     
-    # 执行Prisma连接测试
-    if node test-prisma-connection.js; then
+    # 执行Prisma连接测试（设置30秒超时）
+    if timeout 30 node test-prisma-connection.js; then
         log "✅ Prisma连接测试成功"
         rm -f test-prisma-connection.js
         return 0
     else
-        error "Prisma连接测试失败"
+        local exit_code=$?
+        if [ $exit_code -eq 124 ]; then
+            error "❌ Prisma连接测试超时（30秒）"
+        else
+            error "❌ Prisma连接测试失败"
+        fi
         rm -f test-prisma-connection.js
         return 1
     fi
