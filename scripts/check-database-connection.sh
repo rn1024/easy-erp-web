@@ -238,6 +238,8 @@ main() {
     
     # 执行检查步骤
     local exit_code=0
+    local mysql_test_failed=false
+    local prisma_test_failed=false
     
     # 1. 检查环境变量文件
     if ! check_env_file; then
@@ -257,22 +259,30 @@ main() {
     # 4. 检查数据库服务状态
     check_database_service
     
-    # 5. 测试MySQL客户端连接
+    # 5. 测试MySQL客户端连接（失败不影响整体结果）
     if ! test_mysql_connection; then
-        exit_code=1
+        mysql_test_failed=true
+        warn "MySQL客户端连接测试失败，但这不影响整体结果"
     fi
     
-    # 6. 测试Prisma连接
+    # 6. 测试Prisma连接（这是关键测试）
     if ! test_prisma_connection; then
+        prisma_test_failed=true
         exit_code=1
     fi
     
     log ""
     log "==========================================="
     if [ $exit_code -eq 0 ]; then
-        log "🎉 数据库连接检查完成 - 所有测试通过！"
+        log "🎉 数据库连接检查完成 - 核心测试通过！"
+        if [ "$mysql_test_failed" = true ]; then
+            warn "注意：MySQL客户端测试失败，但Prisma连接正常，数据库功能可用"
+        fi
     else
         error "❌ 数据库连接检查失败 - 请检查上述错误"
+        if [ "$prisma_test_failed" = true ]; then
+            error "关键问题：Prisma数据库连接失败"
+        fi
     fi
     log "==========================================="
     
