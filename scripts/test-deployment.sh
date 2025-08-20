@@ -35,7 +35,7 @@ log_error() {
 # 检查必要的文件和脚本
 check_prerequisites() {
     log_info "检查部署前置条件..."
-
+    
     # 检查关键文件
     local files=(
         "prisma/schema.prisma"
@@ -45,7 +45,7 @@ check_prerequisites() {
         "docs/database-schema-change-process.md"
         ".env"
     )
-
+    
     for file in "${files[@]}"; do
         if [ -f "$file" ]; then
             log_success "$file 存在"
@@ -54,14 +54,14 @@ check_prerequisites() {
             return 1
         fi
     done
-
+    
     # 检查脚本执行权限
     local scripts=(
         "scripts/deploy-to-ecs.sh"
         "scripts/db-backup.sh"
         "scripts/db-rollback.sh"
     )
-
+    
     for script in "${scripts[@]}"; do
         if [ -x "$script" ]; then
             log_success "$script 有执行权限"
@@ -75,7 +75,7 @@ check_prerequisites() {
 # 验证Prisma配置
 validate_prisma() {
     log_info "验证Prisma配置..."
-
+    
     # 验证schema
     if npx prisma validate; then
         log_success "Prisma schema 验证通过"
@@ -83,13 +83,13 @@ validate_prisma() {
         log_error "Prisma schema 验证失败"
         return 1
     fi
-
+    
     # 检查迁移文件
     log_info "检查迁移文件..."
     if [ -d "prisma/migrations" ]; then
         migration_count=$(find prisma/migrations -name "migration.sql" | wc -l)
         log_success "找到 $migration_count 个迁移文件"
-
+        
         # 列出所有迁移
         find prisma/migrations -name "migration.sql" | while read -r migration; do
             migration_dir=$(dirname "$migration")
@@ -104,7 +104,7 @@ validate_prisma() {
 # 测试备份脚本
 test_backup_script() {
     log_info "测试备份脚本语法..."
-
+    
     # 检查备份脚本语法
     if bash -n scripts/db-backup.sh; then
         log_success "备份脚本语法正确"
@@ -112,7 +112,7 @@ test_backup_script() {
         log_error "备份脚本语法错误"
         return 1
     fi
-
+    
     # 检查回滚脚本语法
     if bash -n scripts/db-rollback.sh; then
         log_success "回滚脚本语法正确"
@@ -125,7 +125,7 @@ test_backup_script() {
 # 测试部署脚本
 test_deploy_script() {
     log_info "测试部署脚本语法..."
-
+    
     if bash -n scripts/deploy-to-ecs.sh; then
         log_success "部署脚本语法正确"
     else
@@ -137,7 +137,7 @@ test_deploy_script() {
 # 检查环境变量
 check_environment() {
     log_info "检查环境变量配置..."
-
+    
     if [ -f ".env" ]; then
         # 检查关键环境变量
         local required_vars=(
@@ -145,7 +145,7 @@ check_environment() {
             "JWT_SECRET"
             "NODE_ENV"
         )
-
+        
         for var in "${required_vars[@]}"; do
             if grep -q "^${var}=" .env; then
                 log_success "$var 已配置"
@@ -162,17 +162,17 @@ check_environment() {
 # 验证GitHub Actions工作流
 validate_github_actions() {
     log_info "验证GitHub Actions工作流..."
-
+    
     if [ -f ".github/workflows/deploy.yml" ]; then
         log_success "GitHub Actions工作流文件存在"
-
+        
         # 检查是否包含备份步骤
         if grep -q "db-backup.sh" .github/workflows/deploy.yml; then
             log_success "工作流包含数据库备份步骤"
         else
             log_warning "工作流未包含数据库备份步骤"
         fi
-
+        
         # 检查是否包含迁移状态检查
         if grep -q "prisma migrate status" .github/workflows/deploy.yml; then
             log_success "工作流包含迁移状态检查"
@@ -188,9 +188,9 @@ validate_github_actions() {
 # 生成测试报告
 generate_report() {
     log_info "生成测试报告..."
-
+    
     local report_file="test-deployment-report-$(date +%Y%m%d_%H%M%S).md"
-
+    
     cat > "$report_file" << EOF
 # 部署流程测试报告
 
@@ -246,7 +246,7 @@ main() {
     echo "Git提交: $(git rev-parse --short HEAD 2>/dev/null || echo '未知')"
     echo "======================================"
     echo ""
-
+    
     # 执行所有测试
     check_prerequisites
     validate_prisma
@@ -255,12 +255,12 @@ main() {
     check_environment
     validate_github_actions
     generate_report
-
+    
     echo ""
     echo "======================================"
     log_success "所有测试完成！"
     echo "======================================"
-
+    
     # 显示总结
     echo ""
     log_info "测试总结:"

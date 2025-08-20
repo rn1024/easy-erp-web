@@ -100,6 +100,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
     sku: product.sku,
     specification: product.specification,
     category: product.category,
+    costs: product.costs, // 包含成本数据
   }));
 
   /**
@@ -180,12 +181,47 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
       }
 
       // 验证每个产品明细
-      const invalidItems = orderItems.filter(
-        (item) => !item.productId || item.quantity <= 0 || item.unitPrice <= 0
-      );
+      const validationErrors: string[] = [];
+      
+      orderItems.forEach((item, index) => {
+        const rowNumber = index + 1;
+        
+        // 验证产品是否选择
+        if (!item.productId) {
+          validationErrors.push(`第${rowNumber}行：请选择产品`);
+        } else {
+          // 验证产品是否存在于产品列表中
+          const productExists = productsData.some(p => p.id === item.productId);
+          if (!productExists) {
+            validationErrors.push(`第${rowNumber}行：选择的产品不存在，请重新选择`);
+          }
+        }
+        
+        // 验证数量
+        if (!item.quantity || item.quantity <= 0) {
+          validationErrors.push(`第${rowNumber}行：请输入有效的数量（大于0）`);
+        }
+        
+        // 验证单价
+        if (!item.unitPrice || item.unitPrice <= 0) {
+          validationErrors.push(`第${rowNumber}行：请输入有效的单价（大于0）`);
+        }
+      });
 
-      if (invalidItems.length > 0) {
-        message.error('请完善产品明细信息，确保产品、数量、单价均已正确填写');
+      if (validationErrors.length > 0) {
+        message.error({
+          content: (
+            <div>
+              <div>产品明细验证失败：</div>
+              <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                {validationErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          ),
+          duration: 6,
+        });
         return;
       }
 
