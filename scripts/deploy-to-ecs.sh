@@ -99,31 +99,41 @@ else
   exit 1
 fi
 
-# 9. 安全的数据库同步
-echo "🔄 开始数据库同步..."
-
-# 首先尝试使用迁移文件
-if [ -d "prisma/migrations" ] && [ "$(ls -A prisma/migrations 2>/dev/null)" ]; then
-  echo "📁 发现迁移文件，执行migrate deploy..."
-  if npx prisma migrate deploy; then
-    echo "✅ 数据库迁移完成"
-  else
-    echo "⚠️  迁移失败，尝试使用db push同步..."
-    if npx prisma db push; then
-      echo "✅ 数据库同步完成"
-    else
-      echo "❌ 数据库同步失败"
-      exit 1
-    fi
-  fi
+# 9. 数据库备份和迁移
+echo "💾 创建部署前数据库备份..."
+if bash scripts/db-backup.sh; then
+  echo "✅ 数据库备份完成"
 else
-  echo "📝 未发现迁移文件，使用db push同步..."
-  if npx prisma db push; then
-    echo "✅ 数据库同步完成"
-  else
-    echo "❌ 数据库同步失败"
-    exit 1
-  fi
+  echo "⚠️  数据库备份失败，但继续部署"
+fi
+
+echo "🔄 开始数据库迁移..."
+
+# 检查迁移状态
+echo "📊 检查数据库迁移状态..."
+if npx prisma migrate status; then
+  echo "✅ 迁移状态检查完成"
+else
+  echo "⚠️  迁移状态检查失败，但继续执行迁移"
+fi
+
+# 执行数据库迁移
+echo "📁 执行数据库迁移..."
+if npx prisma migrate deploy; then
+  echo "✅ 数据库迁移完成"
+else
+  echo "❌ 数据库迁移失败"
+  echo "📋 迁移失败详情:"
+  npx prisma migrate status || true
+  exit 1
+fi
+
+# 验证数据库结构
+echo "🔍 验证数据库结构..."
+if npx prisma validate; then
+  echo "✅ 数据库结构验证通过"
+else
+  echo "⚠️  数据库结构验证失败，但继续部署"
 fi
 
 # 10. 检查并初始化种子数据

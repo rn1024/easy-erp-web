@@ -143,6 +143,29 @@ jobs:
               exit 1
             fi
             
+            # 数据库备份（部署前安全措施）
+            echo "💾 执行部署前数据库备份..."
+            if [ -f "scripts/db-backup.sh" ]; then
+              chmod +x scripts/db-backup.sh
+              if ./scripts/db-backup.sh; then
+                echo "✅ 数据库备份完成"
+              else
+                echo "❌ 数据库备份失败，终止部署"
+                exit 1
+              fi
+            else
+              echo "⚠️  数据库备份脚本不存在，跳过备份步骤"
+            fi
+            
+            # Prisma迁移状态检查
+            echo "🔍 检查Prisma迁移状态..."
+            if command -v npx >/dev/null 2>&1; then
+              echo "📋 当前迁移状态："
+              npx prisma migrate status || echo "⚠️  无法获取迁移状态"
+            else
+              echo "⚠️  npx命令不可用，跳过迁移状态检查"
+            fi
+            
             # 确保脚本存在并可执行
             if [ ! -f "scripts/deploy-to-ecs.sh" ]; then
               echo "❌ 部署脚本不存在: scripts/deploy-to-ecs.sh"

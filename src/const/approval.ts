@@ -10,13 +10,14 @@ export enum EntityType {
   EXPENSE_REPORT = 'EXPENSE_REPORT',
 }
 
-// 采购订单状态枚举
+// 采购订单状态枚举 - 与 Prisma schema 保持一致
 export enum PurchaseOrderStatus {
   CREATED = 'CREATED',
   PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  COMPLETED = 'COMPLETED',
+  CONFIRMED = 'CONFIRMED',
+  PRODUCTION = 'PRODUCTION',
+  SHIPPED = 'SHIPPED',
+  RECEIVED = 'RECEIVED',
   CANCELLED = 'CANCELLED',
 }
 
@@ -60,9 +61,10 @@ export const StatusLabels = {
   [EntityType.PURCHASE_ORDER]: {
     [PurchaseOrderStatus.CREATED]: '已创建',
     [PurchaseOrderStatus.PENDING]: '待审批',
-    [PurchaseOrderStatus.APPROVED]: '已审批',
-    [PurchaseOrderStatus.REJECTED]: '已拒绝',
-    [PurchaseOrderStatus.COMPLETED]: '已完成',
+    [PurchaseOrderStatus.CONFIRMED]: '已确认',
+    [PurchaseOrderStatus.PRODUCTION]: '生产中',
+    [PurchaseOrderStatus.SHIPPED]: '已发货',
+    [PurchaseOrderStatus.RECEIVED]: '已收货',
     [PurchaseOrderStatus.CANCELLED]: '已取消',
   },
   [EntityType.SALES_ORDER]: {
@@ -101,9 +103,10 @@ export const StatusColors = {
   [EntityType.PURCHASE_ORDER]: {
     [PurchaseOrderStatus.CREATED]: 'default',
     [PurchaseOrderStatus.PENDING]: 'processing',
-    [PurchaseOrderStatus.APPROVED]: 'success',
-    [PurchaseOrderStatus.REJECTED]: 'error',
-    [PurchaseOrderStatus.COMPLETED]: 'success',
+    [PurchaseOrderStatus.CONFIRMED]: 'success',
+    [PurchaseOrderStatus.PRODUCTION]: 'blue',
+    [PurchaseOrderStatus.SHIPPED]: 'cyan',
+    [PurchaseOrderStatus.RECEIVED]: 'green',
     [PurchaseOrderStatus.CANCELLED]: 'default',
   },
   [EntityType.SALES_ORDER]: {
@@ -145,18 +148,21 @@ export const StatusTransitions = {
       { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
     ],
     [PurchaseOrderStatus.PENDING]: [
-      { value: PurchaseOrderStatus.APPROVED, label: '审批通过', type: 'approve' as const },
-      { value: PurchaseOrderStatus.REJECTED, label: '审批拒绝', type: 'reject' as const },
-    ],
-    [PurchaseOrderStatus.APPROVED]: [
-      { value: PurchaseOrderStatus.COMPLETED, label: '完成订单', type: 'approve' as const },
+      { value: PurchaseOrderStatus.CONFIRMED, label: '确认订单', type: 'approve' as const },
       { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
     ],
-    [PurchaseOrderStatus.REJECTED]: [
-      { value: PurchaseOrderStatus.PENDING, label: '重新提交', type: 'approve' as const },
+    [PurchaseOrderStatus.CONFIRMED]: [
+      { value: PurchaseOrderStatus.PRODUCTION, label: '开始生产', type: 'approve' as const },
       { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
     ],
-    [PurchaseOrderStatus.COMPLETED]: [],
+    [PurchaseOrderStatus.PRODUCTION]: [
+      { value: PurchaseOrderStatus.SHIPPED, label: '发货', type: 'approve' as const },
+      { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
+    ],
+    [PurchaseOrderStatus.SHIPPED]: [
+      { value: PurchaseOrderStatus.RECEIVED, label: '确认收货', type: 'approve' as const },
+    ],
+    [PurchaseOrderStatus.RECEIVED]: [],
     [PurchaseOrderStatus.CANCELLED]: [],
   },
   [EntityType.SALES_ORDER]: {
