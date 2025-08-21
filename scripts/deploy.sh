@@ -211,39 +211,78 @@ verify_seed_data_exists() {
 backup_database() {
     log "备份数据库..."
 
-    # 解析数据库连接信息
+    # 解析数据库连接信息 - 支持PostgreSQL和MySQL（包含查询参数）
     local db_url="$DATABASE_URL"
-    local db_user=$(echo "$db_url" | sed -n 's|mysql://\([^:]*\):.*|\1|p')
-    local db_pass=$(echo "$db_url" | sed -n 's|mysql://[^:]*:\([^@]*\)@.*|\1|p')
-    local db_host=$(echo "$db_url" | sed -n 's|mysql://[^@]*@\([^:]*\):.*|\1|p')
-    local db_port=$(echo "$db_url" | sed -n 's|mysql://[^@]*@[^:]*:\([^/]*\)/.*|\1|p')
-    local db_name=$(echo "$db_url" | sed -n 's|mysql://[^/]*/\(.*\)|\1|p')
+    local db_type=""
+    local db_user=""
+    local db_pass=""
+    local db_host=""
+    local db_port=""
+    local db_name=""
+    
+    if [[ $db_url =~ postgresql://([^:]+):([^@]+)@([^:]+):([0-9]+)/([^?\&]+) ]]; then
+        # PostgreSQL格式（支持查询参数）
+        db_type="postgresql"
+        db_user="${BASH_REMATCH[1]}"
+        db_pass="${BASH_REMATCH[2]}"
+        db_host="${BASH_REMATCH[3]}"
+        db_port="${BASH_REMATCH[4]}"
+        db_name="${BASH_REMATCH[5]}"
+    elif [[ $db_url =~ mysql://([^:]+):([^@]+)@([^:]+):([0-9]+)/([^?\&]+) ]]; then
+        # MySQL格式（支持查询参数）
+        db_type="mysql"
+        db_user="${BASH_REMATCH[1]}"
+        db_pass="${BASH_REMATCH[2]}"
+        db_host="${BASH_REMATCH[3]}"
+        db_port="${BASH_REMATCH[4]}"
+        db_name="${BASH_REMATCH[5]}"
+    else
+        warn "无法解析DATABASE_URL格式，跳过数据库备份"
+        return 0
+    fi
 
     # 创建备份目录
     mkdir -p "$BACKUP_DIR/database"
 
-    # 检查数据库是否有表
-    local table_count=$(mysql -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pass" -e "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema='$db_name';" -s -N 2>/dev/null || echo "0")
-
-    if [ "$table_count" -gt 0 ]; then
-        local backup_file="$BACKUP_DIR/database/backup_$(date +%Y%m%d_%H%M%S).sql"
-
-        # 执行备份
-        if mysqldump -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pass" \
-            --single-transaction \
-            --routines \
-            --triggers \
-            "$db_name" > "$backup_file" 2>/dev/null; then
-            log "数据库备份完成: $backup_file"
-
-            # 压缩备份文件
-            gzip "$backup_file"
-            log "备份文件已压缩: ${backup_file}.gz"
+    # 根据数据库类型检查表数量和执行备份
+    local table_count=0
+    local backup_file="$BACKUP_DIR/database/backup_$(date +%Y%m%d_%H%M%S).sql"
+    
+    if [ "$db_type" = "postgresql" ]; then
+        # PostgreSQL 表数量检查
+        table_count=$(PGPASSWORD="$db_pass" psql -h "$db_host" -p "$db_port" -U "$db_user" -d "$db_name" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null | xargs || echo "0")
+        
+        if [ "$table_count" -gt 0 ]; then
+            # PostgreSQL 备份
+            if PGPASSWORD="$db_pass" pg_dump -h "$db_host" -p "$db_port" -U "$db_user" -d "$db_name" \
+                --verbose --no-password --format=plain --no-owner --no-privileges > "$backup_file" 2>/dev/null; then
+                log "PostgreSQL数据库备份完成: $backup_file"
+                gzip "$backup_file"
+                log "备份文件已压缩: ${backup_file}.gz"
+            else
+                warn "PostgreSQL数据库备份失败，但部署将继续"
+            fi
         else
-            warn "数据库备份失败，但部署将继续"
+            log "PostgreSQL数据库为空，跳过备份"
         fi
-    else
-        log "数据库为空，跳过备份"
+        
+    elif [ "$db_type" = "mysql" ]; then
+        # MySQL 表数量检查
+        table_count=$(mysql -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pass" -e "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema='$db_name';" -s -N 2>/dev/null || echo "0")
+        
+        if [ "$table_count" -gt 0 ]; then
+            # MySQL 备份
+            if mysqldump -h"$db_host" -P"$db_port" -u"$db_user" -p"$db_pass" \
+                --single-transaction --routines --triggers "$db_name" > "$backup_file" 2>/dev/null; then
+                log "MySQL数据库备份完成: $backup_file"
+                gzip "$backup_file"
+                log "备份文件已压缩: ${backup_file}.gz"
+            else
+                warn "MySQL数据库备份失败，但部署将继续"
+            fi
+        else
+            log "MySQL数据库为空，跳过备份"
+        fi
     fi
 
     return 0

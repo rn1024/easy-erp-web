@@ -208,32 +208,54 @@ check_and_create_missing_tables() {
 create_backup() {
   echo "💾 创建数据库备份..."
   local backup_file="/tmp/erp_backup_$(date +%Y%m%d_%H%M%S).sql"
+  local db_type=""
 
-  # 从DATABASE_URL提取连接信息（支持URL编码的密码）
-  if [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:/]+):([0-9]+)/(.+) ]]; then
+  # 从DATABASE_URL提取连接信息（支持PostgreSQL和MySQL，包含查询参数）
+  if [[ $DATABASE_URL =~ postgresql://([^:]+):([^@]+)@([^:/]+):([0-9]+)/([^?\&]+) ]]; then
+    db_type="postgresql"
     DB_USER="${BASH_REMATCH[1]}"
     DB_PASS_ENCODED="${BASH_REMATCH[2]}"
     DB_HOST="${BASH_REMATCH[3]}"
     DB_PORT="${BASH_REMATCH[4]}"
     DB_NAME="${BASH_REMATCH[5]}"
-
-    # URL解码密码（处理%40等编码字符）
-    DB_PASS=$(echo "$DB_PASS_ENCODED" | sed 's/%40/@/g' | sed 's/%21/!/g' | sed 's/%23/#/g' | sed 's/%24/$/g' | sed 's/%25/%/g' | sed 's/%26/\&/g' | sed 's/%2B/+/g')
-
-    echo "🔍 数据库连接信息: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
-
-    if mysqldump -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$backup_file" 2>/dev/null; then
-      echo "$backup_file" > "/tmp/latest_backup_path"
-      echo "✅ 数据库备份完成: $backup_file"
-      return 0
-    else
-      echo "❌ 数据库备份失败"
-      return 1
-    fi
+  elif [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:/]+):([0-9]+)/([^?\&]+) ]]; then
+    db_type="mysql"
+    DB_USER="${BASH_REMATCH[1]}"
+    DB_PASS_ENCODED="${BASH_REMATCH[2]}"
+    DB_HOST="${BASH_REMATCH[3]}"
+    DB_PORT="${BASH_REMATCH[4]}"
+    DB_NAME="${BASH_REMATCH[5]}"
   else
     echo "❌ 无法解析DATABASE_URL: $DATABASE_URL"
-    echo "🔍 期望格式: mysql://user:password@host:port/database"
+    echo "🔍 期望格式: postgresql://user:password@host:port/database 或 mysql://user:password@host:port/database"
     return 1
+  fi
+
+  # URL解码密码（处理%40等编码字符）
+  DB_PASS=$(echo "$DB_PASS_ENCODED" | sed 's/%40/@/g' | sed 's/%21/!/g' | sed 's/%23/#/g' | sed 's/%24/$/g' | sed 's/%25/%/g' | sed 's/%26/\&/g' | sed 's/%2B/+/g')
+
+  echo "🔍 数据库连接信息: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME ($db_type)"
+
+  # 根据数据库类型执行备份
+  if [ "$db_type" = "postgresql" ]; then
+    if PGPASSWORD="$DB_PASS" pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+        --verbose --no-password --format=plain --no-owner --no-privileges > "$backup_file" 2>/dev/null; then
+      echo "$backup_file" > "/tmp/latest_backup_path"
+      echo "✅ PostgreSQL数据库备份完成: $backup_file"
+      return 0
+    else
+      echo "❌ PostgreSQL数据库备份失败"
+      return 1
+    fi
+  elif [ "$db_type" = "mysql" ]; then
+    if mysqldump -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$backup_file" 2>/dev/null; then
+      echo "$backup_file" > "/tmp/latest_backup_path"
+      echo "✅ MySQL数据库备份完成: $backup_file"
+      return 0
+    else
+      echo "❌ MySQL数据库备份失败"
+      return 1
+    fi
   fi
 }
 
@@ -249,7 +271,21 @@ rollback_deployment() {
     local backup_file=$(cat "/tmp/latest_backup_path")
     if [ -f "$backup_file" ]; then
       echo "🔄 恢复数据库备份..."
-      if [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:/]+):([0-9]+)/(.+) ]]; then
+      # 支持PostgreSQL和MySQL格式的DATABASE_URL
+      if [[ $DATABASE_URL =~ postgresql://([^:]+):([^@]+)@([^:/]+):([0-9]+)/([^?\&]+) ]]; then
+        DB_USER="${BASH_REMATCH[1]}"
+        DB_PASS_ENCODED="${BASH_REMATCH[2]}"
+        DB_HOST="${BASH_REMATCH[3]}"
+        DB_PORT="${BASH_REMATCH[4]}"
+        DB_NAME="${BASH_REMATCH[5]}"
+
+        # URL解码密码（处理%40等编码字符）
+        DB_PASS=$(echo "$DB_PASS_ENCODED" | sed 's/%40/@/g' | sed 's/%21/!/g' | sed 's/%23/#/g' | sed 's/%24/$/g' | sed 's/%25/%/g' | sed 's/%26/\&/g' | sed 's/%2B/+/g')
+
+        PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" < "$backup_file" 2>/dev/null || {
+          echo "❌ PostgreSQL数据库恢复失败"
+        }
+      elif [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:/]+):([0-9]+)/([^?\&]+) ]]; then
         DB_USER="${BASH_REMATCH[1]}"
         DB_PASS_ENCODED="${BASH_REMATCH[2]}"
         DB_HOST="${BASH_REMATCH[3]}"
@@ -260,7 +296,7 @@ rollback_deployment() {
         DB_PASS=$(echo "$DB_PASS_ENCODED" | sed 's/%40/@/g' | sed 's/%21/!/g' | sed 's/%23/#/g' | sed 's/%24/$/g' | sed 's/%25/%/g' | sed 's/%26/\&/g' | sed 's/%2B/+/g')
 
         mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$backup_file" 2>/dev/null || {
-          echo "❌ 数据库恢复失败"
+          echo "❌ MySQL数据库恢复失败"
         }
       fi
     fi

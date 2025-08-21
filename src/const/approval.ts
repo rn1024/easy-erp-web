@@ -14,6 +14,7 @@ export enum EntityType {
 export enum PurchaseOrderStatus {
   CREATED = 'CREATED',
   PENDING = 'PENDING',
+  APPROVED = 'APPROVED', // 已审批已通过
   CONFIRMED = 'CONFIRMED',
   PRODUCTION = 'PRODUCTION',
   SHIPPED = 'SHIPPED',
@@ -61,6 +62,7 @@ export const StatusLabels = {
   [EntityType.PURCHASE_ORDER]: {
     [PurchaseOrderStatus.CREATED]: '已创建',
     [PurchaseOrderStatus.PENDING]: '待审批',
+    [PurchaseOrderStatus.APPROVED]: '已审批已通过',
     [PurchaseOrderStatus.CONFIRMED]: '已确认',
     [PurchaseOrderStatus.PRODUCTION]: '生产中',
     [PurchaseOrderStatus.SHIPPED]: '已发货',
@@ -103,6 +105,7 @@ export const StatusColors = {
   [EntityType.PURCHASE_ORDER]: {
     [PurchaseOrderStatus.CREATED]: 'default',
     [PurchaseOrderStatus.PENDING]: 'processing',
+    [PurchaseOrderStatus.APPROVED]: 'success',
     [PurchaseOrderStatus.CONFIRMED]: 'success',
     [PurchaseOrderStatus.PRODUCTION]: 'blue',
     [PurchaseOrderStatus.SHIPPED]: 'cyan',
@@ -148,6 +151,10 @@ export const StatusTransitions = {
       { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
     ],
     [PurchaseOrderStatus.PENDING]: [
+      { value: PurchaseOrderStatus.APPROVED, label: '审批通过', type: 'approve' as const },
+      { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
+    ],
+    [PurchaseOrderStatus.APPROVED]: [
       { value: PurchaseOrderStatus.CONFIRMED, label: '确认订单', type: 'approve' as const },
       { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
     ],

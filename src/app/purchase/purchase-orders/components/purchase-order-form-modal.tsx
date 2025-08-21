@@ -275,7 +275,9 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
               label="店铺"
               rules={[{ required: true, message: '请选择店铺' }]}
             >
-              <Select placeholder="请选择店铺">
+              <Select 
+                placeholder="请选择店铺"
+              >
                 {shopsData.map((shop: any) => (
                   <Option key={shop.id} value={shop.id}>
                     {shop.nickname}
@@ -286,7 +288,10 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
           </Col>
           <Col span={12}>
             <Form.Item name="supplierId" label="供应商">
-              <Select placeholder="请选择供应商" allowClear>
+              <Select 
+                placeholder="请选择供应商" 
+                allowClear
+              >
                 {suppliersData.map((supplier: any) => (
                   <Option key={supplier.id} value={supplier.id}>
                     {supplier.nickname}
@@ -300,7 +305,10 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="urgent" label="是否紧急" valuePropName="checked">
-              <Switch checkedChildren="紧急" unCheckedChildren="常规" />
+              <Switch 
+                checkedChildren="紧急" 
+                unCheckedChildren="常规" 
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -323,7 +331,11 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         )}
 
         <Form.Item name="remark" label="备注">
-          <TextArea rows={3} placeholder="请输入备注信息" maxLength={500} />
+          <TextArea 
+            rows={3} 
+            placeholder="请输入备注信息" 
+            maxLength={500} 
+          />
         </Form.Item>
 
         <Divider orientation="left">产品明细</Divider>
@@ -333,7 +345,6 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
           items={orderItems}
           onChange={handleItemsChange}
           productsData={productOptions}
-          disabled={false}
         />
       </Form>
     </Modal>

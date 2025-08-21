@@ -19,6 +19,7 @@ import {
   Progress,
   Row,
   Col,
+  Image,
 } from 'antd';
 import {
   InfoCircleOutlined,
@@ -285,19 +286,80 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
       >
         {/* 产品信息头部 */}
         <div style={{ marginBottom: 16 }}>
-          <Text strong style={{ color: '#1890ff', fontSize: '16px' }}>
-            {productInfo.product.code}
-          </Text>
-          {productInfo.product.specification && (
-            <div style={{ color: '#666', fontSize: '12px', marginTop: 4 }}>
-              {productInfo.product.specification}
-            </div>
-          )}
-          {productInfo.product.sku && (
-            <div style={{ color: '#999', fontSize: '11px', marginTop: 2 }}>
-              SKU: {productInfo.product.sku}
-            </div>
-          )}
+          <Row gutter={[12, 12]}>
+            {/* 产品图片 */}
+            <Col xs={8} sm={6}>
+              {productInfo.product.images && productInfo.product.images.length > 0 ? (
+                <div style={{ position: 'relative' }}>
+                  <Image
+                    src={productInfo.product.images.find((img: any) => img.isCover)?.imageUrl || productInfo.product.images[0]?.imageUrl}
+                    alt={productInfo.product.code}
+                    style={{
+                      width: '100%',
+                      height: '80px',
+                      objectFit: 'cover',
+                      borderRadius: '6px',
+                      border: '1px solid #f0f0f0'
+                    }}
+                    preview={{
+                      src: productInfo.product.images.find((img: any) => img.isCover)?.imageUrl || productInfo.product.images[0]?.imageUrl
+                    }}
+                  />
+                  {productInfo.product.images.length > 1 && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '4px',
+                      right: '4px',
+                      background: 'rgba(0,0,0,0.6)',
+                      color: 'white',
+                      fontSize: '10px',
+                      padding: '2px 4px',
+                      borderRadius: '2px'
+                    }}>
+                      +{productInfo.product.images.length - 1}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{
+                  width: '100%',
+                  height: '80px',
+                  background: '#f5f5f5',
+                  borderRadius: '6px',
+                  border: '1px solid #f0f0f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                  fontSize: '12px'
+                }}>
+                  暂无图片
+                </div>
+              )}
+            </Col>
+            
+            {/* 产品基本信息 */}
+            <Col xs={16} sm={18}>
+              <Text strong style={{ color: '#1890ff', fontSize: '16px' }}>
+                {productInfo.product.code}
+              </Text>
+              {productInfo.product.specification && (
+                <div style={{ color: '#666', fontSize: '12px', marginTop: 4 }}>
+                  {productInfo.product.specification}
+                </div>
+              )}
+              {productInfo.product.sku && (
+                <div style={{ color: '#999', fontSize: '11px', marginTop: 2 }}>
+                  SKU: {productInfo.product.sku}
+                </div>
+              )}
+              {productInfo.product.color && (
+                <div style={{ color: '#999', fontSize: '11px', marginTop: 2 }}>
+                  颜色: {productInfo.product.color}
+                </div>
+              )}
+            </Col>
+          </Row>
         </div>
 
         {/* 数量统计信息 */}

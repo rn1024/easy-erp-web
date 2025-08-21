@@ -452,13 +452,14 @@ const PurchaseOrdersPage: React.FC = () => {
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="编辑">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              size="small"
-            />
-          </Tooltip>
+              <Button
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+                size="small"
+                disabled={['APPROVED', 'CONFIRMED', 'PRODUCTION', 'SHIPPED', 'RECEIVED'].includes(record.status)}
+              />
+            </Tooltip>
           <Tooltip title="分享给供应商">
             <Button
               type="link"

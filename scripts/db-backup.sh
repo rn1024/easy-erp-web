@@ -18,26 +18,49 @@ if [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 
-# 提取数据库连接信息 - 支持PostgreSQL和MySQL
-if [[ $DATABASE_URL =~ postgresql://([^:]+):([^@]+)@([^:]+):([0-9]+)/([^?]+) ]]; then
+# 提取数据库连接信息 - 支持PostgreSQL和MySQL（包含查询参数）
+# 使用更安全的方式解析URL，支持密码中包含特殊字符
+if [[ $DATABASE_URL =~ ^postgresql:// ]]; then
     # PostgreSQL格式
-    DB_USER="${BASH_REMATCH[1]}"
-    DB_PASS="${BASH_REMATCH[2]}"
-    DB_HOST="${BASH_REMATCH[3]}"
-    DB_PORT="${BASH_REMATCH[4]}"
-    DB_NAME="${BASH_REMATCH[5]}"
     DB_TYPE="postgresql"
-elif [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:]+):([0-9]+)/([^?]+) ]]; then
+    # 移除协议前缀
+    url_without_protocol="${DATABASE_URL#postgresql://}"
+    # 提取用户名和密码部分（在最后一个@之前）
+    credentials_and_rest="$url_without_protocol"
+    # 找到最后一个@的位置，分离认证信息和主机信息
+    host_part="${credentials_and_rest##*@}"
+    credentials_part="${credentials_and_rest%@*}"
+    # 解析用户名和密码
+    DB_USER="${credentials_part%%:*}"
+    DB_PASS="${credentials_part#*:}"
+    # 解析主机、端口和数据库
+    DB_HOST="${host_part%%:*}"
+    port_and_db="${host_part#*:}"
+    DB_PORT="${port_and_db%%/*}"
+    DB_NAME="${port_and_db#*/}"
+elif [[ $DATABASE_URL =~ ^mysql:// ]]; then
     # MySQL格式
-    DB_USER="${BASH_REMATCH[1]}"
-    DB_PASS="${BASH_REMATCH[2]}"
-    DB_HOST="${BASH_REMATCH[3]}"
-    DB_PORT="${BASH_REMATCH[4]}"
-    DB_NAME="${BASH_REMATCH[5]}"
     DB_TYPE="mysql"
+    # 移除协议前缀
+    url_without_protocol="${DATABASE_URL#mysql://}"
+    # 提取用户名和密码部分（在最后一个@之前）
+    credentials_and_rest="$url_without_protocol"
+    # 找到最后一个@的位置，分离认证信息和主机信息
+    host_part="${credentials_and_rest##*@}"
+    credentials_part="${credentials_and_rest%@*}"
+    # 解析用户名和密码
+    DB_USER="${credentials_part%%:*}"
+    DB_PASS="${credentials_part#*:}"
+    # 解析主机、端口和数据库
+    DB_HOST="${host_part%%:*}"
+    port_and_db="${host_part#*:}"
+    DB_PORT="${port_and_db%%/*}"
+    DB_NAME="${port_and_db#*/}"
 else
     echo "❌ 无法解析DATABASE_URL格式: $DATABASE_URL"
     echo "❌ 支持格式: postgresql://user:password@host:port/database 或 mysql://user:password@host:port/database"
+    echo "❌ 注意：支持包含查询参数的URL格式（如 ?sslmode=require）"
+    echo "❌ 当前URL格式: $(echo $DATABASE_URL | sed 's/:.*@/:***@/g')"
     exit 1
 fi
 

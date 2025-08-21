@@ -17,6 +17,8 @@ export interface ShareLinkInfo {
 export interface ShareHistoryItem {
   id: string;
   shareCode: string;
+  shareUrl: string;
+  extractCode?: string;
   purchaseOrderId: string;
   orderNumber?: string;
   createdBy?: string;

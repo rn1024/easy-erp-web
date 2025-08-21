@@ -44,16 +44,27 @@ if [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 
-# 解析DATABASE_URL
-DB_URL_REGEX="mysql://([^:]+):([^@]+)@([^:]+):([0-9]+)/([^?]+)"
-if [[ $DATABASE_URL =~ $DB_URL_REGEX ]]; then
+# 解析DATABASE_URL - 支持PostgreSQL和MySQL（包含查询参数）
+if [[ $DATABASE_URL =~ postgresql://([^:]+):([^@]+)@([^:]+):([0-9]+)/([^?\&]+) ]]; then
+    # PostgreSQL格式（支持查询参数）
     DB_USER="${BASH_REMATCH[1]}"
     DB_PASS="${BASH_REMATCH[2]}"
     DB_HOST="${BASH_REMATCH[3]}"
     DB_PORT="${BASH_REMATCH[4]}"
     DB_NAME="${BASH_REMATCH[5]}"
+    DB_TYPE="postgresql"
+elif [[ $DATABASE_URL =~ mysql://([^:]+):([^@]+)@([^:]+):([0-9]+)/([^?\&]+) ]]; then
+    # MySQL格式（支持查询参数）
+    DB_USER="${BASH_REMATCH[1]}"
+    DB_PASS="${BASH_REMATCH[2]}"
+    DB_HOST="${BASH_REMATCH[3]}"
+    DB_PORT="${BASH_REMATCH[4]}"
+    DB_NAME="${BASH_REMATCH[5]}"
+    DB_TYPE="mysql"
 else
-    echo "❌ 无法解析DATABASE_URL格式"
+    echo "❌ 无法解析DATABASE_URL格式: ***"
+    echo "❌ 支持格式: postgresql://user:password@host:port/database 或 mysql://user:password@host:port/database"
+    echo "❌ 注意：支持包含查询参数的URL格式（如 ?sslmode=require）"
     exit 1
 fi
 

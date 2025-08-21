@@ -177,6 +177,60 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
       ),
     },
     {
+      title: '分享链接',
+      dataIndex: 'shareUrl',
+      key: 'shareUrl',
+      width: 200,
+      render: (url: string) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Text
+            ellipsis={{ tooltip: url }}
+            style={{ fontSize: '12px', maxWidth: 150, cursor: 'pointer' }}
+            onClick={() => copyToClipboard(url, '分享链接')}
+          >
+            {url}
+          </Text>
+          <Tooltip title="复制链接">
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => copyToClipboard(url, '分享链接')}
+            />
+          </Tooltip>
+        </div>
+      ),
+    },
+    {
+      title: '提取码',
+      dataIndex: 'extractCode',
+      key: 'extractCode',
+      width: 100,
+      render: (code: string) => (
+        code ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Tag
+              color="blue"
+              style={{ cursor: 'pointer', margin: 0 }}
+              onClick={() => copyToClipboard(code, '提取码')}
+            >
+              {code}
+            </Tag>
+            <Tooltip title="复制提取码">
+              <Button
+                type="text"
+                size="small"
+                icon={<CopyOutlined />}
+                onClick={() => copyToClipboard(code, '提取码')}
+              />
+            </Tooltip>
+          </div>
+        ) : (
+          <Text type="secondary" style={{ fontSize: '12px' }}>无</Text>
+        )
+      ),
+    },
+    {
       title: '采购订单',
       dataIndex: 'orderNumber',
       key: 'orderNumber',
