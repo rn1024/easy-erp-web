@@ -28,8 +28,7 @@ prisma/migrations
 *.db
 *.sqlite
 
-# Coverage and testing
-coverage
+# Testing
 .nyc_output
 
 # IDE and editor files

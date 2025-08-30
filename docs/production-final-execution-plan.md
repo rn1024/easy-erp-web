@@ -6,17 +6,19 @@
 **风险等级**: 🟡 低风险操作  
 **执行权限**: 数据库管理员 + 技术负责人  
 **预计执行时间**: 5-10 分钟  
-**业务影响**: 零停机时间  
+**业务影响**: 零停机时间
 
 ## 📋 执行前准备清单
 
 ### 人员准备
+
 - [ ] **主执行人**: 数据库管理员在线
 - [ ] **技术负责人**: 在线监督和授权
 - [ ] **备用人员**: 系统管理员待命
 - [ ] **业务负责人**: 知情并确认执行时间窗口
 
 ### 环境准备
+
 - [ ] **服务器连接**: 确认可以正常 SSH 连接到生产服务器
 - [ ] **数据库连接**: 确认数据库连接正常
 - [ ] **备份验证**: 确认最新备份存在且完整
@@ -24,6 +26,7 @@
 - [ ] **回滚脚本**: 确认回滚脚本已准备就绪
 
 ### 时间窗口
+
 - [ ] **业务低峰期**: 选择用户访问量最低的时间段
 - [ ] **团队在线**: 确保关键人员都在线
 - [ ] **无其他变更**: 确认没有其他系统变更计划
@@ -35,13 +38,15 @@
 
 **核心思路**: 不修改数据库结构，只同步 Prisma 迁移状态记录
 
-**技术原理**: 
+**技术原理**:
+
 - 生产数据库中 `shipmentFile` 字段已存在
 - Prisma 迁移记录中缺少对应的迁移记录
 - 通过 `prisma migrate resolve --applied` 同步状态
 - 告诉 Prisma "这个迁移已经应用过了"
 
 **优势分析**:
+
 - ✅ **零风险**: 不修改任何数据库结构
 - ✅ **零停机**: 应用服务无需重启
 - ✅ **快速执行**: 整个过程 2-3 分钟
@@ -82,6 +87,7 @@ npx prisma migrate status
 ```
 
 **预期输出**:
+
 ```
 Database schema is up to date!
 
@@ -97,29 +103,30 @@ To apply pending migrations to the database, run `prisma migrate deploy`.
 # 2.1 检查 shipmentFile 字段是否存在
 echo "检查 shipmentFile 字段状态:"
 mysql -h [host] -u [user] -p[password] [database] -e "
-SELECT 
+SELECT
     COLUMN_NAME,
     DATA_TYPE,
     IS_NULLABLE,
     COLUMN_DEFAULT
-FROM INFORMATION_SCHEMA.COLUMNS 
-WHERE TABLE_SCHEMA = '[database_name]' 
-  AND TABLE_NAME = 'Shipment' 
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = '[database_name]'
+  AND TABLE_NAME = 'Shipment'
   AND COLUMN_NAME = 'shipmentFile';"
 
 # 2.2 检查迁移记录表
 echo "检查迁移记录状态:"
 mysql -h [host] -u [user] -p[password] [database] -e "
-SELECT 
+SELECT
     migration_name,
     checksum,
     finished_at,
     applied_steps_count
-FROM _prisma_migrations 
+FROM _prisma_migrations
 WHERE migration_name = '20250821015630_add_shipment_file_field';"
 ```
 
 **预期结果**:
+
 - `shipmentFile` 字段存在 ✅
 - 迁移记录不存在 ✅
 - 这确认了我们的分析是正确的
@@ -137,6 +144,7 @@ npx prisma migrate status
 ```
 
 **预期输出**:
+
 ```
 Database schema is up to date!
 
@@ -215,6 +223,7 @@ echo "=== 验证完成 ==="
 **现象**: 数据库中没有 `shipmentFile` 字段
 
 **处理方案**:
+
 ```bash
 # 这种情况下，正常执行迁移即可
 echo "字段不存在，执行正常迁移:"
@@ -226,6 +235,7 @@ npx prisma migrate deploy
 **现象**: `_prisma_migrations` 表中已有对应记录
 
 **处理方案**:
+
 ```bash
 # 检查为什么 prisma migrate status 显示未应用
 echo "迁移记录已存在，检查状态不一致原因:"
@@ -241,6 +251,7 @@ npx prisma migrate resolve --applied 20250821015630_add_shipment_file_field
 **现象**: 无法连接到数据库
 
 **处理方案**:
+
 ```bash
 # 1. 检查数据库服务状态
 sudo systemctl status mysql
@@ -260,6 +271,7 @@ echo "数据库连接异常，暂停操作，请联系 DBA"
 **现象**: PM2 显示服务异常或健康检查失败
 
 **处理方案**:
+
 ```bash
 # 1. 查看详细错误日志
 pm2 logs easy-erp --lines 50
@@ -278,6 +290,7 @@ pm2 restart easy-erp
 ## 📊 成功标准
 
 ### 技术指标
+
 - [ ] `npx prisma migrate status` 显示 "No pending migrations"
 - [ ] 应用服务正常启动 (PM2 状态为 online)
 - [ ] 健康检查接口返回 200 状态码
@@ -285,6 +298,7 @@ pm2 restart easy-erp
 - [ ] 无新的错误日志产生
 
 ### 业务指标
+
 - [ ] 用户可以正常访问系统
 - [ ] 关键业务功能正常工作
 - [ ] 数据读写操作正常
@@ -292,6 +306,7 @@ pm2 restart easy-erp
 - [ ] 无用户投诉或异常反馈
 
 ### 监控指标
+
 - [ ] 系统响应时间在正常范围内
 - [ ] 数据库查询性能正常
 - [ ] 服务器资源使用率正常
@@ -301,6 +316,7 @@ pm2 restart easy-erp
 ## 🔄 执行后检查清单
 
 ### 立即检查 (执行完成后 5 分钟内)
+
 - [ ] 记录执行时间和结果
 - [ ] 验证所有技术指标
 - [ ] 检查应用服务状态
@@ -308,6 +324,7 @@ pm2 restart easy-erp
 - [ ] 通知相关人员执行结果
 
 ### 短期监控 (执行完成后 30 分钟内)
+
 - [ ] 持续监控系统性能指标
 - [ ] 关注用户反馈和投诉
 - [ ] 检查业务功能是否正常
@@ -315,6 +332,7 @@ pm2 restart easy-erp
 - [ ] 确认数据一致性
 
 ### 长期观察 (执行完成后 24 小时内)
+
 - [ ] 监控系统稳定性
 - [ ] 收集用户使用反馈
 - [ ] 分析性能趋势
@@ -333,11 +351,13 @@ pm2 restart easy-erp
 ## 执行过程
 
 ### 步骤 1: 环境验证
+
 - 开始时间: [时间]
 - 执行结果: [成功/失败]
 - 备注: [详细说明]
 
 ### 步骤 2: 数据库状态确认
+
 - 开始时间: [时间]
 - shipmentFile 字段状态: [存在/不存在]
 - 迁移记录状态: [存在/不存在]
@@ -345,12 +365,14 @@ pm2 restart easy-erp
 - 备注: [详细说明]
 
 ### 步骤 3: 执行状态同步
+
 - 开始时间: [时间]
 - 执行命令: npx prisma migrate resolve --applied 20250821015630_add_shipment_file_field
 - 执行结果: [成功/失败]
 - 备注: [详细说明]
 
 ### 步骤 4: 应用服务验证
+
 - 开始时间: [时间]
 - PM2 状态: [正常/异常]
 - 健康检查: [通过/失败]
@@ -358,6 +380,7 @@ pm2 restart easy-erp
 - 备注: [详细说明]
 
 ### 步骤 5: 部署验证
+
 - 开始时间: [时间]
 - 服务重启: [成功/失败]
 - 功能测试: [通过/失败]
@@ -365,6 +388,7 @@ pm2 restart easy-erp
 - 备注: [详细说明]
 
 ### 步骤 6: 最终验证
+
 - 开始时间: [时间]
 - 迁移状态: [正常/异常]
 - 应用状态: [正常/异常]
@@ -396,17 +420,20 @@ pm2 restart easy-erp
 ## 🎯 执行建议
 
 ### 最佳执行时间
+
 - **推荐时间**: 凌晨 2:00 - 4:00 (用户访问量最低)
 - **备选时间**: 中午 12:00 - 14:00 (午休时间)
 - **避免时间**: 工作日上午和下午的高峰期
 
 ### 团队协作
+
 - **主执行人**: 负责具体操作执行
 - **监督人员**: 负责流程监督和决策
 - **备用人员**: 待命支持和应急处理
 - **沟通协调**: 保持实时沟通，及时反馈进展
 
 ### 风险控制
+
 - **谨慎原则**: 每一步都要仔细验证
 - **及时停止**: 发现异常立即停止操作
 - **快速回滚**: 准备好快速回滚方案
@@ -415,6 +442,7 @@ pm2 restart easy-erp
 ---
 
 **最终确认**:
+
 - [ ] 技术方案已充分验证
 - [ ] 风险评估已完成
 - [ ] 回滚方案已准备
@@ -423,5 +451,5 @@ pm2 restart easy-erp
 - [ ] 业务方已知情确认
 
 > 🎯 **执行原则**: 安全第一，稳妥推进，充分验证，及时沟通
-> 
+>
 > 🚨 **重要提醒**: 如果在任何步骤中遇到意外情况，请立即停止操作并联系技术负责人，不要强行继续执行。

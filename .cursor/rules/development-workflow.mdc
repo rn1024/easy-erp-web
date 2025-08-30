@@ -160,9 +160,6 @@ alwaysApply: true
    ```bash
    # 运行单元测试
    pnpm test
-
-   # 测试覆盖率
-   pnpm test:coverage
    ```
 
 2. **集成测试**

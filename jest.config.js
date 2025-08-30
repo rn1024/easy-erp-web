@@ -8,15 +8,12 @@ const createJestConfig = nextJest({
 
 // Add any custom config to be passed to Jest
 const config = {
-  coverageProvider: 'v8',
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
-  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts', '!src/**/*.stories.{ts,tsx}'],
-  coverageReporters: ['text', 'lcov', 'html'],
   testTimeout: 30000,
 };
 
