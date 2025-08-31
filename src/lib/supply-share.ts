@@ -3,13 +3,13 @@ import crypto from 'crypto';
 
 export interface ShareConfig {
   expiresIn: number; // 有效期（小时）
-  extractCode?: string; // 提取码（可选，系统会自动生成）
+  extractCode?: string | null; // 提取码（可选，null表示不使用提取码，undefined表示系统自动生成）
   accessLimit?: number; // 访问限制（可选）
 }
 
 export interface ShareLinkInfo {
   shareCode: string;
-  extractCode: string;
+  extractCode: string | null;
   shareUrl: string;
   expiresAt: Date;
   accessLimit?: number;
@@ -48,7 +48,7 @@ export class SupplyShareManager {
   ): Promise<ShareLinkInfo> {
     // 生成新的分享码和提取码
     const shareCode = this.generateRandomCode(this.SHARE_CODE_LENGTH);
-    const extractCode = config.extractCode || this.generateRandomCode(this.EXTRACT_CODE_LENGTH);
+    const extractCode = config.extractCode === null ? null : (config.extractCode || this.generateRandomCode(this.EXTRACT_CODE_LENGTH));
     const expiresAt = new Date(Date.now() + config.expiresIn * 60 * 60 * 1000);
 
     // 创建新的分享链接记录
@@ -67,7 +67,7 @@ export class SupplyShareManager {
 
     return {
       shareCode: shareLink.shareCode,
-      extractCode: shareLink.extractCode || '',
+      extractCode: shareLink.extractCode,
       shareUrl: `${this.BASE_URL}/supply/${shareLink.shareCode}`,
       expiresAt: shareLink.expiresAt,
       accessLimit: shareLink.accessLimit || undefined,
@@ -172,7 +172,7 @@ export class SupplyShareManager {
       userToken, // 返回用户token用于后续请求
       shareInfo: {
         shareCode: shareLink.shareCode,
-        extractCode: shareLink.extractCode || '',
+        extractCode: shareLink.extractCode,
         shareUrl: `${this.BASE_URL}/supply/${shareLink.shareCode}`,
         expiresAt: shareLink.expiresAt,
         accessLimit: shareLink.accessLimit || undefined,

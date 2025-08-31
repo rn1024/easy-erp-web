@@ -1,5 +1,10 @@
 import store2 from 'store2';
-import axios from './index';
+import axios from 'axios';
+
+// 创建独立的axios实例，避免与index.ts的循环依赖
+const tokenAxios = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
+});
 
 interface TokenData {
   token: string;
@@ -114,7 +119,7 @@ class TokenManager {
    */
   private async performRefresh(refreshToken: string): Promise<string> {
     try {
-      const response = await axios<RefreshResponse>('/auth/refresh', {
+      const response = await tokenAxios<RefreshResponse>('/auth/refresh', {
         method: 'POST',
         data: { refreshToken },
         // 不要在这个请求中使用Authorization header，避免循环

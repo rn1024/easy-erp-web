@@ -60,7 +60,7 @@ axios.interceptors.request.use(
 // 响应拦截器
 axios.interceptors.response.use(
   (response: AxiosResponse) => {
-    // 检查业务逻辑错误（code不为0）
+    // 检查业务逻辑错误（code不为0表示失败）
     if (response.data && typeof response.data.code === 'number' && response.data.code !== 0) {
       const errorMsg = response.data.msg || '操作失败';
       message.error(errorMsg);

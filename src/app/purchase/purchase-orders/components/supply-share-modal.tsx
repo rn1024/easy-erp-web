@@ -20,6 +20,7 @@ import {
   Alert,
   Table,
   Drawer,
+  Checkbox,
 } from 'antd';
 import {
   CopyOutlined,
@@ -60,6 +61,17 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
   const [shareText, setShareText] = useState<string>('');
   const [hasShareHistory, setHasShareHistory] = useState(false);
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false);
+  const [useExtractCode, setUseExtractCode] = useState(true);
+
+  // 生成分享文案
+  const generateShareText = (shareInfo: ShareLinkInfo) => {
+    const extractCodeText = shareInfo.extractCode ? `\n提取码：${shareInfo.extractCode}` : '';
+    const accessLimitText = shareInfo.accessLimit ? `\n访问限制：${shareInfo.accessLimit}人` : '';
+    const expiresText = `\n有效期至：${new Date(shareInfo.expiresAt).toLocaleString()}`;
+    
+    const text = `【采购订单分享】\n订单号：${orderNumber}\n分享链接：${shareInfo.shareUrl}${extractCodeText}${accessLimitText}${expiresText}\n\n请点击链接填写供货记录，感谢配合！`;
+    setShareText(text);
+  };
 
   // 弹层打开时设置默认值和检查分享历史
   useEffect(() => {
@@ -67,6 +79,7 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
       // 重置为默认状态
       setShareInfo(null);
       setShareText('');
+      setUseExtractCode(true);
       // 设置表单默认值
       form.setFieldsValue({
         expiresIn: 7 * 24, // 默认7天
@@ -94,14 +107,19 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
   const { run: createShare, loading: createLoading } = useRequest(createShareLinkApi, {
     manual: true,
     onSuccess: (response) => {
-      const data = response.data?.data;
-      setShareInfo(data.shareInfo);
-      setShareText(data.shareText);
-      setHasShareHistory(true);
-      message.success('分享链接创建成功');
+      if (response?.data?.code === 0) {
+        const shareInfo = response.data.data.shareInfo;
+        setShareInfo(shareInfo);
+        generateShareText(shareInfo);
+        message.success('分享链接创建成功');
+        // 重新检查分享历史
+        checkShareHistory();
+      } else {
+        message.error(response?.data?.msg || '创建分享链接失败');
+      }
     },
     onError: (error: any) => {
-      message.error(error.response?.data?.msg || '创建分享链接失败');
+      message.error(error.response?.data?.msg || error.message || '创建分享链接失败');
     },
   });
 
@@ -119,8 +137,13 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
 
   // 处理创建分享
   const handleCreateShare = () => {
-    form.validateFields().then((values: ShareConfig) => {
-      createShare(purchaseOrderId, values);
+    form.validateFields().then((values) => {
+      const config: ShareConfig = {
+        expiresIn: values.expiresIn,
+        extractCode: useExtractCode ? values.extractCode : null,
+        accessLimit: values.accessLimit,
+      };
+      createShare(purchaseOrderId, config);
     });
   };
 
@@ -206,7 +229,7 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
       dataIndex: 'extractCode',
       key: 'extractCode',
       width: 100,
-      render: (code: string) => (
+      render: (code: string | null) => (
         code ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <Tag
@@ -226,7 +249,7 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
             </Tooltip>
           </div>
         ) : (
-          <Text type="secondary" style={{ fontSize: '12px' }}>无</Text>
+          <Text type="secondary" style={{ fontSize: '12px' }}>无需提取码</Text>
         )
       ),
     },
@@ -343,8 +366,33 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
           </Radio.Group>
         </Form.Item>
 
-        <Form.Item label="提取码" name="extractCode" extra="留空则系统自动生成4位提取码">
-          <Input placeholder="请输入4位提取码（可选）" maxLength={4} style={{ width: 200 }} />
+        <Form.Item label="提取码设置">
+          <div style={{ marginBottom: 8 }}>
+            <Checkbox 
+              checked={useExtractCode} 
+              onChange={(e) => setUseExtractCode(e.target.checked)}
+            >
+              使用提取码
+            </Checkbox>
+          </div>
+          {useExtractCode && (
+            <Form.Item 
+              name="extractCode" 
+              extra="留空则系统自动生成4位提取码"
+              style={{ marginBottom: 0 }}
+            >
+              <Input 
+                placeholder="请输入4位提取码（可选）" 
+                maxLength={4} 
+                style={{ width: 200 }} 
+              />
+            </Form.Item>
+          )}
+          {!useExtractCode && (
+            <div style={{ color: '#ff4d4f', fontSize: '12px', marginTop: 4 }}>
+              ⚠️ 不使用提取码将降低分享链接的安全性
+            </div>
+          )}
         </Form.Item>
 
         <Form.Item label="访问人数限制" name="accessLimit" extra="不限制则留空">
@@ -380,18 +428,20 @@ const SupplyShareModal: React.FC<SupplyShareModalProps> = ({
                   </div>
                 </div>
 
-                {shareInfo.extractCode && (
-                  <div>
-                    <Text strong>提取码：</Text>
+                <div>
+                  <Text strong>提取码：</Text>
+                  {shareInfo.extractCode ? (
                     <Tag
                       color="blue"
                       style={{ marginLeft: 8, cursor: 'pointer' }}
-                      onClick={() => copyToClipboard(shareInfo.extractCode, '提取码')}
+                      onClick={() => copyToClipboard(shareInfo.extractCode!, '提取码')}
                     >
                       {shareInfo.extractCode} <CopyOutlined />
                     </Tag>
-                  </div>
-                )}
+                  ) : (
+                    <Text type="secondary" style={{ marginLeft: 8 }}>无需提取码</Text>
+                  )}
+                </div>
 
                 <div>
                   <Text strong>有效期至：</Text>

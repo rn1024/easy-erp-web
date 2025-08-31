@@ -37,7 +37,10 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     const shareInfo = await SupplyShareManager.getShareInfo(purchaseOrderId);
 
     return ApiResponseHelper.success({
-      shareInfo,
+      shareInfo: shareInfo ? {
+        ...shareInfo,
+        expiresAt: shareInfo.expiresAt.toISOString(), // 确保日期格式正确
+      } : null,
       orderNumber: purchaseOrder.orderNumber,
       hasActiveShare: !!shareInfo,
     });
@@ -86,7 +89,10 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     const shareText = SupplyShareManager.generateShareText(shareInfo, purchaseOrder.orderNumber);
 
     return ApiResponseHelper.success({
-      shareInfo,
+      shareInfo: {
+        ...shareInfo,
+        expiresAt: shareInfo.expiresAt.toISOString(), // 确保日期格式正确
+      },
       shareText,
       orderNumber: purchaseOrder.orderNumber,
       message: '分享链接创建成功',

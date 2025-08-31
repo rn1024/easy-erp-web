@@ -10,7 +10,7 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
-import { verifyShareLinkApi } from '@/services/supply';
+import { verifyShareLinkApi, ShareLinkInfo } from '@/services/supply';
 import '../styles.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -35,7 +35,7 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
   const [form] = Form.useForm();
   const [extractCode, setExtractCode] = useState('');
   const [needsExtractCode, setNeedsExtractCode] = useState(false);
-  const [shareInfo, setShareInfo] = useState<any>(null);
+  const [shareInfo, setShareInfo] = useState<ShareLinkInfo | null>(null);
 
   const shareCode = params.shareCode;
   const presetExtractCode = searchParams.get('pwd') || searchParams.get('extractCode');
@@ -44,8 +44,8 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
   const { run: verify, loading } = useRequest(verifyShareLink, {
     manual: true,
     onSuccess: (response) => {
-      if (response?.data?.code === 0) {
-        const data = response.data.data;
+      if (response?.code === 0) {
+        const data = response.data;
         setShareInfo(data.shareInfo);
 
         // 保存用户token到localStorage，用于后续API调用
@@ -57,15 +57,26 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
 
         // 延迟跳转以显示成功消息
         setTimeout(() => {
-          const targetUrl = `/supply/${shareCode}/dashboard?extractCode=${extractCode || presetExtractCode}`;
+          const finalExtractCode = extractCode || presetExtractCode || '';
+          const targetUrl = `/supply/${shareCode}/dashboard${finalExtractCode ? `?extractCode=${finalExtractCode}` : ''}`;
           router.push(targetUrl);
         }, 1000);
       } else {
-        message.error(response?.data?.msg || '验证失败');
+        // 如果是无提取码验证失败，且错误信息提示需要提取码，则显示提取码输入框
+        if (!extractCode && !presetExtractCode && (response?.msg?.includes('提取码') || response?.msg?.includes('错误'))) {
+          setNeedsExtractCode(true);
+          message.error('请输入正确的提取码');
+        } else {
+          message.error(response?.msg || '验证失败');
+        }
       }
     },
     onError: (error: any) => {
-      if (error.message.includes('提取码')) {
+      // 如果是无提取码验证的网络错误，也尝试显示提取码输入框
+      if (!extractCode && !presetExtractCode) {
+        setNeedsExtractCode(true);
+        message.error('请输入正确的提取码');
+      } else if (error.message.includes('提取码')) {
         setNeedsExtractCode(true);
         message.error('请输入正确的提取码');
       } else {
@@ -77,12 +88,13 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
   // 检查是否需要显示提取码输入框
   useEffect(() => {
     if (shareCode && !presetExtractCode) {
-      // 没有预设提取码，显示提取码输入框
-      setNeedsExtractCode(true);
+      // 没有预设提取码，先尝试无提取码验证
+      verify(shareCode);
     } else if (shareCode && presetExtractCode) {
       // 有预设提取码，自动验证
       verify(shareCode, presetExtractCode);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareCode, presetExtractCode]);
 
   // 手动验证
@@ -201,6 +213,14 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
                         </Button>
                       </Form.Item>
                     </Form>
+                  )}
+
+                  {/* 无提取码验证中的状态 */}
+                  {!needsExtractCode && !shareInfo && loading && (
+                    <div className="text-center space-y-4">
+                      <Spin size="large" />
+                      <Paragraph className="text-gray-600">正在验证分享链接...</Paragraph>
+                    </div>
                   )}
 
                   {/* 验证成功状态 */}
