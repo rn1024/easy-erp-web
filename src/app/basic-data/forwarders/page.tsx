@@ -78,7 +78,7 @@ const ForwardersPage: React.FC = () => {
       manual: true,
       onSuccess: (response) => {
         if (response?.code === 0) {
-          message.success('货代删除成功');
+          message.success('删除成功');
           refresh();
         } else {
           message.error(response?.msg || '删除失败');

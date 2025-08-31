@@ -188,12 +188,12 @@ const SupplyDashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
   const { run: submitRecord, loading: submitLoading } = useRequest(submitSupplyRecord, {
     manual: true,
     onSuccess: (response: any) => {
-      if (response?.code === 0) {
+      if (response?.data?.code === 0) {
         message.success('供货记录提交成功！');
         // 可以选择刷新数据或跳转到成功页面
         window.location.reload();
       } else {
-        message.error(response?.msg || '提交失败');
+        message.error(response?.data?.msg || '提交失败');
       }
     },
     onError: (error: any) => {

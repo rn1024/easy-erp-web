@@ -132,7 +132,7 @@ const DeliveryRecordsPage: React.FC = () => {
     {
       manual: true,
       onSuccess: (response: any) => {
-        if (response?.code === 0) {
+        if (response?.data?.code === 0) {
           message.success(editingRecord ? '更新成功' : '创建成功');
           setIsModalVisible(false);
           setEditingRecord(null);
@@ -141,7 +141,7 @@ const DeliveryRecordsPage: React.FC = () => {
           setShipmentFile(undefined);
           refreshRecords();
         } else {
-          message.error(response?.msg || '操作失败');
+          message.error(response?.data?.msg || '操作失败');
         }
       },
       onError: (error) => {
@@ -154,11 +154,11 @@ const DeliveryRecordsPage: React.FC = () => {
   const { run: handleDelete } = useRequest(deleteShipmentRecordApi, {
     manual: true,
     onSuccess: (response: any) => {
-      if (response?.code === 0) {
+      if (response?.data?.code === 0) {
         message.success('删除成功');
         refreshRecords();
       } else {
-        message.error(response?.msg || '删除失败');
+        message.error(response?.data?.msg || '删除失败');
       }
     },
     onError: (error) => {

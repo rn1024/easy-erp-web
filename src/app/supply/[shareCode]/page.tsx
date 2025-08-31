@@ -44,8 +44,8 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
   const { run: verify, loading } = useRequest(verifyShareLink, {
     manual: true,
     onSuccess: (response) => {
-      if (response?.code === 0) {
-        const data = response.data;
+      if (response?.data?.code === 0) {
+        const data = response.data.data;
         setShareInfo(data.shareInfo);
 
         // 保存用户token到localStorage，用于后续API调用
@@ -61,7 +61,7 @@ const ShareVerifyPage: React.FC<VerifyPageProps> = ({ params }) => {
           router.push(targetUrl);
         }, 1000);
       } else {
-        message.error(response?.msg || '验证失败');
+        message.error(response?.data?.msg || '验证失败');
       }
     },
     onError: (error: any) => {

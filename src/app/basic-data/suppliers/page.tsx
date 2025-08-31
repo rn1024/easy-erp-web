@@ -61,13 +61,13 @@ const SuppliersPage: React.FC = () => {
   const { loading: deleting, run: deleteSupplier } = useRequest(deleteSupplierApi, {
     manual: true,
     onSuccess: (response) => {
-      if (response?.data?.code === 0) {
-        message.success('删除供应商成功');
-        refresh();
-      } else {
-        message.error(response?.data?.msg || '删除供应商失败');
-      }
-    },
+          if (response?.data?.code === 0) {
+            message.success('删除成功');
+            refresh();
+          } else {
+            message.error(response?.data?.msg || '删除失败');
+          }
+        },
     onError: (error) => {
       console.error('删除供应商失败:', error);
       message.error('删除供应商失败');

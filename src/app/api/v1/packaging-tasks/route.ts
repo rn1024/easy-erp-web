@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
           },
           orderBy: { createdAt: 'asc' },
         });
-        
+
         return {
           ...task,
           items: productItems,

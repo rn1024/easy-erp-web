@@ -45,13 +45,13 @@ const ShopsPage: React.FC = () => {
   const { run: handleDelete } = useRequest(deleteShop, {
     manual: true,
     onSuccess: (response) => {
-      if (response?.data?.code === 0) {
-        message.success('店铺删除成功');
-        refresh();
-      } else {
-        message.error(response?.data?.msg || '删除失败');
-      }
-    },
+          if (response?.data?.code === 0) {
+            message.success('删除成功');
+            refresh();
+          } else {
+            message.error(response?.data?.msg || '删除失败');
+          }
+        },
     onError: (error: any) => {
       message.error(error.response?.data?.msg || '删除失败');
     },

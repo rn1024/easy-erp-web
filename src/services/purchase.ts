@@ -7,6 +7,7 @@ import type { ResType } from '@/types/api';
 export enum PurchaseOrderStatus {
   CREATED = 'CREATED',
   PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
   CONFIRMED = 'CONFIRMED',
   PRODUCTION = 'PRODUCTION',
   SHIPPED = 'SHIPPED',
@@ -176,7 +177,8 @@ export const deletePurchaseOrderApi = (id: string) => {
 // 采购订单状态选项
 export const purchaseOrderStatusOptions = [
   { label: '已创建', value: PurchaseOrderStatus.CREATED, color: 'default' },
-  { label: '待处理', value: PurchaseOrderStatus.PENDING, color: 'orange' },
+  { label: '待审批', value: PurchaseOrderStatus.PENDING, color: 'orange' },
+  { label: '已审批', value: PurchaseOrderStatus.APPROVED, color: 'green' },
   { label: '已确认', value: PurchaseOrderStatus.CONFIRMED, color: 'blue' },
   { label: '生产中', value: PurchaseOrderStatus.PRODUCTION, color: 'purple' },
   { label: '已发货', value: PurchaseOrderStatus.SHIPPED, color: 'cyan' },

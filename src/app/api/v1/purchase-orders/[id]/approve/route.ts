@@ -39,7 +39,8 @@ const approveHandler = async (
     // 根据 Prisma schema 中的 PurchaseOrderStatus 枚举定义
     const validTransitions: Record<string, string[]> = {
       CREATED: ['PENDING', 'CANCELLED'],
-      PENDING: ['CONFIRMED', 'CANCELLED'],
+      PENDING: ['APPROVED', 'CANCELLED'],
+      APPROVED: ['CONFIRMED', 'CANCELLED'],
       CONFIRMED: ['PRODUCTION', 'CANCELLED'],
       PRODUCTION: ['SHIPPED', 'CANCELLED'],
       SHIPPED: ['RECEIVED', 'CANCELLED'],

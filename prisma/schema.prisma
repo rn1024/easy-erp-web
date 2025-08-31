@@ -611,6 +611,7 @@ enum EntityType {
 enum PurchaseOrderStatus {
   CREATED
   PENDING
+  APPROVED
   CONFIRMED
   PRODUCTION
   SHIPPED
