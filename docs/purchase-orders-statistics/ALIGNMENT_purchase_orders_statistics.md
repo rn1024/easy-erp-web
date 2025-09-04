@@ -3,9 +3,9 @@
 ## 项目上下文分析
 
 ### 现有项目结构
-- **技术栈**: Next.js 14 + React 18 + TypeScript + Prisma + Supabase
+- **技术栈**: Next.js 14 + React 18 + TypeScript + Prisma + MySQL
 - **架构模式**: App Router + API Routes + RESTful API
-- **数据库**: PostgreSQL (Supabase)
+- **数据库**: MySQL
 - **ORM**: Prisma
 
 ### 现有代码模式

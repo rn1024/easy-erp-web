@@ -3,9 +3,9 @@
 ## 项目上下文分析
 
 ### 现有项目结构
-- **技术栈**: Next.js 14 + React 18 + TypeScript + Prisma + Supabase
+- **技术栈**: Next.js 14 + React 18 + TypeScript + Prisma + MySQL
 - **架构模式**: App Router + API Routes + 服务层分离
-- **数据库**: PostgreSQL (Supabase)
+- **数据库**: MySQL
 - **状态管理**: React Hooks + ahooks
 - **UI组件**: Ant Design + ProComponents
 

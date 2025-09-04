@@ -11,7 +11,7 @@ graph TB
     B --> D[ProductItem聚合查询]
     C --> E[Prisma ORM]
     D --> E
-    E --> F[PostgreSQL数据库]
+    E --> F[MySQL数据库]
     
     B --> G[Progress计算逻辑]
     G --> H[calculatePackagingTaskProgress]
@@ -97,12 +97,11 @@ const tasks = await prisma.packagingTask.findMany({
 ### 4. 数据持久层 (Data Persistence Layer)
 ```sql
 -- 建议添加的索引
-CREATE INDEX idx_product_items_packaging_task 
-ON "ProductItem" ("relatedId") 
-WHERE "relatedType" = 'PACKAGING_TASK';
+CREATE INDEX `idx_product_items_packaging_task` 
+ON `product_items` (`relatedId`, `relatedType`);
 
-CREATE INDEX idx_packaging_task_status 
-ON "PackagingTask" ("status", "createdAt");
+CREATE INDEX `idx_packaging_task_status` 
+ON `packaging_tasks` (`status`, `createdAt`);
 ```
 
 ## 模块依赖关系图
@@ -116,7 +115,7 @@ graph LR
     C --> F[数学计算工具]
     
     subgraph "外部依赖"
-        G[PostgreSQL]
+        G[MySQL]
         H[Next.js Runtime]
     end
     
@@ -180,7 +179,7 @@ sequenceDiagram
     participant F as 前端ProTable
     participant A as API Route
     participant P as Prisma ORM
-    participant D as PostgreSQL
+    participant D as MySQL
     participant C as 计算服务
     
     F->>A: GET /api/v1/packaging-tasks?page=1&pageSize=10

@@ -214,7 +214,7 @@ node scripts/optimize-database.js
 
 1. **环境要求**: 确保开发服务器运行在 `http://localhost:3000`
 2. **测试数据**: 需要存在用户名为 `admin`，密码为 `admin123456` 的测试账户
-3. **数据库**: 确保MySQL/PostgreSQL服务正常运行
+3. **数据库**: 确保MySQL服务正常运行
 4. **依赖**: 所有脚本使用Node.js原生模块，无需额外安装依赖
 
 ## 🔧 故障排除

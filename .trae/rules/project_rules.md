@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-Easy ERP 是一个基于 Next.js 14 + React 18 + TypeScript + Prisma + Supabase 的现代化企业资源规划系统，专注于提供高效、可扩展的业务管理解决方案。
+Easy ERP 是一个基于 Next.js 14 + React 18 + TypeScript + Prisma + MySQL 的现代化企业资源规划系统，专注于提供高效、可扩展的业务管理解决方案。
 
 ## 核心理念
 
@@ -151,7 +151,7 @@ Easy ERP 是一个基于 Next.js 14 + React 18 + TypeScript + Prisma + Supabase 
 
 - **生产服务器**: root@121.41.237.2
 - 部署方式: PM2 + Standalone 模式
-- 数据库: Supabase PostgreSQL
+- 数据库: MySQL
 
 ## 项目规范
 
@@ -641,7 +641,7 @@ interface TableProps<T> {
 ```bash
 # 环境变量配置
 NODE_ENV=production
-DATABASE_URL=postgresql://...
+DATABASE_URL=mysql://...
 REDIS_URL=redis://...
 JWT_SECRET=...
 UPLOAD_PATH=/app/uploads

@@ -29,7 +29,7 @@ graph LR
 sequenceDiagram
     participant UI as 产品列表页面
     participant API as getProductsApi
-    participant DB as Supabase DB
+    participant DB as MySQL DB
     
     UI->>API: 请求产品列表
     API->>DB: 查询产品信息(包含costs)

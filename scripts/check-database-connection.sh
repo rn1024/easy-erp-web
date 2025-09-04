@@ -59,16 +59,13 @@ validate_database_url() {
         return 1
     fi
     
-    # 验证URL格式 - 支持PostgreSQL和MySQL
-    if [[ $DATABASE_URL =~ ^postgresql://.*@.*:.*/.*$ ]]; then
-        DB_TYPE="postgresql"
-        log "✅ 检测到PostgreSQL数据库"
-    elif [[ $DATABASE_URL =~ ^mysql://.*@.*:.*/.*$ ]]; then
+    # 验证URL格式 - 仅支持MySQL
+    if [[ $DATABASE_URL =~ ^mysql://.*@.*:.*/.*$ ]]; then
         DB_TYPE="mysql"
         log "✅ 检测到MySQL数据库"
     else
         error "DATABASE_URL格式不正确: $DATABASE_URL"
-        error "支持格式: postgresql://username:password@host:port/database 或 mysql://username:password@host:port/database"
+        error "支持格式: mysql://username:password@host:port/database"
         return 1
     fi
     
@@ -80,24 +77,12 @@ validate_database_url() {
 parse_database_url() {
     log "解析数据库连接信息..."
     
-    if [ "$DB_TYPE" = "postgresql" ]; then
-        # PostgreSQL URL解析
-        DB_USER=$(echo "$DATABASE_URL" | sed -n 's|postgresql://\([^:]*\):.*|\1|p')
-        DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^:]*:\([^@]*\)@.*|\1|p')
-        DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^@]*@\([^:]*\):.*|\1|p')
-        DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^@]*@[^:]*:\([^/]*\)/.*|\1|p')
-        DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^/]*/\([^?]*\)|\1|p')
-    elif [ "$DB_TYPE" = "mysql" ]; then
-        # MySQL URL解析
-        DB_USER=$(echo "$DATABASE_URL" | sed -n 's|mysql://\([^:]*\):.*|\1|p')
-        DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|mysql://[^:]*:\([^@]*\)@.*|\1|p')
-        DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|mysql://[^@]*@\([^:]*\):.*|\1|p')
-        DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|mysql://[^@]*@[^:]*:\([^/]*\)/.*|\1|p')
-        DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|mysql://[^/]*/\([^?]*\)|\1|p')
-    else
-        error "不支持的数据库类型: $DB_TYPE"
-        return 1
-    fi
+    # MySQL URL解析
+    DB_USER=$(echo "$DATABASE_URL" | sed -n 's|mysql://\([^:]*\):.*|\1|p')
+    DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|mysql://[^:]*:\([^@]*\)@.*|\1|p')
+    DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|mysql://[^@]*@\([^:]*\):.*|\1|p')
+    DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|mysql://[^@]*@[^:]*:\([^/]*\)/.*|\1|p')
+    DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|mysql://[^/]*/\([^?]*\)|\1|p')
     
     info "数据库连接信息:"
     info "  类型: $DB_TYPE"
@@ -120,53 +105,23 @@ parse_database_url() {
 test_database_connection() {
     log "测试数据库客户端连接..."
     
-    if [ "$DB_TYPE" = "postgresql" ]; then
-        # 测试PostgreSQL连接
-        if ! command -v psql >/dev/null 2>&1; then
-            warn "PostgreSQL客户端未安装，跳过PostgreSQL连接测试"
-            return 0
-        fi
-        
-        # 设置PostgreSQL密码环境变量
-        export PGPASSWORD="$DB_PASS"
-        
-        # 测试连接（设置15秒超时）
-        if timeout 15 psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1 as connection_test;" >/dev/null 2>&1; then
-            log "✅ PostgreSQL客户端连接测试成功"
-            unset PGPASSWORD
-            return 0
-        else
-            local exit_code=$?
-            unset PGPASSWORD
-            if [ $exit_code -eq 124 ]; then
-                error "❌ PostgreSQL客户端连接测试超时（15秒）"
-            else
-                error "❌ PostgreSQL客户端连接测试失败"
-            fi
-        fi
-        
-    elif [ "$DB_TYPE" = "mysql" ]; then
-        # 测试MySQL连接
-        if ! command -v mysql >/dev/null 2>&1; then
-            warn "MySQL客户端未安装，跳过MySQL连接测试"
-            return 0
-        fi
-        
-        # 测试连接（设置15秒超时）
-        if timeout 15 mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "SELECT 1 as connection_test;" "$DB_NAME" >/dev/null 2>&1; then
-            log "✅ MySQL客户端连接测试成功"
-            return 0
-        else
-            local exit_code=$?
-            if [ $exit_code -eq 124 ]; then
-                error "❌ MySQL客户端连接测试超时（15秒）"
-            else
-                error "❌ MySQL客户端连接测试失败"
-            fi
-        fi
+    # 测试MySQL连接
+    if ! command -v mysql >/dev/null 2>&1; then
+        warn "MySQL客户端未安装，跳过MySQL连接测试"
+        return 0
+    fi
+    
+    # 测试连接（设置15秒超时）
+    if timeout 15 mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "SELECT 1 as connection_test;" "$DB_NAME" >/dev/null 2>&1; then
+        log "✅ MySQL客户端连接测试成功"
+        return 0
     else
-        error "不支持的数据库类型: $DB_TYPE"
-        return 1
+        local exit_code=$?
+        if [ $exit_code -eq 124 ]; then
+            error "❌ MySQL客户端连接测试超时（15秒）"
+        else
+            error "❌ MySQL客户端连接测试失败"
+        fi
     fi
     
     # 提供诊断信息
@@ -250,26 +205,14 @@ EOF
 check_database_service() {
     log "检查数据库服务状态..."
     
-    if [ "$DB_TYPE" = "postgresql" ]; then
-        # 检查PostgreSQL服务状态
-        if systemctl is-active --quiet postgresql 2>/dev/null; then
-            log "✅ PostgreSQL服务正在运行 (systemctl)"
-        elif service postgresql status >/dev/null 2>&1; then
-            log "✅ PostgreSQL服务正在运行 (service)"
-        else
-            warn "⚠️  无法确定PostgreSQL服务状态（可能是远程数据库）"
-            info "如果使用Supabase等云数据库，这是正常的"
-        fi
-    elif [ "$DB_TYPE" = "mysql" ]; then
-        # 检查MySQL服务状态
-        if systemctl is-active --quiet mysql 2>/dev/null; then
-            log "✅ MySQL服务正在运行 (systemctl)"
-        elif service mysql status >/dev/null 2>&1; then
-            log "✅ MySQL服务正在运行 (service)"
-        else
-            warn "⚠️  无法确定MySQL服务状态"
-            info "请手动检查数据库服务是否运行"
-        fi
+    # 检查MySQL服务状态
+    if systemctl is-active --quiet mysql 2>/dev/null; then
+        log "✅ MySQL服务正在运行 (systemctl)"
+    elif service mysql status >/dev/null 2>&1; then
+        log "✅ MySQL服务正在运行 (service)"
+    else
+        warn "⚠️  无法确定MySQL服务状态"
+        info "请手动检查数据库服务是否运行"
     fi
     
     # 检查端口监听

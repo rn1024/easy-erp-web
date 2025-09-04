@@ -18,27 +18,9 @@ if [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 
-# 提取数据库连接信息 - 支持PostgreSQL和MySQL（包含查询参数）
+# 提取数据库连接信息 - 仅支持MySQL（包含查询参数）
 # 使用更安全的方式解析URL，支持密码中包含特殊字符
-if [[ $DATABASE_URL =~ ^postgresql:// ]]; then
-    # PostgreSQL格式
-    DB_TYPE="postgresql"
-    # 移除协议前缀
-    url_without_protocol="${DATABASE_URL#postgresql://}"
-    # 提取用户名和密码部分（在最后一个@之前）
-    credentials_and_rest="$url_without_protocol"
-    # 找到最后一个@的位置，分离认证信息和主机信息
-    host_part="${credentials_and_rest##*@}"
-    credentials_part="${credentials_and_rest%@*}"
-    # 解析用户名和密码
-    DB_USER="${credentials_part%%:*}"
-    DB_PASS="${credentials_part#*:}"
-    # 解析主机、端口和数据库
-    DB_HOST="${host_part%%:*}"
-    port_and_db="${host_part#*:}"
-    DB_PORT="${port_and_db%%/*}"
-    DB_NAME="${port_and_db#*/}"
-elif [[ $DATABASE_URL =~ ^mysql:// ]]; then
+if [[ $DATABASE_URL =~ ^mysql:// ]]; then
     # MySQL格式
     DB_TYPE="mysql"
     # 移除协议前缀
@@ -58,7 +40,7 @@ elif [[ $DATABASE_URL =~ ^mysql:// ]]; then
     DB_NAME="${port_and_db#*/}"
 else
     echo "❌ 无法解析DATABASE_URL格式: $DATABASE_URL"
-    echo "❌ 支持格式: postgresql://user:password@host:port/database 或 mysql://user:password@host:port/database"
+    echo "❌ 支持格式: mysql://user:password@host:port/database"
     echo "❌ 注意：支持包含查询参数的URL格式（如 ?sslmode=require）"
     echo "❌ 当前URL格式: $(echo $DATABASE_URL | sed 's/:.*@/:***@/g')"
     exit 1
@@ -78,31 +60,15 @@ echo "📁 备份文件: $BACKUP_FILE"
 
 # 1. 备份完整数据库
 echo "💾 创建完整数据库备份..."
-if [ "$DB_TYPE" = "postgresql" ]; then
-    # PostgreSQL备份
-    export PGPASSWORD="$DB_PASS"
-    pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
-        --verbose \
-        --no-password \
-        --format=plain \
-        --no-owner \
-        --no-privileges > "$BACKUP_FILE"
-    backup_result=$?
-    unset PGPASSWORD
-elif [ "$DB_TYPE" = "mysql" ]; then
-    # MySQL备份
-    mysqldump -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" \
-        --single-transaction \
-        --routines \
-        --triggers \
-        --events \
-        --add-drop-table \
-        "$DB_NAME" > "$BACKUP_FILE"
-    backup_result=$?
-else
-    echo "❌ 不支持的数据库类型: $DB_TYPE"
-    exit 1
-fi
+# MySQL备份
+mysqldump -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" \
+    --single-transaction \
+    --routines \
+    --triggers \
+    --events \
+    --add-drop-table \
+    "$DB_NAME" > "$BACKUP_FILE"
+backup_result=$?
 
 if [ $backup_result -eq 0 ]; then
     echo "✅ 数据库备份完成: $BACKUP_FILE"
@@ -113,28 +79,14 @@ fi
 
 # 2. 备份仅结构（用于快速对比）
 echo "🏗️  创建数据库结构备份..."
-if [ "$DB_TYPE" = "postgresql" ]; then
-    # PostgreSQL结构备份
-    export PGPASSWORD="$DB_PASS"
-    pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
-        --schema-only \
-        --verbose \
-        --no-password \
-        --format=plain \
-        --no-owner \
-        --no-privileges > "$SCHEMA_FILE"
-    schema_result=$?
-    unset PGPASSWORD
-elif [ "$DB_TYPE" = "mysql" ]; then
-    # MySQL结构备份
-    mysqldump -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" \
-        --no-data \
-        --routines \
-        --triggers \
-        --events \
-        "$DB_NAME" > "$SCHEMA_FILE"
-    schema_result=$?
-fi
+# MySQL结构备份
+mysqldump -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" \
+    --no-data \
+    --routines \
+    --triggers \
+    --events \
+    "$DB_NAME" > "$SCHEMA_FILE"
+schema_result=$?
 
 if [ $schema_result -eq 0 ]; then
     echo "✅ 数据库结构备份完成: $SCHEMA_FILE"

@@ -7,7 +7,7 @@
 - **状态管理**: React Hooks
 - **数据获取**: Axios + SWR
 - **样式**: TailwindCSS + Ant Design
-- **后端**: Next.js API Routes + Prisma + Supabase PostgreSQL
+- **后端**: Next.js API Routes + Prisma + MySQL
 
 ### 现有架构模式
 - 采用 App Router 架构
