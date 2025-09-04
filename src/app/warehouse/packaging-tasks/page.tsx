@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRequest } from 'ahooks';
-import { Button, Form, Select, Space, Tag, Progress, Popconfirm, message, Flex } from 'antd';
+import { Button, Form, Select, Space, Tag, Progress, Popconfirm, message, Flex, Avatar } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
   PlusOutlined,
@@ -10,6 +10,7 @@ import {
   DeleteOutlined,
   SearchOutlined,
   ReloadOutlined,
+  ProductOutlined,
 } from '@ant-design/icons';
 
 /**
@@ -207,24 +208,61 @@ const PackagingTasksPage: React.FC = () => {
     {
       title: '产品明细',
       dataIndex: 'items',
-      width: 200,
+      width: 300,
       render: (_, record) => {
-        if (!record.items || record.items.length === 0) {
-          return <span style={{ color: '#999' }}>暂无产品</span>;
+        const items = record.items || [];
+        
+        if (items.length === 0) {
+          return <span style={{ color: '#ccc' }}>暂无产品</span>;
         }
+        
         return (
-          <div>
-            {record.items.slice(0, 2).map((item: any, index: number) => (
-              <div key={index} style={{ fontSize: '12px', lineHeight: '16px' }}>
-                <span style={{ fontWeight: 500 }}>{item.product?.name || '未知产品'}</span>
-                <span style={{ color: '#666', marginLeft: 4 }}>×{item.quantity}</span>
+          <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+            {items.map((item: any, index: number) => (
+              <div key={index} style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                marginBottom: index < items.length - 1 ? '8px' : '0',
+                padding: '4px 0',
+                borderBottom: index < items.length - 1 ? '1px solid #f0f0f0' : 'none'
+              }}>
+                <Avatar
+                  src={item?.product?.imageUrl}
+                  icon={<ProductOutlined />}
+                  size="small"
+                  style={{ marginRight: 8, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ 
+                    fontWeight: 'bold', 
+                    fontSize: '13px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {item?.product?.name || item?.product?.code || '产品未命名'}
+                  </div>
+                  <div style={{ 
+                    color: '#666', 
+                    fontSize: '11px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    SKU: {item?.product?.sku || '无'}
+                  </div>
+                </div>
+                <div style={{ 
+                  marginLeft: '8px',
+                  fontWeight: 'bold',
+                  color: '#1890ff',
+                  fontSize: '12px',
+                  flexShrink: 0
+                }}>
+                  ×{item?.quantity || 0}
+                </div>
               </div>
             ))}
-            {record.items.length > 2 && (
-              <div style={{ fontSize: '12px', color: '#999' }}>
-                等{record.items.length}个产品
-              </div>
-            )}
           </div>
         );
       },

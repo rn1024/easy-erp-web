@@ -313,13 +313,16 @@ const PurchaseOrdersPage: React.FC = () => {
         return (
           <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
             {items.map((item: any, index: number) => (
-              <div key={index} style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                marginBottom: index < items.length - 1 ? '8px' : '0',
-                padding: '4px 0',
-                borderBottom: index < items.length - 1 ? '1px solid #f0f0f0' : 'none'
-              }}>
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: index < items.length - 1 ? '8px' : '0',
+                  padding: '4px 0',
+                  borderBottom: index < items.length - 1 ? '1px solid #f0f0f0' : 'none',
+                }}
+              >
                 <Avatar
                   src={item?.product?.imageUrl}
                   icon={<ProductOutlined />}
@@ -327,32 +330,38 @@ const PurchaseOrdersPage: React.FC = () => {
                   style={{ marginRight: 8, flexShrink: 0 }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '13px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <div
+                    style={{
+                      fontWeight: 'bold',
+                      fontSize: '13px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {item?.product?.name || item?.product?.code || '产品未命名'}
                   </div>
-                  <div style={{ 
-                    color: '#666', 
-                    fontSize: '11px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <div
+                    style={{
+                      color: '#666',
+                      fontSize: '11px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     SKU: {item?.product?.sku || '无'}
                   </div>
                 </div>
-                <div style={{ 
-                  marginLeft: '8px',
-                  fontWeight: 'bold',
-                  color: '#1890ff',
-                  fontSize: '12px',
-                  flexShrink: 0
-                }}>
+                <div
+                  style={{
+                    marginLeft: '8px',
+                    fontWeight: 'bold',
+                    color: '#1890ff',
+                    fontSize: '12px',
+                    flexShrink: 0,
+                  }}
+                >
                   ×{item?.quantity || 0}
                 </div>
               </div>
@@ -399,7 +408,7 @@ const PurchaseOrdersPage: React.FC = () => {
           onClick={() => handleSupplyRecords(record)}
           style={{ padding: 0 }}
         >
-          <span style={{ color: '#1890ff' }}>共?条</span>
+          <span style={{ color: '#1890ff' }}>共{record.items.length ?? 0}条</span>
         </Button>
       ),
     },
@@ -452,14 +461,16 @@ const PurchaseOrdersPage: React.FC = () => {
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="编辑">
-              <Button
-                type="link"
-                icon={<EditOutlined />}
-                onClick={() => handleEdit(record)}
-                size="small"
-                disabled={['APPROVED', 'CONFIRMED', 'PRODUCTION', 'SHIPPED', 'RECEIVED'].includes(record.status)}
-              />
-            </Tooltip>
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              size="small"
+              disabled={['APPROVED', 'CONFIRMED', 'PRODUCTION', 'SHIPPED', 'RECEIVED'].includes(
+                record.status
+              )}
+            />
+          </Tooltip>
           <Tooltip title="分享给供应商">
             <Button
               type="link"
@@ -484,7 +495,7 @@ const PurchaseOrdersPage: React.FC = () => {
                 type="link"
                 onClick={() => handleApproval(record)}
                 size="small"
-                disabled={!['CREATED', 'PENDING', 'REJECTED'].includes(record.status)}
+                disabled={!['CREATED', 'REJECTED'].includes(record.status)}
               >
                 审批
               </Button>
@@ -502,7 +513,7 @@ const PurchaseOrdersPage: React.FC = () => {
                 danger
                 icon={<DeleteOutlined />}
                 size="small"
-                disabled={!['PENDING', 'CANCELLED'].includes(record.status)}
+                disabled={!['CREATED', 'REJECTED', 'CANCELLED'].includes(record.status)}
               />
             </Popconfirm>
           </Tooltip>

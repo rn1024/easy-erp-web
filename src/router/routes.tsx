@@ -138,12 +138,12 @@ const routes: MenuDataItem[] = [
   },
 
   /* 文件管理 */
-  {
-    icon: <CloudUploadOutlined />,
-    name: 'Files',
-    path: '/files',
-    key: '/files',
-  },
+  // {
+  //   icon: <CloudUploadOutlined />,
+  //   name: 'Files',
+  //   path: '/files',
+  //   key: '/files',
+  // },
 
   /* 系统管理 */
   {

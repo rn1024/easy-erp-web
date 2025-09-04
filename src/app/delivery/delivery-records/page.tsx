@@ -17,6 +17,7 @@ import {
   Descriptions,
   Flex,
   Alert,
+  Avatar,
 } from 'antd';
 import { ProCard, ProTable } from '@ant-design/pro-components';
 import {
@@ -26,6 +27,7 @@ import {
   SearchOutlined,
   ReloadOutlined,
   EyeOutlined,
+  ProductOutlined,
 } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import type { ProTableProps, ProColumns } from '@ant-design/pro-components';
@@ -280,24 +282,64 @@ const DeliveryRecordsPage: React.FC = () => {
     },
     {
       title: '产品概览',
-      width: 250,
-      render: (_, record) => (
-        <div>
-          {record.shipmentProducts?.slice(0, 2).map((product, index) => (
-            <div key={index} style={{ fontSize: '12px', marginBottom: '4px' }}>
-              <span style={{ fontWeight: 500 }}>{product.product?.code}</span>
-              <span style={{ color: '#666', marginLeft: '8px' }}>
-                {product.forwarder?.nickname || '无货代'} - {product.totalBoxes}箱
-              </span>
-            </div>
-          ))}
-          {(record.shipmentProducts?.length || 0) > 2 && (
-            <div style={{ fontSize: '12px', color: '#1890ff' }}>
-              +{(record.shipmentProducts?.length || 0) - 2} 个产品
-            </div>
-          )}
-        </div>
-      ),
+      width: 300,
+      render: (_, record) => {
+        const items = record.shipmentProducts || [];
+
+        if (items.length === 0) {
+          return <span style={{ color: '#ccc' }}>暂无产品</span>;
+        }
+
+        return (
+          <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+            {items.map((item: any, index: number) => (
+              <div key={index} style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                marginBottom: index < items.length - 1 ? '8px' : '0',
+                padding: '4px 0',
+                borderBottom: index < items.length - 1 ? '1px solid #f0f0f0' : 'none'
+              }}>
+                <Avatar
+                  src={item?.product?.imageUrl}
+                  icon={<ProductOutlined />}
+                  size="small"
+                  style={{ marginRight: 8, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ 
+                    fontWeight: 'bold', 
+                    fontSize: '13px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {item?.product?.name || item?.product?.code || '产品未命名'}
+                  </div>
+                  <div style={{ 
+                    color: '#666', 
+                    fontSize: '11px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {item?.forwarder?.nickname || '无货代'} | SKU: {item?.product?.sku || '无'}
+                  </div>
+                </div>
+                <div style={{ 
+                  marginLeft: '8px',
+                  fontWeight: 'bold',
+                  color: '#1890ff',
+                  fontSize: '12px',
+                  flexShrink: 0
+                }}>
+                  ×{item?.totalBoxes || 0}箱
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      },
     },
     {
       title: '国家/渠道',

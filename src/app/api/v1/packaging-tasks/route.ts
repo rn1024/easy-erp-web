@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { PackagingTaskStatus, PackagingTaskType } from '@/services/packaging';
-import { ProductItemRelatedType } from '@/services/product-items';
+import { ProductItemRelatedType, ProductItemInfo, calculatePackagingTaskProgress } from '@/services/product-items';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,39 +52,81 @@ export async function GET(request: NextRequest) {
       take: pageSize,
     });
 
-    // 为每个任务查询关联的产品明细
-    const tasksWithItems = await Promise.all(
-      tasks.map(async (task) => {
-        const productItems = await prisma.productItem.findMany({
-          where: {
-            relatedType: ProductItemRelatedType.PACKAGING_TASK,
-            relatedId: task.id,
+    // 批量查询所有任务的产品明细，避免N+1查询问题
+    const taskIds = tasks.map(task => task.id);
+    const allProductItems = await prisma.productItem.findMany({
+      where: {
+        relatedType: ProductItemRelatedType.PACKAGING_TASK,
+        relatedId: { in: taskIds },
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
           },
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-              },
-            },
-          },
-          orderBy: { createdAt: 'asc' },
-        });
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
 
-        return {
-          ...task,
-          items: productItems,
-        };
-      })
-    );
+    // 按任务ID分组产品明细
+    const productItemsByTaskId = allProductItems.reduce((acc, item) => {
+      if (!acc[item.relatedId]) {
+        acc[item.relatedId] = [];
+      }
+      acc[item.relatedId].push(item);
+      return acc;
+    }, {} as Record<string, typeof allProductItems>);
+
+    // 为每个任务计算实时进度并格式化数据
+    const tasksWithProgress = tasks.map((task) => {
+      const taskItems = productItemsByTaskId[task.id] || [];
+      
+      // 转换为ProductItemInfo格式以匹配calculatePackagingTaskProgress函数的参数类型
+       const formattedItems: ProductItemInfo[] = taskItems.map(item => ({
+         id: item.id,
+         relatedType: item.relatedType as ProductItemRelatedType,
+         relatedId: item.relatedId,
+         productId: item.productId,
+         quantity: item.quantity,
+         unitPrice: item.unitPrice ? Number(item.unitPrice) : undefined,
+         amount: item.amount ? Number(item.amount) : undefined,
+         taxRate: item.taxRate ? Number(item.taxRate) : undefined,
+         taxAmount: item.taxAmount ? Number(item.taxAmount) : undefined,
+         totalAmount: item.totalAmount ? Number(item.totalAmount) : undefined,
+         completedQuantity: item.completedQuantity || undefined,
+         remark: item.remark || undefined,
+         createdAt: item.createdAt.toISOString(),
+         updatedAt: item.updatedAt.toISOString(),
+         product: item.product ? {
+           id: item.product.id,
+           code: item.product.sku || '',
+           sku: item.product.sku || '',
+           specification: undefined,
+           color: undefined,
+         } : undefined,
+       }));
+      
+      // 实时计算progress
+      const calculatedProgress = calculatePackagingTaskProgress(formattedItems);
+      
+      return {
+        ...task,
+        // 使用实时计算的progress值覆盖数据库中的值
+        progress: calculatedProgress,
+        // 添加items字段以保持API兼容性
+        items: taskItems,
+      };
+    });
 
     const totalPages = Math.ceil(total / pageSize);
 
     return NextResponse.json({
       code: 0,
       data: {
-        list: tasksWithItems,
+        list: tasksWithProgress,
         meta: {
           total,
           page,

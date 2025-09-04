@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { PurchaseOrderStatisticsCalculator } from '@/lib/purchase-order-statistics-calculator';
 
 // 生成采购订单号：CGDD+时间+序号（6位）
 async function generateOrderNumber(): Promise<string> {
@@ -57,6 +58,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const urgent = searchParams.get('urgent');
     const operatorId = searchParams.get('operatorId');
+    const orderNumber = searchParams.get('orderNumber');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
@@ -194,6 +196,21 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // 计算统计数据
+    const statisticsCalculator = new PurchaseOrderStatisticsCalculator(prisma);
+    
+    // 构建统计筛选条件
+    const statisticsFilters: any = {};
+    if (shopId) statisticsFilters.shopId = shopId;
+    if (supplierId) statisticsFilters.supplierId = supplierId;
+    if (status) statisticsFilters.status = status;
+    if (operatorId) statisticsFilters.operatorId = operatorId;
+    if (orderNumber) statisticsFilters.orderNumber = orderNumber;
+    if (startDate) statisticsFilters.createdAtStart = new Date(startDate);
+    if (endDate) statisticsFilters.createdAtEnd = new Date(endDate);
+    
+    const statistics = await statisticsCalculator.calculateStatistics(statisticsFilters);
+
     return NextResponse.json({
       code: 0,
       msg: '获取成功',
@@ -205,6 +222,7 @@ export async function GET(request: NextRequest) {
           total,
           totalPages: Math.ceil(total / pageSize),
         },
+        statistics,
       },
     });
   } catch (error) {

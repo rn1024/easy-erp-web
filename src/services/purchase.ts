@@ -6,7 +6,7 @@ import type { ResType } from '@/types/api';
 // 采购订单状态枚举
 export enum PurchaseOrderStatus {
   CREATED = 'CREATED',
-  PENDING = 'PENDING',
+  REJECTED = 'REJECTED',
   APPROVED = 'APPROVED',
   CONFIRMED = 'CONFIRMED',
   PRODUCTION = 'PRODUCTION',
@@ -176,14 +176,14 @@ export const deletePurchaseOrderApi = (id: string) => {
 
 // 采购订单状态选项
 export const purchaseOrderStatusOptions = [
-  { label: '已创建', value: PurchaseOrderStatus.CREATED, color: 'default' },
-  { label: '待审批', value: PurchaseOrderStatus.PENDING, color: 'orange' },
+  { label: '待审批', value: PurchaseOrderStatus.CREATED, color: 'orange' },
+  { label: '已驳回', value: PurchaseOrderStatus.REJECTED, color: 'red' },
   { label: '已审批', value: PurchaseOrderStatus.APPROVED, color: 'green' },
   { label: '已确认', value: PurchaseOrderStatus.CONFIRMED, color: 'blue' },
   { label: '生产中', value: PurchaseOrderStatus.PRODUCTION, color: 'purple' },
   { label: '已发货', value: PurchaseOrderStatus.SHIPPED, color: 'cyan' },
   { label: '已收货', value: PurchaseOrderStatus.RECEIVED, color: 'green' },
-  { label: '已取消', value: PurchaseOrderStatus.CANCELLED, color: 'red' },
+  { label: '已取消', value: PurchaseOrderStatus.CANCELLED, color: 'gray' },
 ];
 
 // 获取状态标签

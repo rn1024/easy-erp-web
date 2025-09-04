@@ -17,6 +17,7 @@ import { UploadOutlined } from '@ant-design/icons';
 import ProductImageUploader from '@/components/product-image-uploader';
 import AccessoryImageUploader from '@/components/accessory-image-uploader';
 import ProductCostManager from '@/components/ProductCostManager';
+import { PACKAGE_TYPE_OPTIONS } from '../../constants/package-type';
 
 /**
  * APIs
@@ -347,11 +348,11 @@ const ProductFormModal: React.FC<Props> = ({ open, entity, closeModal, categorie
             <Col span={8}>
               <Form.Item name="packageType" label="包装类型">
                 <Select placeholder="选择包装类型">
-                  <Option value="box">盒装</Option>
-                  <Option value="bag">袋装</Option>
-                  <Option value="bottle">瓶装</Option>
-                  <Option value="tube">管装</Option>
-                  <Option value="other">其他</Option>
+                  {PACKAGE_TYPE_OPTIONS.map(option => (
+                    <Option key={option.value} value={option.value}>
+                      {option.label}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

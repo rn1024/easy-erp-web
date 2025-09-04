@@ -1,5 +1,5 @@
 -- Migration Sync File
--- Generated at: 2025-08-31T11:47:26.395Z
+-- Generated at: 2025-09-04T13:46:03.248Z
 -- This file contains the current schema state
 
 -- CreateTable

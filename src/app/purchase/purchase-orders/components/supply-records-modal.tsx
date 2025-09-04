@@ -172,7 +172,10 @@ const SupplyRecordsModal: React.FC<SupplyRecordsModalProps> = ({
       width: 200,
       render: (_, record) => (
         <div>
-          <Text strong>{record.product?.code || record.productId}</Text>
+          <Text strong>{record.product?.name || record.product?.code || record.productId}</Text>
+          {record.product?.code && record.product?.name && (
+            <div style={{ color: '#666', fontSize: '12px' }}>编码: {record.product.code}</div>
+          )}
           {record.product?.specification && (
             <div style={{ color: '#666', fontSize: '12px' }}>{record.product.specification}</div>
           )}
@@ -219,7 +222,10 @@ const SupplyRecordsModal: React.FC<SupplyRecordsModalProps> = ({
       width: 150,
       render: (_, record) => (
         <div>
-          <Text strong>{record.product?.code}</Text>
+          <Text strong>{record.product?.name || record.product?.code}</Text>
+          {record.product?.code && record.product?.name && (
+            <div style={{ color: '#666', fontSize: '12px' }}>编码: {record.product.code}</div>
+          )}
           {record.product?.specification && (
             <div style={{ color: '#666', fontSize: '12px' }}>{record.product.specification}</div>
           )}

@@ -29,6 +29,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { getPackageTypeLabel } from '../constants/package-type';
 
 /**
  * Components
@@ -329,6 +330,58 @@ const ProductManagement: React.FC = () => {
       ),
     },
     {
+      title: '成本',
+      dataIndex: 'costs',
+      width: 120,
+      ellipsis: true,
+      render: (_, record: ProductInfo) => {
+         // 成本显示逻辑：优先显示最新的成本记录
+         const getCostDisplay = (costs?: any[]) => {
+           if (!costs || costs.length === 0) return '-';
+           
+           // 按创建时间排序，获取最新的成本记录
+           const sortedCosts = [...costs].sort((a, b) => 
+             new Date(b.createdAt || b.updatedAt || 0).getTime() - 
+             new Date(a.createdAt || a.updatedAt || 0).getTime()
+           );
+           
+           const latestCost = sortedCosts[0];
+           
+           // 优先级：price + unit > price > costInfo > 空值
+           if (latestCost.price && latestCost.unit) {
+             return `${latestCost.price} ${latestCost.unit}`;
+           }
+           if (latestCost.price) {
+             return `${latestCost.price}`;
+           }
+           if (latestCost.costInfo) {
+             return latestCost.costInfo;
+           }
+           return '-';
+         };
+         
+         const costDisplay = getCostDisplay(record.costs);
+         const hasMultipleCosts = record.costs && record.costs.length > 1;
+         
+         return (
+           <Tooltip 
+             title={hasMultipleCosts ? `${costDisplay} (共${record.costs?.length}条成本记录)` : costDisplay}
+           >
+             <span style={{ color: costDisplay === '-' ? '#999' : '#333' }}>
+               {costDisplay}
+               {hasMultipleCosts && (
+                 <Badge 
+                   count={record.costs?.length || 0} 
+                   size="small" 
+                   style={{ marginLeft: 4 }}
+                 />
+               )}
+             </span>
+           </Tooltip>
+         );
+       },
+    },
+    {
       title: '重量(g)',
       dataIndex: 'weight',
       width: 80,
@@ -338,7 +391,7 @@ const ProductManagement: React.FC = () => {
       title: '包装类型',
       dataIndex: 'packageType',
       width: 100,
-      render: (_, record: ProductInfo) => record.packageType || '-',
+      render: (_, record: ProductInfo) => getPackageTypeLabel(record.packageType),
     },
     {
       title: '分类',

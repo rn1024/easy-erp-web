@@ -13,7 +13,7 @@ export enum EntityType {
 // 采购订单状态枚举 - 与 Prisma schema 保持一致
 export enum PurchaseOrderStatus {
   CREATED = 'CREATED',
-  PENDING = 'PENDING',
+  REJECTED = 'REJECTED',
   APPROVED = 'APPROVED', // 已审批已通过
   CONFIRMED = 'CONFIRMED',
   PRODUCTION = 'PRODUCTION',
@@ -60,9 +60,9 @@ export enum ExpenseReportStatus {
 // 状态标签映射
 export const StatusLabels = {
   [EntityType.PURCHASE_ORDER]: {
-    [PurchaseOrderStatus.CREATED]: '已创建',
-    [PurchaseOrderStatus.PENDING]: '待审批',
-    [PurchaseOrderStatus.APPROVED]: '已审批已通过',
+    [PurchaseOrderStatus.CREATED]: '待审批',
+    [PurchaseOrderStatus.REJECTED]: '已驳回',
+    [PurchaseOrderStatus.APPROVED]: '已审批',
     [PurchaseOrderStatus.CONFIRMED]: '已确认',
     [PurchaseOrderStatus.PRODUCTION]: '生产中',
     [PurchaseOrderStatus.SHIPPED]: '已发货',
@@ -103,8 +103,8 @@ export const StatusLabels = {
 // 状态颜色映射
 export const StatusColors = {
   [EntityType.PURCHASE_ORDER]: {
-    [PurchaseOrderStatus.CREATED]: 'default',
-    [PurchaseOrderStatus.PENDING]: 'processing',
+    [PurchaseOrderStatus.CREATED]: 'processing',
+    [PurchaseOrderStatus.REJECTED]: 'error',
     [PurchaseOrderStatus.APPROVED]: 'success',
     [PurchaseOrderStatus.CONFIRMED]: 'success',
     [PurchaseOrderStatus.PRODUCTION]: 'blue',
@@ -147,10 +147,11 @@ export const StatusColors = {
 export const StatusTransitions = {
   [EntityType.PURCHASE_ORDER]: {
     [PurchaseOrderStatus.CREATED]: [
-      { value: PurchaseOrderStatus.PENDING, label: '提交审批', type: 'approve' as const },
+      { value: PurchaseOrderStatus.APPROVED, label: '审批通过', type: 'approve' as const },
+      { value: PurchaseOrderStatus.REJECTED, label: '审批驳回', type: 'reject' as const },
       { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
     ],
-    [PurchaseOrderStatus.PENDING]: [
+    [PurchaseOrderStatus.REJECTED]: [
       { value: PurchaseOrderStatus.APPROVED, label: '审批通过', type: 'approve' as const },
       { value: PurchaseOrderStatus.CANCELLED, label: '取消订单', type: 'reject' as const },
     ],
