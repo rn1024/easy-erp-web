@@ -75,7 +75,7 @@ jobs:
             mkdir -p "$PROJECT_DIR"
             cd "$PROJECT_DIR" || exit 1
             
-            # 拉取最新代码
+            # 拉取最新代码（优先更新，确保脚本是最新的）
             echo "📥 拉取最新代码..."
             if [ -d ".git" ]; then
               git fetch origin
@@ -89,6 +89,35 @@ jobs:
               cd easy-erp-web
               echo "✅ 代码克隆完成"
             fi
+            
+            # 立即设置所有脚本的执行权限
+            echo "🔧 设置脚本执行权限..."
+            if [ -d "scripts" ]; then
+              chmod +x scripts/*.sh 2>/dev/null || true
+              echo "✅ 脚本权限设置完成"
+            else
+              echo "❌ scripts目录不存在"
+              exit 1
+            fi
+            
+            # 验证关键脚本文件是否存在
+            echo "🔍 验证关键脚本文件..."
+            REQUIRED_SCRIPTS=(
+              "deploy-to-ecs.sh"
+              "check-database-connection.sh"
+              "db-backup.sh"
+            )
+            
+            for script in "${REQUIRED_SCRIPTS[@]}"; do
+              if [ ! -f "scripts/$script" ]; then
+                echo "❌ 缺少必需脚本: scripts/$script"
+                exit 1
+              fi
+              echo "✅ 脚本存在: scripts/$script"
+            done
+            
+            echo "📋 当前脚本权限状态："
+            ls -la scripts/*.sh
             
             # 创建.env文件并写入环境变量
             echo "⚙️  配置环境变量..."
@@ -120,41 +149,28 @@ jobs:
             fi
             echo "✅ DATABASE_URL已设置"
             
-            # 数据库连接测试
-            echo "🔗 执行数据库连接检查脚本..."
-            
-            # 检查数据库连接检查脚本是否存在
-            if [ -f "scripts/check-database-connection.sh" ]; then
-              chmod +x scripts/check-database-connection.sh
-              echo "⏱️  执行数据库连接检查（最大等待60秒）..."
-              if timeout 60 ./scripts/check-database-connection.sh; then
-                echo "✅ 数据库连接检查完成"
-              else
-                exit_code=$?
-                if [ $exit_code -eq 124 ]; then
-                  echo "❌ 数据库连接检查超时（60秒）"
-                else
-                  echo "❌ 数据库连接检查失败"
-                fi
-                exit 1
-              fi
+            # 数据库连接测试（脚本已在前面验证和设置权限）
+            echo "🔗 执行数据库连接检查..."
+            echo "⏱️  执行数据库连接检查（最大等待60秒）..."
+            if timeout 60 ./scripts/check-database-connection.sh; then
+              echo "✅ 数据库连接检查完成"
             else
-              echo "❌ 数据库连接检查脚本不存在: scripts/check-database-connection.sh"
+              exit_code=$?
+              if [ $exit_code -eq 124 ]; then
+                echo "❌ 数据库连接检查超时（60秒）"
+              else
+                echo "❌ 数据库连接检查失败"
+              fi
               exit 1
             fi
             
-            # 数据库备份（部署前安全措施）
+            # 数据库备份（部署前安全措施，脚本权限已设置）
             echo "💾 执行部署前数据库备份..."
-            if [ -f "scripts/db-backup.sh" ]; then
-              chmod +x scripts/db-backup.sh
-              if ./scripts/db-backup.sh; then
-                echo "✅ 数据库备份完成"
-              else
-                echo "❌ 数据库备份失败，终止部署"
-                exit 1
-              fi
+            if ./scripts/db-backup.sh; then
+              echo "✅ 数据库备份完成"
             else
-              echo "⚠️  数据库备份脚本不存在，跳过备份步骤"
+              echo "❌ 数据库备份失败，终止部署"
+              exit 1
             fi
             
             # Prisma迁移状态检查
@@ -166,15 +182,8 @@ jobs:
               echo "⚠️  npx命令不可用，跳过迁移状态检查"
             fi
             
-            # 确保脚本存在并可执行
-            if [ ! -f "scripts/deploy-to-ecs.sh" ]; then
-              echo "❌ 部署脚本不存在: scripts/deploy-to-ecs.sh"
-              exit 1
-            fi
-            
-            chmod +x scripts/deploy-to-ecs.sh
-            
-            # 执行部署脚本
+            # 执行部署脚本（脚本已在前面验证存在并设置权限）
+            echo "🚀 执行部署脚本..."
             ./scripts/deploy-to-ecs.sh
   # 3. 远程验证Job
   verify:
