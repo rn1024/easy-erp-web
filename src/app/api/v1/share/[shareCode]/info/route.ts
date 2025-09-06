@@ -55,13 +55,12 @@ export async function GET(request: NextRequest, { params }: { params: { shareCod
       },
       include: {
         product: {
-          select: {
-            id: true,
-            code: true,
-            specification: true,
-            color: true,
-            sku: true,
-            label: true,
+          include: {
+            images: {
+              orderBy: {
+                sortOrder: 'asc',
+              },
+            },
           },
         },
       },
