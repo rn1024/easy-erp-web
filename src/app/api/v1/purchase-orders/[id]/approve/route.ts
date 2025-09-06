@@ -36,17 +36,17 @@ const approveHandler = async (
     }
 
     // 验证状态转换的合理性
-    // 根据 Prisma schema 中的 PurchaseOrderStatus 枚举定义
+    // 根据前端 approval.ts 配置保持一致
     const validTransitions: Record<string, string[]> = {
-      CREATED: ['PENDING', 'CANCELLED'],
-      PENDING: ['APPROVED', 'CANCELLED'],
+      CREATED: ['APPROVED', 'REJECTED', 'CANCELLED'],
+      REJECTED: ['APPROVED', 'CANCELLED'],
       APPROVED: ['CONFIRMED', 'CANCELLED'],
       CONFIRMED: ['PRODUCTION', 'CANCELLED'],
       PRODUCTION: ['SHIPPED', 'CANCELLED'],
       SHIPPED: ['RECEIVED', 'CANCELLED'],
       RECEIVED: [], // 最终状态
       CANCELLED: [], // 最终状态
-    };
+    }
 
     if (!validTransitions[purchaseOrder.status]?.includes(toStatus)) {
       return NextResponse.json(

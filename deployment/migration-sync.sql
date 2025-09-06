@@ -1,5 +1,5 @@
 -- Migration Sync File
--- Generated at: 2025-09-04T13:46:03.248Z
+-- Generated at: 2025-09-06T13:07:07.271Z
 -- This file contains the current schema state
 
 -- CreateTable
@@ -377,10 +377,10 @@ CREATE TABLE `shipment_records` (
     `shippingDetails` TEXT NULL,
     `date` DATE NOT NULL,
     `status` ENUM('PREPARING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED') NOT NULL DEFAULT 'PREPARING',
-    `shipmentFile` VARCHAR(191) NULL,
     `operatorId` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `shipmentFile` VARCHAR(191) NULL,
 
     INDEX `shipment_records_shopId_status_idx`(`shopId`, `status`),
     INDEX `shipment_records_date_status_idx`(`date`, `status`),

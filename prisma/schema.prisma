@@ -247,10 +247,10 @@ model ProductInfo {
 model ProductCost {
   id        String      @id @default(cuid())
   productId String
-  costInfo  String?     // 成本信息（文本输入）
-  price     String?     // 价格（文本输入）
-  unit      String?     // 单位（文本输入）
-  supplier  String?     // 供应商（文本输入）
+  costInfo  String?
+  price     String?
+  unit      String?
+  supplier  String?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   product   ProductInfo @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -411,10 +411,10 @@ model ShipmentRecord {
   shippingDetails           String?                 @db.Text
   date                      DateTime                @db.Date
   status                    ShipmentRecordStatus    @default(PREPARING)
-  shipmentFile              String?                 // 发货文件URL
   operatorId                String
   createdAt                 DateTime                @default(now())
   updatedAt                 DateTime                @updatedAt
+  shipmentFile              String?
   shipmentProducts          ShipmentProductRecord[]
   operator                  Account                 @relation("ShipmentOperator", fields: [operatorId], references: [id])
   shop                      Shop                    @relation(fields: [shopId], references: [id])
@@ -547,18 +547,18 @@ model ExportRecord {
 }
 
 model FileUpload {
-  id                  String               @id @default(cuid())
-  originalName        String
-  fileName            String
-  fileUrl             String
-  fileSize            Int
-  fileType            String
-  category            String
-  storage             String               @default("oss")
-  uploaderId          String
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  uploader            Account              @relation("FileUploader", fields: [uploaderId], references: [id])
+  id           String   @id @default(cuid())
+  originalName String
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  fileType     String
+  category     String
+  storage      String   @default("oss")
+  uploaderId   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  uploader     Account  @relation("FileUploader", fields: [uploaderId], references: [id])
 
   @@index([uploaderId])
   @@index([category])
@@ -580,8 +580,6 @@ model EntityResource {
   @@index([entityId], map: "entity_resources_entityId_fkey")
   @@map("entity_resources")
 }
-
-
 
 enum AccountStatus {
   ACTIVE
