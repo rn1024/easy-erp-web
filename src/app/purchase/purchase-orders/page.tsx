@@ -104,7 +104,9 @@ const PurchaseOrdersPage: React.FC = () => {
   useEffect(() => {
     if (purchaseOrdersResponse?.data?.data?.list) {
       // 为当前页面的采购订单预加载供货记录
-      const orderIds = purchaseOrdersResponse.data.data.list.map((order: PurchaseOrderInfo) => order.id);
+      const orderIds = purchaseOrdersResponse.data.data.list.map(
+        (order: PurchaseOrderInfo) => order.id
+      );
       preloadSupplyRecords(orderIds);
     }
   }, [purchaseOrdersResponse?.data?.data?.list]);
