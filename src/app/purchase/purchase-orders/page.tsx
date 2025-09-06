@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Button,
   Form,
@@ -40,6 +40,7 @@ import PurchaseOrderFormModal from './components/purchase-order-form-modal';
 import PurchaseOrderApprovalModal from './components/purchase-order-approval-modal';
 import SupplyShareModal from './components/supply-share-modal';
 import SupplyRecordsModal from './components/supply-records-modal';
+import SupplyRecordsCell, { preloadSupplyRecords } from './components/supply-records-cell';
 import Permission from '@/components/permission';
 
 /**
@@ -98,6 +99,15 @@ const PurchaseOrdersPage: React.FC = () => {
   } = useRequest(() => getPurchaseOrdersApi(searchParams), {
     refreshDeps: [searchParams],
   });
+
+  // 预加载供货记录数据
+  useEffect(() => {
+    if (purchaseOrdersResponse?.data?.list) {
+      // 为当前页面的采购订单预加载供货记录
+      const orderIds = purchaseOrdersResponse.data.list.map((order: PurchaseOrderInfo) => order.id);
+      preloadSupplyRecords(orderIds);
+    }
+  }, [purchaseOrdersResponse?.data?.list]);
 
   // 获取店铺列表
   const { data: shopsResponse } = useRequest(() => getShops({ page: 1, pageSize: 100 }));
@@ -402,14 +412,14 @@ const PurchaseOrdersPage: React.FC = () => {
       width: 100,
       align: 'center',
       render: (_, record) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={() => handleSupplyRecords(record)}
-          style={{ padding: 0 }}
-        >
-          <span style={{ color: '#1890ff' }}>共{record.items.length ?? 0}条</span>
-        </Button>
+        <SupplyRecordsCell
+          purchaseOrderId={record.id}
+          fallbackCount={record.items?.length ?? 0}
+          onClick={(records, statistics) => {
+            // 异步获取的数据可以在SupplyRecordsModal中使用
+            handleSupplyRecords(record);
+          }}
+        />
       ),
     },
     {

@@ -1,7 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Select, InputNumber, Popconfirm, Space, Typography, Card, message } from 'antd';
+import {
+  Table,
+  Button,
+  Select,
+  InputNumber,
+  Popconfirm,
+  Space,
+  Typography,
+  Card,
+  message,
+} from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -122,8 +132,8 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
         // 如果更新的是影响计算的字段，重新计算金额
         if (['quantity', 'unitPrice'].includes(field)) {
           const { amount } = calculateRowAmounts(
-            field === 'quantity' ? (Number(value) || 0) : (Number(updatedItem.quantity) || 0),
-            field === 'unitPrice' ? (Number(value) || 0) : (Number(updatedItem.unitPrice) || 0)
+            field === 'quantity' ? Number(value) || 0 : Number(updatedItem.quantity) || 0,
+            field === 'unitPrice' ? Number(value) || 0 : Number(updatedItem.unitPrice) || 0
           );
 
           updatedItem.amount = amount;
@@ -167,26 +177,28 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
         return (
           <Select
             value={value}
-            placeholder={productsData.length > 0 ? "请选择产品" : "暂无产品数据"}
+            placeholder={productsData.length > 0 ? '请选择产品' : '暂无产品数据'}
             style={{ width: '100%' }}
             showSearch
             optionFilterProp="children"
             disabled={disabled || productsData.length === 0}
-            notFoundContent={productsData.length === 0 ? "暂无产品数据，请先添加产品" : "未找到匹配的产品"}
+            notFoundContent={
+              productsData.length === 0 ? '暂无产品数据，请先添加产品' : '未找到匹配的产品'
+            }
             onChange={(val) => {
               // 获取选中产品的成本价格
-              const selectedProduct = productsData.find(p => p.id === val);
+              const selectedProduct = productsData.find((p) => p.id === val);
               if (!selectedProduct) {
                 message.error('选择的产品不存在，请重新选择');
                 return;
               }
-              
+
               const firstCost = selectedProduct?.costs?.[0];
               const unitPrice = firstCost?.price ? parseFloat(firstCost.price) : 0;
-              
+
               // 更新产品ID
               handleRowChange(record.key!, 'productId', val);
-              
+
               // 如果有成本价格，自动填充单价
               if (unitPrice > 0) {
                 handleRowChange(record.key!, 'unitPrice', unitPrice);
