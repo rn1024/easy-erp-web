@@ -44,3 +44,6 @@ next-env.d.ts
 # upload files
 /upload
 /admin-fe
+
+# docs directory
+/docs

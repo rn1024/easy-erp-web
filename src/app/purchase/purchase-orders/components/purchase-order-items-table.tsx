@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Table,
   Button,
@@ -26,6 +26,11 @@ export interface PurchaseOrderItem {
   unitPrice: number;
   amount: number; // 小计金额 (quantity * unitPrice)
   remark?: string;
+}
+
+// 批量更新接口
+export interface RowUpdateData {
+  [field: string]: any;
 }
 
 // 产品成本接口
@@ -147,11 +152,67 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
     updateDataSource(newDataSource);
   };
 
-  // 计算合计
-  const summary = {
+  // 批量更新单行数据（解决竞态条件问题）
+  const handleMultipleRowChange = useCallback((key: string, updates: RowUpdateData) => {
+    try {
+      // 输入验证
+      if (!key || typeof key !== 'string') {
+        console.error('handleMultipleRowChange: 无效的 key 参数');
+        return;
+      }
+
+      if (!updates || typeof updates !== 'object') {
+        console.error('handleMultipleRowChange: 无效的 updates 参数');
+        return;
+      }
+
+      // 查找目标行
+      const targetIndex = dataSource.findIndex((item) => item.key === key);
+      if (targetIndex === -1) {
+        console.error(`handleMultipleRowChange: 未找到 key 为 ${key} 的行`);
+        return;
+      }
+
+      const newDataSource = dataSource.map((item) => {
+        if (item.key === key) {
+          // 合并所有更新字段
+          const updatedItem = { ...item, ...updates };
+
+          // 数值字段验证和处理
+          if ('quantity' in updates) {
+            updatedItem.quantity = Math.max(0, Number(updatedItem.quantity) || 0);
+          }
+          if ('unitPrice' in updates) {
+            updatedItem.unitPrice = Math.max(0, Number(updatedItem.unitPrice) || 0);
+          }
+
+          // 检查是否需要重新计算金额
+          const hasQuantityOrPriceUpdate = ['quantity', 'unitPrice'].some(field => field in updates);
+          if (hasQuantityOrPriceUpdate) {
+            const { amount } = calculateRowAmounts(
+              Number(updatedItem.quantity) || 0,
+              Number(updatedItem.unitPrice) || 0
+            );
+            updatedItem.amount = amount;
+          }
+
+          return updatedItem;
+        }
+        return item;
+      });
+
+      updateDataSource(newDataSource);
+    } catch (error) {
+      console.error('handleMultipleRowChange 执行出错:', error);
+       message.error('更新数据时发生错误，请重试');
+     }
+   }, [dataSource, updateDataSource]);
+
+  // 计算合计（使用 useMemo 优化性能）
+  const summary = useMemo(() => ({
     totalQuantity: dataSource.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
     totalAmount: dataSource.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
-  };
+  }), [dataSource]);
 
   // 表格列定义
   const columns: ColumnsType<PurchaseOrderItem> = [
@@ -196,16 +257,19 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
               const firstCost = selectedProduct?.costs?.[0];
               const unitPrice = firstCost?.price ? parseFloat(firstCost.price) : 0;
 
-              // 更新产品ID
-              handleRowChange(record.key!, 'productId', val);
-
-              // 如果有成本价格，自动填充单价
+              // 使用批量更新避免竞态条件
+              const updates: RowUpdateData = { productId: val };
+              
+              // 如果有成本价格，同时更新单价
               if (unitPrice > 0) {
-                handleRowChange(record.key!, 'unitPrice', unitPrice);
+                updates.unitPrice = unitPrice;
                 message.success(`已自动填充单价：¥${unitPrice.toFixed(2)}`);
               } else {
                 message.warning('该产品暂无成本价格，请手动输入单价');
               }
+
+              // 一次性批量更新，避免竞态条件
+              handleMultipleRowChange(record.key!, updates);
             }}
             filterOption={(input, option) => {
               const label = option?.label || option?.children;

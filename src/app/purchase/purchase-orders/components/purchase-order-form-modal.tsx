@@ -1,25 +1,8 @@
 import { useBoolean } from 'ahooks';
 import { get } from 'lodash';
-import { FormattedMessage, useIntl } from 'react-intl';
-import {
-  Form,
-  Input,
-  message,
-  Modal,
-  ModalProps,
-  Select,
-  Row,
-  Col,
-  InputNumber,
-  Switch,
-  Divider,
-} from 'antd';
+import { useIntl } from 'react-intl';
+import { Form, Input, message, Modal, ModalProps, Select, Row, Col, Switch, Divider } from 'antd';
 import { useEffect, useState } from 'react';
-
-/**
- * Utils
- */
-import { apiErrorMsg } from '@/utils/apiErrorMsg';
 
 /**
  * Components
@@ -182,26 +165,26 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
 
       // 验证每个产品明细
       const validationErrors: string[] = [];
-      
+
       orderItems.forEach((item, index) => {
         const rowNumber = index + 1;
-        
+
         // 验证产品是否选择
         if (!item.productId) {
           validationErrors.push(`第${rowNumber}行：请选择产品`);
         } else {
           // 验证产品是否存在于产品列表中
-          const productExists = productsData.some(p => p.id === item.productId);
+          const productExists = productsData.some((p) => p.id === item.productId);
           if (!productExists) {
             validationErrors.push(`第${rowNumber}行：选择的产品不存在，请重新选择`);
           }
         }
-        
+
         // 验证数量
         if (!item.quantity || item.quantity <= 0) {
           validationErrors.push(`第${rowNumber}行：请输入有效的数量（大于0）`);
         }
-        
+
         // 验证单价
         if (!item.unitPrice || item.unitPrice <= 0) {
           validationErrors.push(`第${rowNumber}行：请输入有效的单价（大于0）`);
@@ -275,9 +258,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
               label="店铺"
               rules={[{ required: true, message: '请选择店铺' }]}
             >
-              <Select 
-                placeholder="请选择店铺"
-              >
+              <Select placeholder="请选择店铺">
                 {shopsData.map((shop: any) => (
                   <Option key={shop.id} value={shop.id}>
                     {shop.nickname}
@@ -288,10 +269,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
           </Col>
           <Col span={12}>
             <Form.Item name="supplierId" label="供应商">
-              <Select 
-                placeholder="请选择供应商" 
-                allowClear
-              >
+              <Select placeholder="请选择供应商" allowClear>
                 {suppliersData.map((supplier: any) => (
                   <Option key={supplier.id} value={supplier.id}>
                     {supplier.nickname}
@@ -305,10 +283,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="urgent" label="是否紧急" valuePropName="checked">
-              <Switch 
-                checkedChildren="紧急" 
-                unCheckedChildren="常规" 
-              />
+              <Switch checkedChildren="紧急" unCheckedChildren="常规" />
             </Form.Item>
           </Col>
         </Row>
@@ -331,11 +306,7 @@ const PurchaseOrderFormModal: React.FC<Props> = ({
         )}
 
         <Form.Item name="remark" label="备注">
-          <TextArea 
-            rows={3} 
-            placeholder="请输入备注信息" 
-            maxLength={500} 
-          />
+          <TextArea rows={3} placeholder="请输入备注信息" maxLength={500} />
         </Form.Item>
 
         <Divider orientation="left">产品明细</Divider>
