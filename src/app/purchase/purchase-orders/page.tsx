@@ -102,12 +102,12 @@ const PurchaseOrdersPage: React.FC = () => {
 
   // 预加载供货记录数据
   useEffect(() => {
-    if (purchaseOrdersResponse?.data?.list) {
+    if (purchaseOrdersResponse?.data?.data?.list) {
       // 为当前页面的采购订单预加载供货记录
-      const orderIds = purchaseOrdersResponse.data.list.map((order: PurchaseOrderInfo) => order.id);
+      const orderIds = purchaseOrdersResponse.data.data.list.map((order: PurchaseOrderInfo) => order.id);
       preloadSupplyRecords(orderIds);
     }
-  }, [purchaseOrdersResponse?.data?.list]);
+  }, [purchaseOrdersResponse?.data?.data?.list]);
 
   // 获取店铺列表
   const { data: shopsResponse } = useRequest(() => getShops({ page: 1, pageSize: 100 }));
@@ -136,7 +136,7 @@ const PurchaseOrdersPage: React.FC = () => {
   );
 
   // 处理数据
-  const purchaseOrdersData = purchaseOrdersResponse?.data?.data;
+  const purchaseOrdersData = purchaseOrdersResponse?.data?.data?.list;
   const shopsData = shopsResponse?.data?.data?.list || [];
   const suppliersData = suppliersResponse?.data?.data?.list || [];
   const productsData = productsResponse?.data?.data?.list || [];
@@ -535,14 +535,14 @@ const PurchaseOrdersPage: React.FC = () => {
   // ProTable 配置
   const proTableProps: ProTableProps<PurchaseOrderInfo, any> = {
     columns,
-    dataSource: purchaseOrdersData?.list || [],
+    dataSource: purchaseOrdersData || [],
     loading: purchaseOrdersLoading,
     rowKey: 'id',
     search: false,
     pagination: {
       current: Number(searchParams.page) || 1,
       pageSize: Number(searchParams.pageSize) || 20,
-      total: purchaseOrdersData?.meta?.total || 0,
+      total: purchaseOrdersResponse?.data?.data?.meta?.total || 0,
       showSizeChanger: true,
       showQuickJumper: true,
       showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
